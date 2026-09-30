@@ -13,7 +13,6 @@ import {
   buildRig,
   evaluatePose,
   groundOffset,
-  skinWeights,
   solveSegments,
   type PoseKey,
   type Rig,
@@ -68,6 +67,20 @@ const POSE_FRAME: Partial<Record<PoseKey, { centerY: number; halfHeight: number 
   bendForward: { centerY: 0.7, halfHeight: 0.8 },
 };
 const BREATH_PERIOD = 4.8;
+
+interface SkinEntry {
+  /** Byte offset of 4×Uint8 segment indices, followed by 4×Uint8 weights, per vertex. */
+  o: number;
+  /** Optional replacement triangle list (Uint32) for the body surface. */
+  i?: number;
+  n?: number;
+}
+
+interface SkinManifest {
+  version: number;
+  files: string[];
+  parts: Record<string, SkinEntry>;
+}
 
 interface PartMesh {
   part: AtlasPart;
@@ -524,14 +537,29 @@ export class AnatomyViewer {
     let done = 0;
     onProgress(0, total);
 
+    // Baked skinning weights (scripts/bake-skin-weights.ts); without them everything moves rigidly.
+    let skin: SkinManifest | null = null;
+    try {
+      const res = await fetch(`${MODEL_BASE}/skin.json`);
+      if (res.ok) skin = (await res.json()) as SkinManifest;
+    } catch {
+      skin = null;
+    }
+
     const queue = manifest.chunks.map((c, i) => ({ path: c.gzip.split("/").pop() as string, index: i }));
     const worker = async () => {
       while (queue.length && !this.disposed) {
         const job = queue.shift();
         if (!job) return;
-        const buffer = await fetchChunk(job.path);
+        const [buffer, weights] = await Promise.all([
+          fetchChunk(job.path),
+          skin ? fetchChunk(skin.files[job.index]).catch(() => null) : Promise.resolve(null),
+        ]);
         if (this.disposed) return;
-        for (const part of byChunk.get(job.index) ?? []) this.addPart(part, buffer);
+        for (const part of byChunk.get(job.index) ?? []) {
+          const baked = weights && skin?.parts[part.id];
+          this.addPart(part, buffer, baked ? { buffer: weights, entry: baked } : null);
+        }
         done += 1;
         onProgress(done, total);
         this.dirty = true;
@@ -540,7 +568,7 @@ export class AnatomyViewer {
     await Promise.all([worker(), worker(), worker(), worker()]);
   }
 
-  private addPart(part: AtlasPart, buffer: ArrayBuffer) {
+  private addPart(part: AtlasPart, buffer: ArrayBuffer, baked: { buffer: ArrayBuffer; entry: SkinEntry } | null) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(buffer, part.positions, part.vertexCount * 3);
     const normals = new Int16Array(buffer.slice(part.normals, part.normals + part.vertexCount * 6));
@@ -548,20 +576,22 @@ export class AnatomyViewer {
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3, true));
     geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-    // Muscles, vessels and organs attach across joints in ways a heuristic can't weight well, so they
-    // move rigidly with their segment (no stretching). Only the continuous body surface is skinned.
-    const rigid = part.system !== "integumentary" || !this.rig;
+    // Bones move rigidly with their segment. Everything else uses baked weights: the skin's own smoothed
+    // weights, and for tissue under it the weights of the nearest skin, so it all moves together.
+    const rigid = !baked;
     if (rigid) {
       const idx = new Uint8Array(part.vertexCount * 4).fill(IDENTITY_SLOT);
       const wts = new Uint8Array(part.vertexCount * 4);
       for (let i = 0; i < part.vertexCount; i++) wts[i * 4] = 255;
       geometry.setAttribute("aSegI", new THREE.BufferAttribute(idx, 4));
       geometry.setAttribute("aSegW", new THREE.BufferAttribute(wts, 4, true));
-    } else if (this.rig) {
-      const skin = skinWeights(this.rig, positions, indices);
-      geometry.setAttribute("aSegI", new THREE.BufferAttribute(skin.index, 4));
-      geometry.setAttribute("aSegW", new THREE.BufferAttribute(skin.weight, 4, true));
-      if (skin.indices !== indices) geometry.setIndex(new THREE.BufferAttribute(skin.indices, 1));
+    } else {
+      const { buffer: wb, entry } = baked;
+      const n = part.vertexCount * 4;
+      geometry.setAttribute("aSegI", new THREE.BufferAttribute(new Uint8Array(wb, entry.o, n), 4));
+      geometry.setAttribute("aSegW", new THREE.BufferAttribute(new Uint8Array(wb, entry.o + n, n), 4, true));
+      // The body surface ships with bridge triangles (hand touching hip in the scan) removed.
+      if (entry.i !== undefined && entry.n) geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(wb, entry.i, entry.n), 1));
     }
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();

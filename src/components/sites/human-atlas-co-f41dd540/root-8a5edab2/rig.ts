@@ -260,13 +260,20 @@ export function skinWeights(
   positions: Float32Array,
   indices: Uint32Array,
 ): { index: Uint8Array; weight: Uint8Array; indices: Uint32Array } {
+  const { raw, indices: cleaned } = skinRawWeights(rig, positions, indices);
+  return { ...quantizeWeights(raw, positions.length / 3), indices: cleaned };
+}
+
+/** Smoothed float weights (count × SEG_COUNT) for the body surface, plus its cleaned triangles. */
+export function skinRawWeights(
+  rig: Rig,
+  positions: Float32Array,
+  indices: Uint32Array,
+): { raw: Float32Array; indices: Uint32Array } {
   const count = positions.length / 3;
-  const index = new Uint8Array(count * 4);
-  const weight = new Uint8Array(count * 4);
   const { neck, waist } = rig.joints;
   const w = new Float32Array(SEGMENTS.length);
   const raw = new Float32Array(count * SEGMENTS.length);
-  const order: number[] = [];
 
   // Arm "capsules": distance to the bone line decides what follows the arm. Using distance (not
   // sideways position) keeps hip skin that touches the hanging hand attached to the body.
@@ -330,7 +337,14 @@ export function skinWeights(
     // Legs: near the leg bones (so hanging hands are not dragged along) and below the hip joint.
     let legNear = 0;
     for (const c of leg[S]) legNear = Math.max(legNear, influence(c));
-    const legness = legNear * (1 - smooth(J.hip.y - 0.12, J.hip.y + 0.02, y)) * smooth(0.015, 0.05, ax) * (1 - armness);
+    // Near the crotch the midline belongs to the trunk; below it, inner thighs, knees and calves
+    // (which touch the midline in the scan) are always leg.
+    const crotch = J.hip.y - 0.12;
+    const midline = y < crotch - 0.03 ? 1 : smooth(0.015, 0.05, ax);
+    // Well below the crotch there is no trunk: the back of the calf (≈12 cm behind the tibia) and the
+    // heel must never fall back to the pelvis, even outside the leg capsule.
+    if (y < crotch - 0.05) legNear = 1;
+    const legness = legNear * (1 - smooth(crotch, J.hip.y + 0.02, y)) * midline * (1 - armness);
     const body = Math.max(0, 1 - armness - legness);
 
     if (armness > 0) {
@@ -365,8 +379,14 @@ export function skinWeights(
   // 2. Smooth the weights across the surface (Laplacian diffusion) so the skin bends gradually
   //    at the joints instead of tearing where the classification changes abruptly.
   smoothOverMesh(raw, cleaned, count, 14);
+  return { raw, indices: cleaned };
+}
 
-  // 3. Keep the four strongest influences and quantise to bytes that sum to 255.
+/** Keep the four strongest influences per vertex and quantise them to bytes that sum to 255. */
+export function quantizeWeights(raw: Float32Array, count: number): { index: Uint8Array; weight: Uint8Array } {
+  const index = new Uint8Array(count * 4);
+  const weight = new Uint8Array(count * 4);
+  const order: number[] = [];
   for (let v = 0; v < count; v++) {
     const base = v * SEG_COUNT;
     order.length = 0;
@@ -394,10 +414,10 @@ export function skinWeights(
       weight[v * 4] = 255;
     }
   }
-  return { index, weight, indices: cleaned };
+  return { index, weight };
 }
 
-const SEG_COUNT = SEGMENTS.length;
+export const SEG_COUNT = SEGMENTS.length;
 
 function dominant(raw: Float32Array, v: number): [number, number] {
   let best = 0;
