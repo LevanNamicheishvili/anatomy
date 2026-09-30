@@ -434,7 +434,7 @@ function dominant(raw: Float32Array, v: number): [number, number] {
   return [best, sum > 0 ? bestW / sum : 0];
 }
 
-function dropBridges(indices: Uint32Array, raw: Float32Array): Uint32Array {
+export function dropBridges(indices: Uint32Array, raw: Float32Array): Uint32Array {
   const joined = (a: number, b: number) => a === b || PARENT[SEGMENTS[a]] === SEGMENTS[b] || PARENT[SEGMENTS[b]] === SEGMENTS[a];
   const keep: number[] = [];
   for (let t = 0; t < indices.length; t += 3) {
@@ -451,7 +451,7 @@ function dropBridges(indices: Uint32Array, raw: Float32Array): Uint32Array {
   return keep.length === indices.length ? indices : Uint32Array.from(keep);
 }
 
-function smoothOverMesh(raw: Float32Array, indices: Uint32Array, count: number, iterations: number) {
+export function smoothOverMesh(raw: Float32Array, indices: Uint32Array, count: number, iterations: number) {
   // Compressed adjacency lists built from the triangle edges.
   const degree = new Uint32Array(count + 1);
   for (let t = 0; t < indices.length; t += 3)

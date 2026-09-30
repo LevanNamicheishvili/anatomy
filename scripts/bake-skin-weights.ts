@@ -1,7 +1,7 @@
 /**
  * Bakes per-vertex skinning weights for the anatomy atlas (run: `npx tsx scripts/bake-skin-weights.ts`).
  *
- * - Body surface ("Skin"): smoothed geometric weights (see rig.ts `skinRawWeights`).
+ * - Body surface ("Skin"): nearest-bone segment per vertex, smoothed over the surface.
  * - Every other soft structure (muscles, vessels, organs, connective tissue, hair…): weights copied from
  *   the nearest skin vertices, so everything under the skin moves exactly with it.
  * - Bones are not baked; they move rigidly with their segment at runtime.
@@ -12,7 +12,14 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { join } from "node:path";
 import type { AtlasManifest, AtlasPart } from "../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/atlas-data";
-import { SEG_COUNT, buildRig, quantizeWeights, skinRawWeights } from "../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/rig";
+import {
+  SEGMENT_INDEX,
+  SEG_COUNT,
+  buildRig,
+  dropBridges,
+  quantizeWeights,
+  smoothOverMesh,
+} from "../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/rig";
 
 const DIR = "public/sites/human-atlas-co-f41dd540/shared/models";
 const manifest = JSON.parse(readFileSync(join(DIR, "atlas.json"), "utf8")) as AtlasManifest;
@@ -25,12 +32,88 @@ const chunks = manifest.chunks.map((c) => {
 const positionsOf = (p: AtlasPart) => new Float32Array(chunks[p.chunk], p.positions, p.vertexCount * 3);
 const indicesOf = (p: AtlasPart) => new Uint32Array(chunks[p.chunk], p.indices, p.indexCount);
 
-// 1. Body surface weights.
+// 1. Body surface weights: every skin vertex follows its nearest bone (bones are assigned to body
+//    segments by name, which is exact), then weights are smoothed over the surface so joints bend
+//    gradually. Triangles still bridging unjoined parts (hand resting on the hip) are dropped.
 const skinPart = manifest.parts.find((p) => p.name === "Skin");
 if (!skinPart) throw new Error("Skin part not found");
 const skinPos = positionsOf(skinPart);
-const skin = skinRawWeights(rig, skinPos, indicesOf(skinPart));
 const skinCount = skinPart.vertexCount;
+
+const BONE_CELL = 0.02;
+const boneBuckets = new Map<string, number[]>();
+const bonePts: number[] = [];
+const boneSeg: number[] = [];
+for (const p of manifest.parts) {
+  if (p.system !== "skeletal") continue;
+  const seg = SEGMENT_INDEX[rig.segmentOf(p)];
+  const pos = positionsOf(p);
+  for (let v = 0; v < p.vertexCount; v++) {
+    const i = boneSeg.length;
+    bonePts.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]);
+    boneSeg.push(seg);
+    const k = `${Math.floor(pos[v * 3] / BONE_CELL)},${Math.floor(pos[v * 3 + 1] / BONE_CELL)},${Math.floor(pos[v * 3 + 2] / BONE_CELL)}`;
+    const list = boneBuckets.get(k);
+    if (list) list.push(i);
+    else boneBuckets.set(k, [i]);
+  }
+}
+
+function nearestBoneSegment(x: number, y: number, z: number): number {
+  const cx = Math.floor(x / BONE_CELL);
+  const cy = Math.floor(y / BONE_CELL);
+  const cz = Math.floor(z / BONE_CELL);
+  let best = -1;
+  let bestD = Infinity;
+  for (let r = 0; r < 30; r++) {
+    for (let i = -r; i <= r; i++)
+      for (let j = -r; j <= r; j++)
+        for (let k = -r; k <= r; k++) {
+          if (Math.max(Math.abs(i), Math.abs(j), Math.abs(k)) !== r) continue;
+          const list = boneBuckets.get(`${cx + i},${cy + j},${cz + k}`);
+          if (!list) continue;
+          for (const b of list) {
+            const dx = bonePts[b * 3] - x;
+            const dy = bonePts[b * 3 + 1] - y;
+            const dz = bonePts[b * 3 + 2] - z;
+            const d = dx * dx + dy * dy + dz * dz;
+            if (d < bestD) {
+              bestD = d;
+              best = b;
+            }
+          }
+        }
+    if (best >= 0 && Math.sqrt(bestD) <= r * BONE_CELL) break;
+  }
+  return best >= 0 ? boneSeg[best] : SEGMENT_INDEX.root;
+}
+
+const skinRaw = new Float32Array(skinCount * SEG_COUNT);
+for (let v = 0; v < skinCount; v++) {
+  skinRaw[v * SEG_COUNT + nearestBoneSegment(skinPos[v * 3], skinPos[v * 3 + 1], skinPos[v * 3 + 2])] = 1;
+}
+const skinIndices = indicesOf(skinPart);
+const cleanedSkin = dropBridges(skinIndices, skinRaw);
+smoothOverMesh(skinRaw, cleanedSkin, skinCount, 10);
+const skin = { raw: skinRaw, indices: cleanedSkin };
+
+// Report where triangles were dropped, so real skin is never removed by accident.
+{
+  const kept = new Set<string>();
+  for (let t = 0; t < cleanedSkin.length; t += 3) kept.add(`${cleanedSkin[t]},${cleanedSkin[t + 1]},${cleanedSkin[t + 2]}`);
+  const heights: number[] = [];
+  for (let t = 0; t < skinIndices.length; t += 3) {
+    if (kept.has(`${skinIndices[t]},${skinIndices[t + 1]},${skinIndices[t + 2]}`)) continue;
+    heights.push(skinPos[skinIndices[t] * 3 + 1]);
+  }
+  const bands = new Map<string, number>();
+  for (const h of heights) {
+    const b = `${(Math.floor(h * 10) / 10).toFixed(1)}m`;
+    bands.set(b, (bands.get(b) ?? 0) + 1);
+  }
+  console.log(`skin triangles dropped: ${heights.length}`, Object.fromEntries([...bands].sort()));
+}
+
 
 // 2. Spatial grid over skin vertices for nearest-neighbour weight transfer.
 const CELL = 0.025;
