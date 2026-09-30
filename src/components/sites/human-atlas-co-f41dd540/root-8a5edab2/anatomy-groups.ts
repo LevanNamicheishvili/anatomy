@@ -30,7 +30,7 @@ export function animGroup(p: AtlasPart): AnimGroup {
   if (p.system === "integumentary") return 8;
   if (isHeartPart(p)) return /atri/i.test(p.name) ? 1 : 2;
   if ((p.system === "arterial" || p.system === "venous") && insideHeartBox(p)) return 2;
-  if (p.system === "respiratory" && /bronch|trachea/i.test(p.name)) return 3;
+  if (p.system === "respiratory" && /bronch|trachea|lobe of (right|left) lung/i.test(p.name)) return 3;
   if (/^diaphragm$/i.test(p.name)) return 4;
   if ((p.system === "skeletal" || p.system === "connective") && RIBCAGE.test(p.name)) return 5;
   if (p.system === "arterial") return 6;

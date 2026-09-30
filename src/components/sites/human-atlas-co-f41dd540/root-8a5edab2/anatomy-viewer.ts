@@ -64,6 +64,7 @@ const POSE_FRAME: Partial<Record<PoseKey, { centerY: number; halfHeight: number 
 };
 const BREATH_PERIOD = 4.8;
 const IDENTITY = new THREE.Matrix4();
+const TRANSLUCENT = /^(upper|middle|lower) lobe of (right|left) lung$/i;
 
 interface SkinEntry {
   /** Byte offset of 4×Uint8 segment indices, followed by 4×Uint8 weights, per vertex. */
@@ -91,6 +92,8 @@ interface PartMesh {
   explodeOffset: THREE.Vector3;
   /** Everything moves as one rigid piece with its body segment except the body surface (skinned). */
   rigid: boolean;
+  /** Drawn see-through (the lung lobes, so the bronchial tree inside stays visible). */
+  translucent: boolean;
   /** Colour id in the picking pass. */
   pickId: number;
   /** Skinned parts: the rest-pose bounds and the segment slots their vertices follow, for culling. */
@@ -456,8 +459,8 @@ export class AnatomyViewer {
 
   // ---- Materials -------------------------------------------------------------------------------
 
-  private material(system: SystemKey, group: AnimGroup, state: MaterialState): THREE.MeshPhysicalMaterial {
-    const key = `${system}|${group}|${state}`;
+  private material(system: SystemKey, group: AnimGroup, state: MaterialState, translucent = false): THREE.MeshPhysicalMaterial {
+    const key = `${system}|${group}|${state}${translucent ? "|t" : ""}`;
     const cached = this.materials.get(key);
     if (cached) return cached;
     const m = makeTissue(system);
@@ -480,6 +483,13 @@ export class AnatomyViewer {
       m.polygonOffset = true;
       m.polygonOffsetFactor = -1;
       m.polygonOffsetUnits = -2;
+    }
+    if (translucent && state !== "cut") {
+      // Lung tissue as a light veil: the airways and vessels inside stay in view.
+      m.transparent = true;
+      m.opacity = state === "base" ? 0.5 : 0.65;
+      m.depthWrite = false;
+      m.clearcoat = 0;
     }
     this.injectAnimation(m, group);
     if (state === "cut") this.wrapCut(m);
@@ -592,7 +602,7 @@ export class AnatomyViewer {
         if (!job) return;
         const [buffer, weights] = await Promise.all([
           fetchChunk(job.path),
-          skin ? fetchChunk(skin.files[job.index]).catch(() => null) : Promise.resolve(null),
+          skin?.files[job.index] ? fetchChunk(skin.files[job.index]).catch(() => null) : Promise.resolve(null),
         ]);
         if (this.disposed) return;
         for (const part of byChunk.get(job.index) ?? []) {
@@ -664,6 +674,7 @@ export class AnatomyViewer {
       jitter: new THREE.Vector3(hashUnit(part.id, 1), hashUnit(part.id, 2), hashUnit(part.id, 3)),
       explodeOffset: new THREE.Vector3(),
       rigid,
+      translucent: TRANSLUCENT.test(part.name),
       pickId: this.pickById.length + 1,
       restSphere: rigid ? undefined : restSphere,
       segSlots,
@@ -727,7 +738,7 @@ export class AnatomyViewer {
         : this.hovered === id
           ? "hover"
           : "base";
-    entry.mesh.material = this.material(entry.part.system, entry.group, state);
+    entry.mesh.material = this.material(entry.part.system, entry.group, state, entry.translucent);
   }
 
   private updatePartMatrix(entry: PartMesh) {

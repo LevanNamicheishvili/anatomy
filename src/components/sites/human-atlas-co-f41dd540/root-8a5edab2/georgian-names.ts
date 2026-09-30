@@ -45,6 +45,12 @@ const PHALANX: Record<string, string> = {
 
 /** Exact (side-less, lower-case) names → Georgian. */
 const DICT: Record<string, string> = {
+  // Lung lobes (built from the lobes' bronchial trees; "მარჯვენა/მარცხენა" is added from the name)
+  "upper lobe of right lung": "ფილტვის ზედა წილი",
+  "middle lobe of right lung": "ფილტვის შუა წილი",
+  "lower lobe of right lung": "ფილტვის ქვედა წილი",
+  "upper lobe of left lung": "ფილტვის ზედა წილი",
+  "lower lobe of left lung": "ფილტვის ქვედა წილი",
   // Skeleton
   femur: "ბარძაყის ძვალი",
   tibia: "დიდი წვივის ძვალი",
