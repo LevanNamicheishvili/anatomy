@@ -1039,6 +1039,8 @@ export class AnatomyViewer {
   }
 
   private updateLabels(now: number) {
+    // A read-back that never finishes (lost GPU context, throttled tab) must not stop labels for good.
+    if (this.labelsBusy && now - this.lastLabelsAt > 2000) this.labelsBusy = false;
     if (!this.labelsOn || !this.labelsStale || this.labelsBusy) return;
     const settled = now - this.labelsChangedAt > 350;
     const periodic = this.rigActive && now - this.lastLabelsAt > 1500;
@@ -1062,6 +1064,9 @@ export class AnatomyViewer {
         if (this.disposed || !this.labelsOn) return;
         this.chooseLabels(buf, W, H, cw / W, ch / H);
         this.emitLabels();
+      })
+      .catch(() => {
+        this.labelsStale = true;
       })
       .finally(() => {
         this.labelsBusy = false;
