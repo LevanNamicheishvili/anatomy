@@ -1,10 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { animGroup, animationAnchors, type AnimGroup } from "./anatomy-groups";
 import {
   IDENTITY_SLOT,
@@ -256,8 +252,6 @@ const FRAGMENT_FLOW = /* glsl */ `
 
 export class AnatomyViewer {
   private renderer: THREE.WebGLRenderer;
-  private composer: EffectComposer;
-  private gtao: GTAOPass;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private controls: OrbitControls;
@@ -321,7 +315,7 @@ export class AnatomyViewer {
     private canvas: HTMLCanvasElement,
     private callbacks: ViewerCallbacks,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
@@ -343,10 +337,7 @@ export class AnatomyViewer {
     this.controls.minPolarAngle = THREE.MathUtils.degToRad(12);
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(100);
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-    this.controls.addEventListener("change", () => {
-      this.dirty = true;
-      this.lastMotion = performance.now();
-    });
+    this.controls.addEventListener("change", () => (this.dirty = true));
     this.controls.addEventListener("start", () => (this.tween = null));
 
     // Studio reflections give the tissue its moist, glossy highlights.
@@ -363,16 +354,8 @@ export class AnatomyViewer {
     this.buildStage();
     this.scene.add(this.root);
 
-    // Post-processing: multisampled render → ambient occlusion → tone mapping/output.
-    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-    this.composer = new EffectComposer(this.renderer, target);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.gtao = new GTAOPass(this.scene, this.camera, 1, 1);
-    this.gtao.updateGtaoMaterial({ radius: 0.12, distanceExponent: 1.6, thickness: 1.6, scale: 1.4, samples: 16 });
-    this.gtao.updatePdMaterial({ radius: 6, rings: 2, samples: 12 });
-    this.gtao.blendIntensity = 1;
-    this.composer.addPass(this.gtao);
-    this.composer.addPass(new OutputPass());
+    // Rendered in a single pass (no ambient-occlusion post effect): shading never pops in or out
+    // while the camera moves, and each frame draws the scene only once.
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
@@ -634,17 +617,10 @@ export class AnatomyViewer {
   // ---- State from React ------------------------------------------------------------------------
 
   private visibility: Set<string> | null = null;
-  private skinVisible = false;
-  /** Last time anything moved; ambient occlusion only renders once the view is still. */
-  private lastMotion = 0;
 
   setVisible(ids: Set<string>) {
     this.visibility = ids;
-    this.skinVisible = false;
-    for (const [id, entry] of this.parts) {
-      entry.mesh.visible = ids.has(id);
-      if (entry.mesh.visible && !entry.rigid) this.skinVisible = true;
-    }
+    for (const [id, entry] of this.parts) entry.mesh.visible = ids.has(id);
     if (this.hovered && !ids.has(this.hovered)) this.setHovered(null);
     this.dirty = true;
   }
@@ -867,8 +843,6 @@ export class AnatomyViewer {
     const { clientWidth: w, clientHeight: h } = this.canvas;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.setSize(w, h);
     this.camera.aspect = w / h;
     this.applyViewOffset();
     this.dirty = true;
@@ -1014,21 +988,10 @@ export class AnatomyViewer {
     const rigMoved = this.tickRig(now);
     const animated = this.tickAnimation(now);
     if (!animated) this.lastTick = now;
-    if (rigMoved || animated || this.tween) {
-      this.dirty = true;
-      this.lastMotion = now;
-    }
-    // Ambient occlusion re-renders the whole scene, so only add it once the view has settled.
-    // (It sees rest-pose geometry, so skip it for a posed, skinned body surface or a 3D cut.)
-    const wantAO =
-      now - this.lastMotion > 350 && this.cutIds.size === 0 && !(this.pose !== "standing" && this.skinVisible);
-    if (wantAO !== this.gtao.enabled) {
-      this.gtao.enabled = wantAO;
-      this.dirty = true;
-    }
+    if (rigMoved || animated || this.tween) this.dirty = true;
     if (this.dirty) {
       this.dirty = false;
-      this.composer.render();
+      this.renderer.render(this.scene, this.camera);
     }
   };
 
@@ -1046,8 +1009,6 @@ export class AnatomyViewer {
     for (const { mesh } of this.parts.values()) mesh.geometry.dispose();
     for (const m of this.materials.values()) m.dispose();
     for (const d of this.disposables) d.dispose();
-    this.gtao.dispose();
-    this.composer.dispose();
     this.renderer.dispose();
   }
 }
