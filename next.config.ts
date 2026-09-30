@@ -4,6 +4,15 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
   devIndicators: false,
+  // The 3D model chunks are large and rarely change: let browsers and the CDN keep them.
+  async headers() {
+    return [
+      {
+        source: "/sites/:site/shared/models/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

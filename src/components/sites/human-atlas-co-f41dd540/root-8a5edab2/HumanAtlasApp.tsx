@@ -44,7 +44,9 @@ import { AppBar, LoadingCard, PhaseIndicator } from "./StudioChrome";
 import type { PoseKey } from "./rig";
 import { DIVE_TEMPLATES, TOPIC_TEMPLATE, templateFor, type DiveTemplate } from "./deep-dive-data";
 import { DeepDivePanel } from "./DeepDivePanel";
-import { HoverCallout, type HoverInfo } from "./HoverCallout";
+import { HoverLayer, type HoverState } from "./HoverCallout";
+import { AtlasLabels, type LabelFrame } from "./AtlasLabels";
+import { createChannel } from "./channel";
 import { georgianName } from "./georgian-names";
 import { TOPIC_BY_SLUG, type Topic } from "./topics";
 import { TopicSheet } from "./TopicSheet";
@@ -115,7 +117,10 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tab, setTab] = useState<SidebarTab>("systems");
-  const [hover, setHover] = useState<(HoverInfo & { w: number; h: number }) | null>(null);
+  const [hoverChannel] = useState(createChannel<HoverState>);
+  const [labelChannel] = useState(createChannel<LabelFrame>);
+  // Always-on labels: school smart boards are touch screens, so hover never happens there.
+  const [labelsOn, setLabelsOn] = useState(true);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [pose, setPose] = useState<PoseKey>("standing");
   const [dive, setDive] = useState<{ template: DiveTemplate; title: string; ids: string[]; restoreIsolated: string[] | null } | null>(null);
@@ -160,7 +165,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     if (!canvas) return;
     const viewer = new AnatomyViewer(canvas, {
       onHover: (part, x, y) =>
-        setHover(
+        hoverChannel.set(
           part
             ? {
                 name: georgianName(part.name, part.system, part.bounds).name,
@@ -175,6 +180,10 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
       onPick: (part) => pickRef.current(part, false),
       onFocus: (part) => pickRef.current(part, true),
       onPhase: (heart, breath) => setPhase({ heart, breath }),
+      onLabels: (anchors, free) =>
+        labelChannel.set(
+          anchors && free ? { anchors, free, w: canvas.clientWidth, h: canvas.clientHeight } : null,
+        ),
     });
     viewerRef.current = viewer;
     let cancelled = false;
@@ -200,7 +209,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, [loadKey]);
+  }, [loadKey, hoverChannel, labelChannel]);
 
   useEffect(() => {
     viewerRef.current?.setVisible(visible);
@@ -213,6 +222,10 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   useEffect(() => {
     viewerRef.current?.setAnimation(anim);
   }, [anim, loadKey]);
+
+  useEffect(() => {
+    viewerRef.current?.setLabels(labelsOn);
+  }, [labelsOn, loadKey]);
 
   // Keep the model centred in the space the panels leave free.
   const sidebarVisible = !mobile;
@@ -580,7 +593,8 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           aria-label="3D ანატომიის ხედი"
           className="block size-full cursor-grab touch-none active:cursor-grabbing"
         />
-        {hover && <HoverCallout t={t} hover={hover} width={hover.w} height={hover.h} />}
+        <AtlasLabels channel={labelChannel} onPick={(part) => pickRef.current(part, false)} />
+        <HoverLayer t={t} channel={hoverChannel} />
       </div>
 
       <AppBar
@@ -645,6 +659,8 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           setView(null);
         }}
         onZoom={(d) => viewerRef.current?.zoom(d > 0 ? 0.8 : 1.25)}
+        labelsOn={labelsOn}
+        onLabels={() => setLabelsOn((v) => !v)}
       />
 
       <div className={`${canvasArea} z-10`}>

@@ -63,6 +63,7 @@ const POSE_FRAME: Partial<Record<PoseKey, { centerY: number; halfHeight: number 
   bendForward: { centerY: 0.7, halfHeight: 0.8 },
 };
 const BREATH_PERIOD = 4.8;
+const IDENTITY = new THREE.Matrix4();
 
 interface SkinEntry {
   /** Byte offset of 4×Uint8 segment indices, followed by 4×Uint8 weights, per vertex. */
@@ -90,6 +91,11 @@ interface PartMesh {
   explodeOffset: THREE.Vector3;
   /** Everything moves as one rigid piece with its body segment except the body surface (skinned). */
   rigid: boolean;
+  /** Colour id in the picking pass. */
+  pickId: number;
+  /** Skinned parts: the rest-pose bounds and the segment slots their vertices follow, for culling. */
+  restSphere?: THREE.Sphere;
+  segSlots?: number[];
 }
 
 interface CameraTween {
@@ -108,6 +114,16 @@ export interface ViewerCallbacks {
   /** Double click: select and fly to the part. */
   onFocus: (part: AtlasPart) => void;
   onPhase: (heart: HeartPhase | null, breath: BreathPhase | null) => void;
+  /** Visible parts for the permanent labels (canvas pixels); null hides them while the view moves. */
+  onLabels: (anchors: LabelAnchor[] | null, free?: Insets) => void;
+}
+
+export interface LabelAnchor {
+  part: AtlasPart;
+  x: number;
+  y: number;
+  /** On-screen area in square canvas pixels. */
+  area: number;
 }
 
 function hashUnit(id: string, salt: number): number {
@@ -229,6 +245,16 @@ mat4 segM = (uSeg[int(aSegI.x)] * aSegW.x + uSeg[int(aSegI.y)] * aSegW.y
 objectNormal = normalize(mat3(segM) * objectNormal);
 `;
 
+/** The same blend for the picking pass, which has no normals of its own to skin. */
+const VERTEX_PICK_SEG = /* glsl */ `
+float segSum = max(aSegW.x + aSegW.y + aSegW.z + aSegW.w, 1e-4);
+mat4 segM = (uSeg[int(aSegI.x)] * aSegW.x + uSeg[int(aSegI.y)] * aSegW.y
+          + uSeg[int(aSegI.z)] * aSegW.z + uSeg[int(aSegI.w)] * aSegW.w) / segSum;
+`;
+
+/** Pixel ratios tried in turn when the device can't keep up. */
+const QUALITY_PIXEL_RATIO = [1.5, 1, 0.75];
+
 const FRAGMENT_HEADER = /* glsl */ `
 uniform vec3 uHeartC;
 uniform vec2 uFlow;      // x enabled (0..1), y beats elapsed
@@ -259,8 +285,16 @@ export class AnatomyViewer {
   private parts = new Map<string, PartMesh>();
   private materials = new Map<string, THREE.MeshPhysicalMaterial>();
   private disposables: { dispose: () => void }[] = [];
-  private raycaster = new THREE.Raycaster();
-  private pointer = new THREE.Vector2();
+  // GPU picking: parts are drawn with id colours into one pixel under the cursor, using the same
+  // skinning and animation shaders as the visible image, so what you point at is what gets picked.
+  private pickTarget = new THREE.WebGLRenderTarget(1, 1);
+  private pickCamera = new THREE.PerspectiveCamera();
+  private pickMaterials = new Map<string, THREE.MeshBasicMaterial>();
+  private pickById: PartMesh[] = [];
+  private pickPixel = new Uint8Array(4);
+  private pickBusy = false;
+  private lastPickAt = 0;
+  private clearColor = new THREE.Color();
   private selected = new Set<string>();
   private hovered: string | null = null;
   private explode = 0;
@@ -269,7 +303,14 @@ export class AnatomyViewer {
   private tween: CameraTween | null = null;
   private resizeObserver: ResizeObserver;
   private downAt: { x: number; y: number; t: number } | null = null;
-  private hoverQueued: { x: number; y: number } | null = null;
+  /** Cursor over the canvas (canvas pixels) while hovering with a mouse. */
+  private hoverPos: { x: number; y: number } | null = null;
+  private hoverStale = false;
+  private hoverMoved = false;
+  // Adaptive quality: drop the pixel ratio when frames are slow.
+  private quality = 0;
+  private frameGaps: number[] = [];
+  private lastRenderAt = 0;
   private disposed = false;
 
   // Screen-space framing: the model is centred in the area not covered by panels.
@@ -293,6 +334,8 @@ export class AnatomyViewer {
   private segRot = Object.fromEntries(SEGMENTS.map((s) => [s, new THREE.Quaternion()])) as Record<Segment, THREE.Quaternion>;
   private segMatrix = Object.fromEntries(SEGMENTS.map((s) => [s, new THREE.Matrix4()])) as Record<Segment, THREE.Matrix4>;
   private tmpQuat = new THREE.Quaternion();
+  private tmpBox = new THREE.Box3();
+  private tmpVec = new THREE.Vector3();
 
   // Deep-dive cutaway: a camera-facing clipping plane through the chosen structure.
   private cutIds = new Set<string>();
@@ -316,7 +359,7 @@ export class AnatomyViewer {
     private callbacks: ViewerCallbacks,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_PIXEL_RATIO[0]));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -338,7 +381,10 @@ export class AnatomyViewer {
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(100);
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
     this.controls.addEventListener("change", () => (this.dirty = true));
-    this.controls.addEventListener("start", () => (this.tween = null));
+    this.controls.addEventListener("start", () => {
+      this.tween = null;
+      if (this.labelsOn) this.callbacks.onLabels(null);
+    });
 
     // Studio reflections give the tissue its moist, glossy highlights.
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -587,7 +633,16 @@ export class AnatomyViewer {
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
     // Animated parts grow slightly; keep them from being culled at the edge of the view.
+    const restSphere = (geometry.boundingSphere as THREE.Sphere).clone();
     if (geometry.boundingSphere) geometry.boundingSphere.radius *= 1.15;
+    let segSlots: number[] | undefined;
+    if (!rigid) {
+      const si = geometry.getAttribute("aSegI").array as Uint8Array;
+      const sw = geometry.getAttribute("aSegW").array as Uint8Array;
+      const used = new Set<number>();
+      for (let k = 0; k < si.length; k++) if (sw[k] > 0) used.add(si[k]);
+      segSlots = [...used];
+    }
 
     const [min, max] = part.bounds;
     const centroid = new THREE.Vector3((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
@@ -595,8 +650,8 @@ export class AnatomyViewer {
     const mesh = new THREE.Mesh(geometry, this.material(part.system, group, "base"));
     mesh.userData.partId = part.id;
     mesh.matrixAutoUpdate = false;
-    // Skinned vertices can leave the rest-pose bounds, so never cull soft tissue.
-    if (!rigid) mesh.frustumCulled = false;
+    // Outer layers draw first, so the depth test skips shading everything hidden underneath them.
+    mesh.renderOrder = part.system === "integumentary" ? -2 : part.system === "muscular" ? -1 : 0;
     const entry: PartMesh = {
       part,
       group,
@@ -606,8 +661,13 @@ export class AnatomyViewer {
       jitter: new THREE.Vector3(hashUnit(part.id, 1), hashUnit(part.id, 2), hashUnit(part.id, 3)),
       explodeOffset: new THREE.Vector3(),
       rigid,
+      pickId: this.pickById.length + 1,
+      restSphere: rigid ? undefined : restSphere,
+      segSlots,
     };
+    this.pickById.push(entry);
     this.parts.set(part.id, entry);
+    this.updateSkinnedBounds(entry);
     this.applyExplode(entry);
     this.applyMaterial(entry);
     mesh.visible = this.visibility ? this.visibility.has(part.id) : true;
@@ -673,6 +733,26 @@ export class AnatomyViewer {
     entry.mesh.matrixWorldNeedsUpdate = true;
   }
 
+  /**
+   * Skinned vertices are blends of their segments' transforms, so they stay inside the union of the
+   * rest bounds moved by each of those segments. Keeping that as the culling sphere lets the GPU skip
+   * soft tissue that is off screen without ever clipping something that is visible.
+   */
+  private updateSkinnedBounds(entry: PartMesh) {
+    const { restSphere, segSlots } = entry;
+    const sphere = entry.mesh.geometry.boundingSphere;
+    if (!restSphere || !segSlots || !sphere) return;
+    const mats = this.uniforms.uSeg.value;
+    const box = this.tmpBox.makeEmpty();
+    const centres = segSlots.map((slot) => this.tmpVec.copy(restSphere.center).applyMatrix4(mats[slot] ?? IDENTITY).clone());
+    for (const c of centres) box.expandByPoint(c);
+    box.getCenter(sphere.center);
+    let spread = 0;
+    for (const c of centres) spread = Math.max(spread, c.distanceTo(sphere.center));
+    // Margin for the skin push-out and the heart/breathing deformation.
+    sphere.radius = spread + restSphere.radius * 1.15 + 0.03;
+  }
+
   private applyExplode(entry: PartMesh) {
     const t = this.explode;
     const c = entry.centroid;
@@ -716,7 +796,10 @@ export class AnatomyViewer {
     solveSegments(this.rig, this.segRot, this.rootOffset, this.segMatrix);
     this.rootOffset.y = groundOffset(this.rig, this.segMatrix);
     solveSegments(this.rig, this.segRot, this.rootOffset, this.segMatrix);
-    for (const entry of this.parts.values()) this.updatePartMatrix(entry);
+    for (const entry of this.parts.values()) {
+      this.updatePartMatrix(entry);
+      this.updateSkinnedBounds(entry);
+    }
     const animated = this.pose === "walk" || this.pose === "wave" || this.pose === "jumpingJack" || this.pose === "squatExercise";
     if (settled && !animated) this.rigActive = false;
     return true;
@@ -850,37 +933,171 @@ export class AnatomyViewer {
 
   // ---- Picking ---------------------------------------------------------------------------------
 
-  private pick(clientX: number, clientY: number): PartMesh | null {
-    const rect = this.canvas.getBoundingClientRect();
-    this.pointer.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
-    this.raycaster.setFromCamera(this.pointer, this.camera);
-    const visible = this.root.children.filter((o) => o.visible);
-    const hit = this.raycaster.intersectObjects(visible, false)[0];
-    if (!hit) return null;
-    this.lastHitPoint.copy(hit.point);
-    return this.parts.get(hit.object.userData.partId as string) ?? null;
+  /** Id-colour material for one part, sharing the animation/skinning vertex code of its group. */
+  private pickMaterial(entry: PartMesh): THREE.MeshBasicMaterial {
+    const cached = this.pickMaterials.get(entry.part.id);
+    if (cached) return cached;
+    const id = entry.pickId;
+    const m = new THREE.MeshBasicMaterial({ toneMapped: false });
+    m.color.setRGB(((id >> 16) & 255) / 255, ((id >> 8) & 255) / 255, (id & 255) / 255, THREE.LinearSRGBColorSpace);
+    m.defines = { ANIM_GROUP: entry.group };
+    m.customProgramCacheKey = () => `pick-${entry.group}`;
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, this.uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", `#include <common>\n${VERTEX_HEADER}`)
+        .replace("#include <begin_vertex>", `#include <begin_vertex>\n${VERTEX_PICK_SEG}\n${VERTEX_DEFORM}`);
+    };
+    this.pickMaterials.set(entry.part.id, m);
+    return m;
   }
 
-  /** Where the textbook-style label points: the spot on the part first touched by the cursor. */
-  private lastHitPoint = new THREE.Vector3();
-  private hoverAnchor: THREE.Vector3 | null = null;
-  private anchorScreen = new THREE.Vector3();
+  /** The part drawn at canvas pixel (x, y), exactly as it appears on screen (pose, animation, cutaway). */
+  private async pick(x: number, y: number): Promise<PartMesh | null> {
+    const cw = this.canvas.clientWidth;
+    const ch = this.canvas.clientHeight;
+    if (!cw || !ch || x < 0 || y < 0 || x >= cw || y >= ch) return null;
+    const { w, h } = this.freeArea();
+    // Same framing as the main view, narrowed to the single pixel under the cursor.
+    const cam = this.pickCamera;
+    cam.copy(this.camera);
+    cam.setViewOffset(cw, ch, (-this.offset.x * cw) / w + x, (-this.offset.y * ch) / h + y, 1, 1);
+    this.renderIds(cam, this.pickTarget);
+
+    const px = this.pickPixel;
+    await this.renderer.readRenderTargetPixelsAsync(this.pickTarget, 0, 0, 1, 1, px);
+    if (this.disposed || px[3] === 0) return null;
+    const id = (px[0] << 16) | (px[1] << 8) | px[2];
+    return this.pickById[id - 1] ?? null;
+  }
+
+  /** Draw every visible part in its id colour into the given target. */
+  private renderIds(cam: THREE.Camera, target: THREE.WebGLRenderTarget) {
+    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+    for (const entry of this.parts.values()) {
+      const mesh = entry.mesh;
+      if (!mesh.visible) continue;
+      const base = mesh.material as THREE.MeshPhysicalMaterial;
+      const pm = this.pickMaterial(entry);
+      pm.side = base.side;
+      pm.clippingPlanes = base.clippingPlanes;
+      pm.polygonOffset = base.polygonOffset;
+      pm.polygonOffsetFactor = base.polygonOffsetFactor;
+      pm.polygonOffsetUnits = base.polygonOffsetUnits;
+      swapped.push([mesh, base]);
+      mesh.material = pm;
+    }
+    const r = this.renderer;
+    const prevTarget = r.getRenderTarget();
+    r.getClearColor(this.clearColor);
+    const prevAlpha = r.getClearAlpha();
+    r.setRenderTarget(target);
+    r.setClearColor(0x000000, 0);
+    r.render(this.root, cam);
+    r.setRenderTarget(prevTarget);
+    r.setClearColor(this.clearColor, prevAlpha);
+    for (const [mesh, material] of swapped) mesh.material = material;
+  }
+
+  // ---- Permanent labels (smart boards have no hover) --------------------------------------------
+
+  private labelsOn = false;
+  private labelsStale = true;
+  private labelsChangedAt = 0;
+  private lastLabelsAt = 0;
+  private labelsBusy = false;
+  private labelTarget = new THREE.WebGLRenderTarget(1, 1);
+
+  setLabels(on: boolean) {
+    this.labelsOn = on;
+    this.labelsStale = true;
+    this.labelsChangedAt = 0;
+    if (!on) this.callbacks.onLabels(null);
+  }
+
+  /**
+   * Once the view settles, draw part ids for the whole view at quarter resolution and report, for each
+   * part that is actually visible, its on-screen area and a point on it near the middle of what shows.
+   */
+  private updateLabels(now: number) {
+    if (!this.labelsOn || !this.labelsStale || this.labelsBusy) return;
+    const settled = now - this.labelsChangedAt > 250;
+    const periodic = this.rigActive && now - this.lastLabelsAt > 600;
+    if (!settled && !periodic) return;
+    const cw = this.canvas.clientWidth;
+    const ch = this.canvas.clientHeight;
+    if (!cw || !ch) return;
+    const scale = 4;
+    const W = Math.max(1, Math.floor(cw / scale));
+    const H = Math.max(1, Math.floor(ch / scale));
+    if (this.labelTarget.width !== W || this.labelTarget.height !== H) this.labelTarget.setSize(W, H);
+    this.pickCamera.copy(this.camera);
+    this.renderIds(this.pickCamera, this.labelTarget);
+    this.labelsStale = false;
+    this.labelsBusy = true;
+    this.lastLabelsAt = now;
+    const buf = new Uint8Array(W * H * 4);
+    void this.renderer
+      .readRenderTargetPixelsAsync(this.labelTarget, 0, 0, W, H, buf)
+      .then(() => {
+        if (this.disposed || !this.labelsOn) return;
+        this.callbacks.onLabels(this.collectAnchors(buf, W, H, cw / W, ch / H), { ...this.insets });
+      })
+      .finally(() => {
+        this.labelsBusy = false;
+      });
+  }
+
+  private collectAnchors(buf: Uint8Array, W: number, H: number, sx: number, sy: number): LabelAnchor[] {
+    const stats = new Map<number, { n: number; x: number; y: number; bx: number; by: number; bd: number }>();
+    for (let row = 0; row < H; row++)
+      for (let col = 0; col < W; col++) {
+        const i = (row * W + col) * 4;
+        if (buf[i + 3] === 0) continue;
+        const id = (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2];
+        const s = stats.get(id);
+        if (s) {
+          s.n += 1;
+          s.x += col;
+          s.y += row;
+        } else stats.set(id, { n: 1, x: col, y: row, bx: col, by: row, bd: Infinity });
+      }
+    // Anchor on a pixel of the part itself nearest its centre, well inside the part, not on an edge.
+    for (let row = 1; row < H - 1; row++)
+      for (let col = 1; col < W - 1; col++) {
+        const i = (row * W + col) * 4;
+        if (buf[i + 3] === 0) continue;
+        const id = (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2];
+        const s = stats.get(id);
+        if (!s || s.n < 12) continue;
+        const same = (j: number) => buf[j + 3] !== 0 && ((buf[j] << 16) | (buf[j + 1] << 8) | buf[j + 2]) === id;
+        if (!same(i - 4) || !same(i + 4) || !same(i - W * 4) || !same(i + W * 4)) continue;
+        const d = (col - s.x / s.n) ** 2 + (row - s.y / s.n) ** 2;
+        if (d < s.bd) {
+          s.bd = d;
+          s.bx = col;
+          s.by = row;
+        }
+      }
+    const anchors: LabelAnchor[] = [];
+    for (const [id, s] of stats) {
+      const entry = this.pickById[id - 1];
+      if (!entry || s.n < 12 || s.bd === Infinity) continue;
+      // Read-back rows start at the bottom of the image.
+      anchors.push({ part: entry.part, x: (s.bx + 0.5) * sx, y: (H - 1 - s.by + 0.5) * sy, area: s.n * sx * sy });
+    }
+    return anchors;
+  }
 
   private emitHover() {
     const entry = this.hovered ? this.parts.get(this.hovered) : undefined;
-    if (!entry || !this.hoverAnchor) {
-      this.callbacks.onHover(null, 0, 0);
-      return;
-    }
-    const v = this.anchorScreen.copy(this.hoverAnchor).applyMatrix4(entry.mesh.matrixWorld).project(this.camera);
-    const w = this.canvas.clientWidth;
-    const h = this.canvas.clientHeight;
-    this.callbacks.onHover(entry.part, ((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h);
+    const at = this.hoverPos;
+    if (!entry || !at) this.callbacks.onHover(null, 0, 0);
+    else this.callbacks.onHover(entry.part, at.x, at.y);
   }
 
   private setHovered(id: string | null) {
     if (this.hovered === id) return;
-    if (!id) this.hoverAnchor = null;
     const prev = this.hovered;
     this.hovered = id;
     for (const pid of [prev, id]) {
@@ -889,6 +1106,11 @@ export class AnatomyViewer {
     }
     this.canvas.style.cursor = id ? "pointer" : "";
     this.dirty = true;
+  }
+
+  private canvasPoint(e: MouseEvent) {
+    const rect = this.canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
   private onPointerDown = (e: PointerEvent) => {
@@ -901,47 +1123,79 @@ export class AnatomyViewer {
     if (!down || e.button !== 0) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     if (moved > 5 || performance.now() - down.t > 500) return;
-    const hit = this.pick(e.clientX, e.clientY);
-    if (hit) this.callbacks.onPick(hit.part);
+    const { x, y } = this.canvasPoint(e);
+    void this.pick(x, y).then((hit) => {
+      if (hit) this.callbacks.onPick(hit.part);
+    });
   };
 
   private onDoubleClick = (e: MouseEvent) => {
-    const hit = this.pick(e.clientX, e.clientY);
-    if (hit) this.callbacks.onFocus(hit.part);
+    const { x, y } = this.canvasPoint(e);
+    void this.pick(x, y).then((hit) => {
+      if (hit) this.callbacks.onFocus(hit.part);
+    });
   };
 
   private onContextMenu = (e: MouseEvent) => e.preventDefault();
 
   private onPointerMove = (e: PointerEvent) => {
     if (e.pointerType !== "mouse" || e.buttons !== 0) {
+      this.hoverPos = null;
       if (this.hovered) {
         this.setHovered(null);
         this.callbacks.onHover(null, 0, 0);
       }
       return;
     }
-    const rect = this.canvas.getBoundingClientRect();
-    this.hoverQueued = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    this.hoverPos = this.canvasPoint(e);
+    this.hoverStale = true;
+    this.hoverMoved = true;
   };
 
   private onPointerLeave = () => {
-    this.hoverQueued = null;
+    this.hoverPos = null;
+    this.hoverStale = false;
     this.setHovered(null);
     this.callbacks.onHover(null, 0, 0);
   };
 
-  private processHover() {
-    const q = this.hoverQueued;
-    if (!q) return;
-    this.hoverQueued = null;
-    const rect = this.canvas.getBoundingClientRect();
-    const hit = this.pick(q.x + rect.left, q.y + rect.top);
-    const id = hit?.part.id ?? null;
-    if (id === this.hovered) return;
-    // Anchor in the part's own space, so the label stays on the organ while it moves or animates.
-    this.hoverAnchor = hit ? this.lastHitPoint.clone().applyMatrix4(hit.mesh.matrixWorld.clone().invert()) : null;
-    this.setHovered(id);
-    this.emitHover();
+  /** Once per frame: move the label with the cursor, and re-pick at most every 50 ms. */
+  private processHover(now: number) {
+    if (this.hoverMoved) {
+      this.hoverMoved = false;
+      if (this.hovered) this.emitHover();
+    }
+    if (!this.hoverStale || this.pickBusy || now - this.lastPickAt < 50) return;
+    const at = this.hoverPos;
+    if (!at) return;
+    this.hoverStale = false;
+    this.pickBusy = true;
+    this.lastPickAt = now;
+    void this.pick(at.x, at.y)
+      .then((hit) => {
+        if (!this.hoverPos) return;
+        const id = hit?.part.id ?? null;
+        if (id === this.hovered) return;
+        this.setHovered(id);
+        this.emitHover();
+      })
+      .finally(() => {
+        this.pickBusy = false;
+      });
+  }
+
+  /** Step the pixel ratio down when the device keeps rendering below ~30 fps. */
+  private trackFrameRate(now: number) {
+    const gap = now - this.lastRenderAt;
+    this.lastRenderAt = now;
+    if (gap > 250 || this.quality >= QUALITY_PIXEL_RATIO.length - 1) return;
+    this.frameGaps.push(gap);
+    if (this.frameGaps.length < 40) return;
+    const sorted = [...this.frameGaps].sort((a, b) => a - b);
+    this.frameGaps = [];
+    if (sorted[sorted.length >> 1] < 34) return;
+    this.quality += 1;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_PIXEL_RATIO[this.quality]));
   }
 
   // ---- Animation -------------------------------------------------------------------------------
@@ -1007,16 +1261,24 @@ export class AnatomyViewer {
     this.controls.update();
     this.clampTarget();
     this.updateCutPlane();
-    this.processHover();
     const rigMoved = this.tickRig(now);
+    // Anything but the heart/breathing animation moves parts on screen, so labels must be re-placed.
+    if (this.dirty || rigMoved || this.tween) {
+      this.labelsStale = true;
+      this.labelsChangedAt = now;
+    }
     const animated = this.tickAnimation(now);
     if (!animated) this.lastTick = now;
     if (rigMoved || animated || this.tween) this.dirty = true;
-    if (this.dirty && this.hoverAnchor) this.emitHover();
+    // The view changed under a still cursor: check what is under it now (throttled while moving).
+    if (this.dirty && this.hoverPos && now - this.lastPickAt > 150) this.hoverStale = true;
+    this.processHover(now);
     if (this.dirty) {
       this.dirty = false;
       this.renderer.render(this.scene, this.camera);
+      this.trackFrameRate(now);
     }
+    this.updateLabels(now);
   };
 
   dispose() {
@@ -1032,6 +1294,9 @@ export class AnatomyViewer {
     this.controls.dispose();
     for (const { mesh } of this.parts.values()) mesh.geometry.dispose();
     for (const m of this.materials.values()) m.dispose();
+    for (const m of this.pickMaterials.values()) m.dispose();
+    this.pickTarget.dispose();
+    this.labelTarget.dispose();
     for (const d of this.disposables) d.dispose();
     this.renderer.dispose();
   }

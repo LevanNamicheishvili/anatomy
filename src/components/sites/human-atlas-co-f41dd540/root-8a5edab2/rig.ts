@@ -108,7 +108,7 @@ function sideOf(part: AtlasPart): "L" | "R" | null {
 const HAND = /metacarpal|phalanx of .*(finger|thumb)|scaphoid|lunate|triquetral|pisiform|trapezium|trapezoid|capitate|hamate/i;
 const FOREARM = /\bradius\b|\bulna\b|interosseous membrane of .*forearm/i;
 const UPPER_ARM = /humerus/i;
-const FOOT = /metatarsal|phalanx of .*toe|calcaneus|talus|cuboid|cuneiform|navicular bone of .*foot|sesamoid bone of .*foot|calcaneal tendon|long plantar/i;
+const FOOT = /metatarsal|phalanx of .*toe|calcaneus|talus|cuboid|cuneiform bone|navicular bone of .*foot|sesamoid bone of .*foot|calcaneal tendon|long plantar/i;
 const SHIN = /\btibia\b|\bfibula\b|patella|interosseous membrane of .*leg/i;
 const THIGH = /femur/i;
 const HEAD = /frontal bone|parietal bone|occipital bone|temporal bone|sphenoid|ethmoid|nasal bone|maxilla|zygomatic|mandible|vomer|palatine|lacrimal|tooth|gingiva/i;

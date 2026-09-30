@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, RotateCcw, RotateCw } from "lucide-react";
+import { Minus, Plus, RotateCcw, RotateCw, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ViewName } from "./anatomy-viewer";
 import type { Strings } from "./i18n";
@@ -22,12 +22,16 @@ export function ViewControls({
   onView,
   onRotate,
   onZoom,
+  labelsOn,
+  onLabels,
 }: {
   t: Strings;
   active: ViewName | null;
   onView: (v: ViewName) => void;
   onRotate: (dir: 1 | -1) => void;
   onZoom: (dir: 1 | -1) => void;
+  labelsOn: boolean;
+  onLabels: () => void;
 }) {
   return (
     <nav
@@ -60,6 +64,17 @@ export function ViewControls({
       </button>
       <button type="button" title={t.views.rotateRight} aria-label={t.views.rotateRight} onClick={() => onRotate(1)} className={iconBtn}>
         <RotateCw className="size-[18px]" strokeWidth={2} />
+      </button>
+      <span className={divider} />
+      <button
+        type="button"
+        title="წარწერები"
+        aria-label="წარწერები"
+        aria-pressed={labelsOn}
+        onClick={onLabels}
+        className={cn(iconBtn, labelsOn && "bg-[#0f8a74] text-white hover:bg-[#0f8a74]")}
+      >
+        <Tags className="size-[18px]" strokeWidth={2} />
       </button>
       <span className={cn(divider, "max-md:hidden")} />
       <button type="button" aria-label="გადიდება" onClick={() => onZoom(1)} className={cn(iconBtn, "max-md:hidden")}>

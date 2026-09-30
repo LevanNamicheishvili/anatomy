@@ -1,6 +1,8 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { SYSTEM_BY_KEY, type SystemKey } from "./atlas-data";
+import type { Channel } from "./channel";
 import type { Strings } from "./i18n";
 
 export interface HoverInfo {
@@ -9,6 +11,14 @@ export interface HoverInfo {
   /** Anchor on the structure, in canvas pixels. */
   x: number;
   y: number;
+}
+
+export type HoverState = HoverInfo & { w: number; h: number };
+
+/** Hover updates arrive with every mouse move, so they live outside the app state. */
+export function HoverLayer({ t, channel }: { t: Strings; channel: Channel<HoverState> }) {
+  const hover = useSyncExternalStore(channel.subscribe, channel.get, () => null);
+  return hover ? <HoverCallout t={t} hover={hover} width={hover.w} height={hover.h} /> : null;
 }
 
 const RISE = 44; // how far the leader line climbs before turning
@@ -28,7 +38,7 @@ export function HoverCallout({ t, hover, width, height }: { t: Strings; hover: H
   const endY = Math.min(Math.max(hover.y - RISE, 28), height - 28);
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[45]" key={`${hover.name}-${Math.round(hover.x / 40)}`}>
+    <div className="pointer-events-none absolute inset-0 z-[45]" key={hover.name}>
       <svg className="absolute inset-0 size-full overflow-visible" aria-hidden>
         <polyline
           points={`${hover.x},${hover.y} ${bendX},${endY} ${endX},${endY}`}

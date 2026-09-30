@@ -13,6 +13,8 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { join } from "node:path";
 import type { AtlasManifest, AtlasPart } from "../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/atlas-data";
 import {
+  PARENT,
+  SEGMENTS,
   SEGMENT_INDEX,
   SEG_COUNT,
   buildRig,
@@ -292,11 +294,26 @@ for (let v = 0; v < skinCount; v++) {
   else grid.set(k, [v]);
 }
 
+// Each skin vertex's main segment. Tissue only borrows weights from skin on its own body segment or a
+// neighbouring one: otherwise a hip muscle next to the hanging hand would follow the hand when the arm
+// is raised and be stretched into a spike.
+const skinDom = new Uint8Array(skinCount);
+for (let v = 0; v < skinCount; v++) {
+  let best = 0;
+  for (let s = 1; s < SEG_COUNT; s++) if (skin.raw[v * SEG_COUNT + s] > skin.raw[v * SEG_COUNT + best]) best = s;
+  skinDom[v] = best;
+}
+const adjacent = SEGMENTS.map((a) =>
+  SEGMENTS.map((b) => a === b || PARENT[a] === b || PARENT[b] === a),
+);
+
 const K = 4;
 const bestIdx = new Int32Array(K);
 const bestD = new Float64Array(K);
 const acc = new Float32Array(SEG_COUNT);
 function transfer(x: number, y: number, z: number, out: Float32Array, o: number) {
+  const own = nearestBoneSegment(x, y, z);
+  const ok = adjacent[own];
   bestD.fill(Infinity);
   bestIdx.fill(-1);
   const cx = Math.floor(x / CELL);
@@ -311,6 +328,7 @@ function transfer(x: number, y: number, z: number, out: Float32Array, o: number)
           const list = grid.get(`${cx + i},${cy + j},${cz + k}`);
           if (!list) continue;
           for (const v of list) {
+            if (!ok[skinDom[v]]) continue;
             const dx = skinPos[v * 3] - x;
             const dy = skinPos[v * 3 + 1] - y;
             const dz = skinPos[v * 3 + 2] - z;
@@ -337,6 +355,7 @@ function transfer(x: number, y: number, z: number, out: Float32Array, o: number)
     for (let s = 0; s < SEG_COUNT; s++) acc[s] += skin.raw[bestIdx[n] * SEG_COUNT + s] * w;
   }
   for (let s = 0; s < SEG_COUNT; s++) out[o + s] = total > 0 ? acc[s] / total : 0;
+  if (total === 0) out[o + own] = 1;
 }
 
 // 3. Write one weight file per model chunk.
@@ -356,6 +375,8 @@ for (const p of manifest.parts) {
     const pos = positionsOf(p);
     raw = new Float32Array(p.vertexCount * SEG_COUNT);
     for (let v = 0; v < p.vertexCount; v++) transfer(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], raw, v * SEG_COUNT);
+    // Spread any sharp change of segment within the part over its own surface, so it bends instead of tearing.
+    smoothOverMesh(raw, indicesOf(p), p.vertexCount, 6);
   }
   const { index, weight } = quantizeWeights(raw, p.vertexCount);
   const offset = chunkSize[p.chunk];
