@@ -307,6 +307,7 @@ export class AnatomyViewer {
   private hoverPos: { x: number; y: number } | null = null;
   private hoverStale = false;
   private hoverMoved = false;
+  private lastMoveAt = 0;
   // Adaptive quality: drop the pixel ratio when frames are slow.
   private quality = 0;
   private frameGaps: number[] = [];
@@ -334,6 +335,7 @@ export class AnatomyViewer {
   private segRot = Object.fromEntries(SEGMENTS.map((s) => [s, new THREE.Quaternion()])) as Record<Segment, THREE.Quaternion>;
   private segMatrix = Object.fromEntries(SEGMENTS.map((s) => [s, new THREE.Matrix4()])) as Record<Segment, THREE.Matrix4>;
   private tmpQuat = new THREE.Quaternion();
+  private matricesDirty = true;
   private tmpBox = new THREE.Box3();
   private tmpVec = new THREE.Vector3();
 
@@ -358,8 +360,9 @@ export class AnatomyViewer {
     private canvas: HTMLCanvasElement,
     private callbacks: ViewerCallbacks,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_PIXEL_RATIO[0]));
+    // Retina and 4K boards already have tiny pixels: skip multisampling there, it mostly costs GPU time.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio < 1.5, powerPreference: "high-performance" });
+    this.applyPixelRatio();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -396,6 +399,9 @@ export class AnatomyViewer {
     this.uniforms.uSeg.value = [...SEGMENTS.map((seg) => this.segMatrix[seg]), new THREE.Matrix4()];
     this.buildStage();
     this.scene.add(this.root);
+    // 2 000+ parts: walking them all every frame is wasted work, so world matrices update only on change.
+    this.scene.matrixWorldAutoUpdate = false;
+    this.root.matrixWorldAutoUpdate = false;
 
     // Rendered in a single pass (no ambient-occlusion post effect): shading never pops in or out
     // while the camera moves, and each frame draws the scene only once.
@@ -669,6 +675,7 @@ export class AnatomyViewer {
     this.applyMaterial(entry);
     mesh.visible = this.visibility ? this.visibility.has(part.id) : true;
     this.root.add(mesh);
+    this.matricesDirty = true;
   }
 
   // ---- State from React ------------------------------------------------------------------------
@@ -728,6 +735,7 @@ export class AnatomyViewer {
     entry.mesh.matrix.makeTranslation(o.x, o.y, o.z);
     if (entry.rigid) entry.mesh.matrix.multiply(this.segMatrix[entry.segment]);
     entry.mesh.matrixWorldNeedsUpdate = true;
+    this.matricesDirty = true;
   }
 
   /**
@@ -919,9 +927,17 @@ export class AnatomyViewer {
     this.camera.setViewOffset(w, h, -this.offset.x, -this.offset.y, w, h);
   }
 
+  /** Pixel ratio from the quality level, capped so huge screens (4K boards) never shade more than ~3.5 MP. */
+  private applyPixelRatio() {
+    const area = Math.max(1, this.canvas.clientWidth * this.canvas.clientHeight);
+    const budget = Math.sqrt(3_500_000 / area);
+    this.renderer.setPixelRatio(Math.max(0.6, Math.min(window.devicePixelRatio, QUALITY_PIXEL_RATIO[this.quality], budget)));
+  }
+
   private resize() {
     const { clientWidth: w, clientHeight: h } = this.canvas;
     if (!w || !h) return;
+    this.applyPixelRatio();
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.applyViewOffset();
@@ -1161,7 +1177,7 @@ export class AnatomyViewer {
   /** The vertex of the part that shows at canvas pixel (x, y): near it on screen and closest to the camera. */
   private vertexAt(entry: PartMesh, x: number, y: number) {
     const count = entry.mesh.geometry.getAttribute("position").count;
-    const step = Math.max(1, Math.floor(count / 6000));
+    const step = Math.max(1, Math.floor(count / 2000));
     let best = 0;
     let bestScore = Infinity;
     const eye = this.camera.position;
@@ -1252,6 +1268,7 @@ export class AnatomyViewer {
     this.hoverPos = this.canvasPoint(e);
     this.hoverStale = true;
     this.hoverMoved = true;
+    this.lastMoveAt = performance.now();
   };
 
   private onPointerLeave = () => {
@@ -1267,7 +1284,9 @@ export class AnatomyViewer {
       this.hoverMoved = false;
       if (this.hovered) this.emitHover();
     }
-    if (!this.hoverStale || this.pickBusy || now - this.lastPickAt < 50) return;
+    // Pick when the cursor pauses (or every 150 ms while it keeps moving), not on every movement.
+    if (!this.hoverStale || this.pickBusy) return;
+    if (now - this.lastMoveAt < 60 && now - this.lastPickAt < 150) return;
     const at = this.hoverPos;
     if (!at) return;
     this.hoverStale = false;
@@ -1286,7 +1305,7 @@ export class AnatomyViewer {
       });
   }
 
-  /** Step the pixel ratio down when the device keeps rendering below ~30 fps. */
+  /** Step the pixel ratio down when the device keeps rendering below ~45 fps. */
   private trackFrameRate(now: number) {
     const gap = now - this.lastRenderAt;
     this.lastRenderAt = now;
@@ -1295,9 +1314,10 @@ export class AnatomyViewer {
     if (this.frameGaps.length < 40) return;
     const sorted = [...this.frameGaps].sort((a, b) => a - b);
     this.frameGaps = [];
-    if (sorted[sorted.length >> 1] < 34) return;
+    // Below ~45 fps: render fewer pixels.
+    if (sorted[sorted.length >> 1] < 22) return;
     this.quality += 1;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_PIXEL_RATIO[this.quality]));
+    this.applyPixelRatio();
   }
 
   // ---- Animation -------------------------------------------------------------------------------
@@ -1374,6 +1394,10 @@ export class AnatomyViewer {
     if (rigMoved || animated || this.tween) this.dirty = true;
     // The view changed under a still cursor: check what is under it now (throttled while moving).
     if (this.dirty && this.hoverPos && now - this.lastPickAt > 150) this.hoverStale = true;
+    if (this.matricesDirty) {
+      this.matricesDirty = false;
+      this.scene.updateMatrixWorld();
+    }
     this.processHover(now);
     if (this.dirty) {
       this.dirty = false;
