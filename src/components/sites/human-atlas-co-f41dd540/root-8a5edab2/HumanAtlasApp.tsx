@@ -44,6 +44,7 @@ import { AppBar, LoadingCard, PhaseIndicator } from "./StudioChrome";
 import type { PoseKey } from "./rig";
 import { DIVE_TEMPLATES, TOPIC_TEMPLATE, templateFor, type DiveTemplate } from "./deep-dive-data";
 import { DeepDivePanel } from "./DeepDivePanel";
+import { HoverCallout, type HoverInfo } from "./HoverCallout";
 import { georgianName } from "./georgian-names";
 import { TOPIC_BY_SLUG, type Topic } from "./topics";
 import { TopicSheet } from "./TopicSheet";
@@ -114,11 +115,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tab, setTab] = useState<SidebarTab>("systems");
-  const [hover, setHover] = useState<{
-    name: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [hover, setHover] = useState<(HoverInfo & { w: number; h: number }) | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [pose, setPose] = useState<PoseKey>("standing");
   const [dive, setDive] = useState<{ template: DiveTemplate; title: string; ids: string[]; restoreIsolated: string[] | null } | null>(null);
@@ -163,7 +160,18 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     if (!canvas) return;
     const viewer = new AnatomyViewer(canvas, {
       onHover: (part, x, y) =>
-        setHover(part ? { name: georgianName(part.name, part.system).name, x, y } : null),
+        setHover(
+          part
+            ? {
+                name: georgianName(part.name, part.system, part.bounds).name,
+                system: part.system,
+                x,
+                y,
+                w: canvas.clientWidth,
+                h: canvas.clientHeight,
+              }
+            : null,
+        ),
       onPick: (part) => pickRef.current(part, false),
       onFocus: (part) => pickRef.current(part, true),
       onPhase: (heart, breath) => setPhase({ heart, breath }),
@@ -272,7 +280,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
       if (!part) return;
       revealSelection(
         {
-          name: georgianName(part.name, part.system).name,
+          name: georgianName(part.name, part.system, part.bounds).name,
           conceptId: part.conceptId,
           system: part.system,
           ids: [part.id],
@@ -572,14 +580,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           aria-label="3D ანატომიის ხედი"
           className="block size-full cursor-grab touch-none active:cursor-grabbing"
         />
-        {hover && (
-          <div
-            className="pointer-events-none absolute z-[45] max-w-[260px] rounded-md bg-[#111a18] px-2.5 py-1.5 text-xs leading-snug font-medium text-white capitalize"
-            style={{ left: hover.x + 16, top: hover.y + 16 }}
-          >
-            {hover.name}
-          </div>
-        )}
+        {hover && <HoverCallout t={t} hover={hover} width={hover.w} height={hover.h} />}
       </div>
 
       <AppBar

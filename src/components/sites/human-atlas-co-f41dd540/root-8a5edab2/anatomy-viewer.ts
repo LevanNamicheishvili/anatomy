@@ -857,11 +857,30 @@ export class AnatomyViewer {
     const visible = this.root.children.filter((o) => o.visible);
     const hit = this.raycaster.intersectObjects(visible, false)[0];
     if (!hit) return null;
+    this.lastHitPoint.copy(hit.point);
     return this.parts.get(hit.object.userData.partId as string) ?? null;
+  }
+
+  /** Where the textbook-style label points: the spot on the part first touched by the cursor. */
+  private lastHitPoint = new THREE.Vector3();
+  private hoverAnchor: THREE.Vector3 | null = null;
+  private anchorScreen = new THREE.Vector3();
+
+  private emitHover() {
+    const entry = this.hovered ? this.parts.get(this.hovered) : undefined;
+    if (!entry || !this.hoverAnchor) {
+      this.callbacks.onHover(null, 0, 0);
+      return;
+    }
+    const v = this.anchorScreen.copy(this.hoverAnchor).applyMatrix4(entry.mesh.matrixWorld).project(this.camera);
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    this.callbacks.onHover(entry.part, ((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h);
   }
 
   private setHovered(id: string | null) {
     if (this.hovered === id) return;
+    if (!id) this.hoverAnchor = null;
     const prev = this.hovered;
     this.hovered = id;
     for (const pid of [prev, id]) {
@@ -917,8 +936,12 @@ export class AnatomyViewer {
     this.hoverQueued = null;
     const rect = this.canvas.getBoundingClientRect();
     const hit = this.pick(q.x + rect.left, q.y + rect.top);
-    this.setHovered(hit?.part.id ?? null);
-    this.callbacks.onHover(hit?.part ?? null, q.x, q.y);
+    const id = hit?.part.id ?? null;
+    if (id === this.hovered) return;
+    // Anchor in the part's own space, so the label stays on the organ while it moves or animates.
+    this.hoverAnchor = hit ? this.lastHitPoint.clone().applyMatrix4(hit.mesh.matrixWorld.clone().invert()) : null;
+    this.setHovered(id);
+    this.emitHover();
   }
 
   // ---- Animation -------------------------------------------------------------------------------
@@ -989,6 +1012,7 @@ export class AnatomyViewer {
     const animated = this.tickAnimation(now);
     if (!animated) this.lastTick = now;
     if (rigMoved || animated || this.tween) this.dirty = true;
+    if (this.dirty && this.hoverAnchor) this.emitHover();
     if (this.dirty) {
       this.dirty = false;
       this.renderer.render(this.scene, this.camera);

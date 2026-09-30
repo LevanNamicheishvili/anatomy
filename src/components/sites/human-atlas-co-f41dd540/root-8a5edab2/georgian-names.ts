@@ -66,7 +66,7 @@ const DICT: Record<string, string> = {
   "occipital bone": "კეფის ძვალი",
   "temporal bone": "საფეთქლის ძვალი",
   "sphenoid bone": "სოლისებრი ძვალი",
-  ethmoid: "ცხავისებრი ძვალი",
+  ethmoid: "ცხავის ძვალი",
   "nasal bone": "ცხვირის ძვალი",
   maxilla: "ზედა ყბა",
   mandible: "ქვედა ყბა",
@@ -76,7 +76,7 @@ const DICT: Record<string, string> = {
   "lacrimal bone": "ცრემლის ძვალი",
   "hyoid bone": "ინის ძვალი",
   atlas: "ატლანტი (I კისრის მალა)",
-  axis: "ღერძი (II კისრის მალა)",
+  axis: "აქსისი (II კისრის მალა)",
   calcaneus: "ქუსლის ძვალი",
   talus: "კოჭი",
   "cuboid bone": "კუბისებრი ძვალი",
@@ -84,14 +84,14 @@ const DICT: Record<string, string> = {
   "intermediate cuneiform bone": "შუა სოლისებრი ძვალი",
   "lateral cuneiform bone": "გარეთა სოლისებრი ძვალი",
   "navicular bone of foot": "ტერფის ნავისებრი ძვალი",
-  scaphoid: "ნავისებრი ძვალი",
-  lunate: "მთვარისებრი ძვალი",
-  triquetral: "სამწახნაგა ძვალი",
-  pisiform: "მუხუდოსებრი ძვალი",
-  trapezium: "ტრაპეციის ძვალი",
-  trapezoid: "ტრაპეციისებრი ძვალი",
-  capitate: "თავიანი ძვალი",
-  hamate: "კაუჭიანი ძვალი",
+  scaphoid: "მაჯის ძვალი",
+  lunate: "მაჯის ძვალი",
+  triquetral: "მაჯის ძვალი",
+  pisiform: "მაჯის ძვალი",
+  trapezium: "მაჯის ძვალი",
+  trapezoid: "მაჯის ძვალი",
+  capitate: "მაჯის ძვალი",
+  hamate: "მაჯის ძვალი",
   "sesamoid bone of foot": "ტერფის სეზამისებრი ძვალი",
   "intervertebral disk": "მალთაშუა დისკო",
   "thyroid cartilage": "ფარისებრი ხრტილი",
@@ -204,7 +204,6 @@ const DICT: Record<string, string> = {
   "vastus lateralis": "ბარძაყის გარეთა განიერი კუნთი",
   "vastus medialis": "ბარძაყის შიგნითა განიერი კუნთი",
   "biceps femoris": "ბარძაყის ორთავა კუნთი",
-  gastrocnemius: "წვივის ტყუპი კუნთი",
   "tibialis anterior": "დიდი წვივის წინა კუნთი",
   "adductor longus": "გრძელი მომზიდველი კუნთი",
   "adductor magnus": "დიდი მომზიდველი კუნთი",
@@ -225,8 +224,8 @@ const DICT: Record<string, string> = {
 };
 
 const VALVE: Record<string, string> = {
-  "mitral valve": "ორკარედი სარქველის",
-  "tricuspid valve": "სამკარედი სარქველის",
+  "mitral valve": "ორკარიანი სარქველის",
+  "tricuspid valve": "სამკარიანი სარქველის",
   "aortic valve": "აორტის სარქველის",
   "pulmonary valve": "ფილტვის ღეროს სარქველის",
 };
@@ -434,7 +433,12 @@ function compose(n: string, side: string, category: string): GeorgianName | null
     push(reg, REGION[w]);
     push(act, ACTION[w]);
   }
-  if (!reg.length && !act.length) return null;
+  // Only short, reliable patterns: muscles (Latin-derived names) are never composed, and at most one
+  // region word and one position word are used, region first ("თირკმლის წინა არტერია").
+  if (category === "კუნთი" || !reg.length) return null;
+  pos.splice(1);
+  reg.splice(1);
+  act.length = 0;
   const partOf = /^(distal|middle|proximal) part of /.test(n);
   const branch = /\bbranch|division\b/.test(n);
   let tail = category;
@@ -442,7 +446,7 @@ function compose(n: string, side: string, category: string): GeorgianName | null
   else if (branch) tail = `${GENITIVE[category] ?? category} ტოტი`;
   const s = side || innerSide;
   // "distal part of ileum" reads organ-first in Georgian: "თეძოს ნაწლავის დისტალური ნაწილი".
-  const order = partOf ? [...reg, ...pos, ...act, tail] : [...pos, ...reg, ...act, tail];
+  const order = branch ? [...reg, GENITIVE[category] ?? category, ...pos, "ტოტი"] : [...reg, ...pos, tail];
   return { name: `${s}${order.join(" ")}`.replace(/\s+/g, " ").trim(), exact: true };
 }
 
@@ -461,7 +465,29 @@ export interface GeorgianName {
   exact: boolean;
 }
 
-export function georgianName(english: string, system: SystemKey): GeorgianName {
+/** Where on the body a structure sits (Georgian genitive), from its bounding box. */
+export function bodyRegion(bounds: [[number, number, number], [number, number, number]]): string {
+  const x = (bounds[0][0] + bounds[1][0]) / 2;
+  const y = (bounds[0][1] + bounds[1][1]) / 2;
+  const z = (bounds[0][2] + bounds[1][2]) / 2;
+  const ax = Math.abs(x);
+  if (y > 1.5) return "თავის";
+  if (y > 1.43) return "კისრის";
+  if (y > 1.3 && ax > 0.14) return "მხრის";
+  if (ax > 0.19 && y > 0.62) return y > 1.12 ? "მხრის" : y > 0.86 ? "წინამხრის" : "მტევნის";
+  if (y > 1.1) return z < -0.03 ? "ზურგის" : "გულმკერდის";
+  if (y > 0.9) return z < -0.04 ? "წელის" : "მუცლის";
+  if (y > 0.75) return "მენჯის";
+  if (y > 0.47) return "ბარძაყის";
+  if (y > 0.09) return "წვივის";
+  return "ტერფის";
+}
+
+export function georgianName(
+  english: string,
+  system: SystemKey,
+  bounds?: [[number, number, number], [number, number, number]],
+): GeorgianName {
   let n = english.toLowerCase().trim();
   let side = "";
   const leading = n.match(/^(left|right) /);
@@ -497,6 +523,17 @@ export function georgianName(english: string, system: SystemKey): GeorgianName {
     return { name: `${VALVE[`${valve[3]} valve`]} ${pos ? `${pos} ` : ""}კარი`, exact: true };
   }
 
+  if (!side) {
+    const inner = n.match(/\b(left|right)\b/);
+    if (inner) side = inner[1] === "left" ? "მარცხენა " : "მარჯვენა ";
+  }
+  // "Acromial part of right deltoid", "lateral head of left triceps brachii" → part of a known muscle.
+  const partOf = n.match(/^.+? (part|head|belly) of (?:left |right )?(.+)$/);
+  if (partOf && DICT[partOf[2]]?.endsWith("კუნთი")) {
+    const muscle = DICT[partOf[2]].replace(/კუნთი$/, "კუნთის");
+    return { name: `${side}${muscle} ${partOf[1] === "head" ? "თავი" : "ნაწილი"}`, exact: true };
+  }
+
   const direct = DICT[n] ?? DICT[n.replace(/ of (left|right) (foot|hand)$/, " of $2")];
   if (direct) return { name: `${side}${direct}`, exact: true };
 
@@ -522,7 +559,9 @@ export function georgianName(english: string, system: SystemKey): GeorgianName {
   if (!matched && system === "muscular") category = "კუნთი";
   const composed = compose(n, side, category);
   if (composed) return composed;
-  return { name: `${side}${category}`, exact: false };
+  // No confirmed Georgian name: say what it is and where it is, e.g. "მარცხენა წინამხრის კუნთი".
+  const where = bounds ? `${bodyRegion(bounds)} ` : "";
+  return { name: `${side}${where}${category}`, exact: false };
 }
 
 /** All Georgian search terms (term → English atlas words) derived from the dictionary. */

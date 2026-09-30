@@ -7,6 +7,7 @@ import { SYSTEM_BY_KEY, titleCase, type SystemKey } from "./atlas-data";
 import type { Strings } from "./i18n";
 import { btnPrimary, btnSecondary, floating, iconBtn, sectionLabel } from "./primitives";
 import { searchIndex, type SearchEntry } from "./search-index";
+import { structureInfo } from "./structure-info";
 
 export interface Selection {
   name: string;
@@ -79,6 +80,7 @@ export function DetailSheet({
   onDeepDive: () => void;
 }) {
   const sys = SYSTEM_BY_KEY[selection.system];
+  const info = structureInfo(selection.name);
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => titleRef.current?.focus({ preventScroll: true }), [selection.name]);
 
@@ -94,8 +96,14 @@ export function DetailSheet({
       />
 
       <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <p className="text-[15px] leading-7 text-[#33413e]">{t.systemDescriptions[selection.system]}</p>
-        <p className="mt-2 text-xs leading-5 text-[#97a29e]">{t.systemOverview}</p>
+        {info ? (
+          <p className="text-[15px] leading-7 text-[#33413e]">{info}</p>
+        ) : (
+          <>
+            <p className="text-[15px] leading-7 text-[#33413e]">{t.systemDescriptions[selection.system]}</p>
+            <p className="mt-2 text-xs leading-5 text-[#97a29e]">{t.systemOverview}</p>
+          </>
+        )}
         <dl className="mt-5 border-y border-[#e2e7e5] text-sm">
           <div className="flex h-10 items-center justify-between">
             <dt className="text-[#66736f]">{t.selectedPieces}</dt>

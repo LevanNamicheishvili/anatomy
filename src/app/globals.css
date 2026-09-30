@@ -162,3 +162,42 @@ body {
     animation: none !important;
   }
 }
+
+/* Textbook-style hover label: the leader line draws in, the card and anchor appear softly. */
+@keyframes atlas-leader-draw {
+  from {
+    stroke-dashoffset: 140;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.atlas-leader {
+  stroke-dasharray: 140;
+  animation: atlas-leader-draw 260ms ease-out both;
+}
+@keyframes atlas-callout-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.atlas-callout {
+  animation: atlas-callout-in 200ms ease-out 120ms both;
+}
+@keyframes atlas-anchor-pulse {
+  0%,
+  100% {
+    r: 7;
+    opacity: 0.35;
+  }
+  50% {
+    r: 11;
+    opacity: 0.12;
+  }
+}
+.atlas-anchor-ring {
+  animation: atlas-anchor-pulse 1.6s ease-in-out infinite;
+}
