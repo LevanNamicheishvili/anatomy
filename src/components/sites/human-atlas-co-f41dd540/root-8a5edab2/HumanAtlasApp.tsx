@@ -68,6 +68,12 @@ const LESSON_ANIMATION: Record<LessonKey, Omit<AnimationSettings, "bpm">> = {
   circulation: { heartbeat: true, breathing: false, bloodFlow: true },
 };
 
+/** Label text for the always-on labels: textbook names only, without left/right. */
+function labelName(part: AtlasPart): string | null {
+  const g = georgianName(part.name, part.system, part.bounds);
+  return g.exact ? g.name.replace(/^(მარცხენა|მარჯვენა) /, "") : null;
+}
+
 function sameSet<T>(a: Set<T>, b: T[]) {
   return a.size === b.length && b.every((x) => a.has(x));
 }
@@ -224,7 +230,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   }, [anim, loadKey]);
 
   useEffect(() => {
-    viewerRef.current?.setLabels(labelsOn);
+    viewerRef.current?.setLabels(labelsOn, labelName);
   }, [labelsOn, loadKey]);
 
   // Keep the model centred in the space the panels leave free.

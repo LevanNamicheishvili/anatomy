@@ -115,15 +115,15 @@ export interface ViewerCallbacks {
   onFocus: (part: AtlasPart) => void;
   onPhase: (heart: HeartPhase | null, breath: BreathPhase | null) => void;
   /** Visible parts for the permanent labels (canvas pixels); null hides them while the view moves. */
-  onLabels: (anchors: LabelAnchor[] | null, free?: Insets) => void;
+  onLabels: (labels: LabelAnchor[] | null, free?: Insets) => void;
 }
 
 export interface LabelAnchor {
   part: AtlasPart;
+  name: string;
+  /** Arrow tip on the structure, in canvas pixels. */
   x: number;
   y: number;
-  /** On-screen area in square canvas pixels. */
-  area: number;
 }
 
 function hashUnit(id: string, salt: number): number {
@@ -381,10 +381,7 @@ export class AnatomyViewer {
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(100);
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
     this.controls.addEventListener("change", () => (this.dirty = true));
-    this.controls.addEventListener("start", () => {
-      this.tween = null;
-      if (this.labelsOn) this.callbacks.onLabels(null);
-    });
+    this.controls.addEventListener("start", () => (this.tween = null));
 
     // Studio reflections give the tissue its moist, glossy highlights.
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -1000,29 +997,51 @@ export class AnatomyViewer {
   }
 
   // ---- Permanent labels (smart boards have no hover) --------------------------------------------
+  //
+  // Which structures get a label is decided after the view settles, from one id pass over the whole
+  // view. Each label is then pinned to a vertex of its structure and re-projected every frame, so the
+  // labels follow zooming, turning and poses smoothly instead of disappearing and popping back.
 
   private labelsOn = false;
+  private labelName: (part: AtlasPart) => string | null = () => null;
+  private labelNames = new Map<string, string | null>();
   private labelsStale = true;
   private labelsChangedAt = 0;
   private lastLabelsAt = 0;
   private labelsBusy = false;
   private labelTarget = new THREE.WebGLRenderTarget(1, 1);
+  private tracked: { entry: PartMesh; vertex: number; name: string }[] = [];
+  private labelPoint = new THREE.Vector3();
+  private labelTmp = new THREE.Vector3();
 
-  setLabels(on: boolean) {
+  /** `name` returns the label text for a part, or null when it has no textbook name worth showing. */
+  setLabels(on: boolean, name?: (part: AtlasPart) => string | null) {
     this.labelsOn = on;
+    if (name) {
+      this.labelName = name;
+      this.labelNames.clear();
+    }
     this.labelsStale = true;
     this.labelsChangedAt = 0;
-    if (!on) this.callbacks.onLabels(null);
+    if (!on) {
+      this.tracked = [];
+      this.callbacks.onLabels(null);
+    }
   }
 
-  /**
-   * Once the view settles, draw part ids for the whole view at quarter resolution and report, for each
-   * part that is actually visible, its on-screen area and a point on it near the middle of what shows.
-   */
+  private nameOf(part: AtlasPart) {
+    let n = this.labelNames.get(part.id);
+    if (n === undefined) {
+      n = this.labelName(part);
+      this.labelNames.set(part.id, n);
+    }
+    return n;
+  }
+
   private updateLabels(now: number) {
     if (!this.labelsOn || !this.labelsStale || this.labelsBusy) return;
-    const settled = now - this.labelsChangedAt > 250;
-    const periodic = this.rigActive && now - this.lastLabelsAt > 600;
+    const settled = now - this.labelsChangedAt > 350;
+    const periodic = this.rigActive && now - this.lastLabelsAt > 1500;
     if (!settled && !periodic) return;
     const cw = this.canvas.clientWidth;
     const ch = this.canvas.clientHeight;
@@ -1041,20 +1060,22 @@ export class AnatomyViewer {
       .readRenderTargetPixelsAsync(this.labelTarget, 0, 0, W, H, buf)
       .then(() => {
         if (this.disposed || !this.labelsOn) return;
-        this.callbacks.onLabels(this.collectAnchors(buf, W, H, cw / W, ch / H), { ...this.insets });
+        this.chooseLabels(buf, W, H, cw / W, ch / H);
+        this.emitLabels();
       })
       .finally(() => {
         this.labelsBusy = false;
       });
   }
 
-  private collectAnchors(buf: Uint8Array, W: number, H: number, sx: number, sy: number): LabelAnchor[] {
+  /** Largest clearly visible named structures, one per name, with their arrow tips kept apart. */
+  private chooseLabels(buf: Uint8Array, W: number, H: number, sx: number, sy: number) {
     const stats = new Map<number, { n: number; x: number; y: number; bx: number; by: number; bd: number }>();
+    const idAt = (i: number) => (buf[i + 3] === 0 ? 0 : (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2]);
     for (let row = 0; row < H; row++)
       for (let col = 0; col < W; col++) {
-        const i = (row * W + col) * 4;
-        if (buf[i + 3] === 0) continue;
-        const id = (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2];
+        const id = idAt((row * W + col) * 4);
+        if (!id) continue;
         const s = stats.get(id);
         if (s) {
           s.n += 1;
@@ -1062,16 +1083,14 @@ export class AnatomyViewer {
           s.y += row;
         } else stats.set(id, { n: 1, x: col, y: row, bx: col, by: row, bd: Infinity });
       }
-    // Anchor on a pixel of the part itself nearest its centre, well inside the part, not on an edge.
+    // Aim at a pixel well inside the part (all four neighbours are the same part), nearest its centre.
     for (let row = 1; row < H - 1; row++)
       for (let col = 1; col < W - 1; col++) {
         const i = (row * W + col) * 4;
-        if (buf[i + 3] === 0) continue;
-        const id = (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2];
-        const s = stats.get(id);
+        const id = idAt(i);
+        const s = id ? stats.get(id) : undefined;
         if (!s || s.n < 12) continue;
-        const same = (j: number) => buf[j + 3] !== 0 && ((buf[j] << 16) | (buf[j + 1] << 8) | buf[j + 2]) === id;
-        if (!same(i - 4) || !same(i + 4) || !same(i - W * 4) || !same(i + W * 4)) continue;
+        if (idAt(i - 4) !== id || idAt(i + 4) !== id || idAt(i - W * 4) !== id || idAt(i + W * 4) !== id) continue;
         const d = (col - s.x / s.n) ** 2 + (row - s.y / s.n) ** 2;
         if (d < s.bd) {
           s.bd = d;
@@ -1079,14 +1098,92 @@ export class AnatomyViewer {
           s.by = row;
         }
       }
-    const anchors: LabelAnchor[] = [];
+
+    const { top, bottom, left, right } = this.insets;
+    const cw = this.canvas.clientWidth;
+    const ch = this.canvas.clientHeight;
+    const limit = Math.min(12, Math.max(0, Math.floor((ch - top - bottom - 48) / 38) * 2));
+    const candidates: { entry: PartMesh; name: string; x: number; y: number; area: number }[] = [];
     for (const [id, s] of stats) {
       const entry = this.pickById[id - 1];
       if (!entry || s.n < 12 || s.bd === Infinity) continue;
+      const name = this.nameOf(entry.part);
+      if (!name) continue;
       // Read-back rows start at the bottom of the image.
-      anchors.push({ part: entry.part, x: (s.bx + 0.5) * sx, y: (H - 1 - s.by + 0.5) * sy, area: s.n * sx * sy });
+      const x = (s.bx + 0.5) * sx;
+      const y = (H - 1 - s.by + 0.5) * sy;
+      if (x < left + 12 || x > cw - right - 12 || y < top + 24 || y > ch - bottom - 24) continue;
+      candidates.push({ entry, name, x, y, area: s.n });
     }
-    return anchors;
+    candidates.sort((a, b) => b.area - a.area);
+    const chosen: typeof candidates = [];
+    const names = new Set<string>();
+    for (const c of candidates) {
+      if (chosen.length >= limit) break;
+      if (names.has(c.name) || chosen.some((o) => Math.hypot(o.x - c.x, o.y - c.y) < 56)) continue;
+      names.add(c.name);
+      chosen.push(c);
+    }
+    this.tracked = chosen.map((c) => ({ entry: c.entry, name: c.name, vertex: this.vertexAt(c.entry, c.x, c.y) }));
+  }
+
+  /** Current world position of one vertex, skinned the same way as in the shader. */
+  private vertexWorld(entry: PartMesh, v: number, out: THREE.Vector3) {
+    const g = entry.mesh.geometry;
+    const pos = g.getAttribute("position");
+    const si = g.getAttribute("aSegI").array as Uint8Array;
+    const sw = g.getAttribute("aSegW").array as Uint8Array;
+    const mats = this.uniforms.uSeg.value;
+    out.set(0, 0, 0);
+    let sum = 0;
+    for (let j = 0; j < 4; j++) {
+      const w = sw[v * 4 + j];
+      if (!w) continue;
+      sum += w;
+      out.addScaledVector(this.labelTmp.fromBufferAttribute(pos, v).applyMatrix4(mats[si[v * 4 + j]] ?? IDENTITY), w);
+    }
+    if (sum) out.divideScalar(sum);
+    else out.fromBufferAttribute(pos, v);
+    return out.applyMatrix4(entry.mesh.matrixWorld);
+  }
+
+  /** Canvas position of a world point, including the panel-aware view offset. */
+  private toCanvas(p: THREE.Vector3) {
+    const v = p.project(this.camera);
+    return { x: ((v.x + 1) / 2) * this.canvas.clientWidth, y: ((1 - v.y) / 2) * this.canvas.clientHeight, front: v.z < 1 };
+  }
+
+  /** The vertex of the part that shows at canvas pixel (x, y): near it on screen and closest to the camera. */
+  private vertexAt(entry: PartMesh, x: number, y: number) {
+    const count = entry.mesh.geometry.getAttribute("position").count;
+    const step = Math.max(1, Math.floor(count / 6000));
+    let best = 0;
+    let bestScore = Infinity;
+    const eye = this.camera.position;
+    for (let v = 0; v < count; v += step) {
+      const p = this.vertexWorld(entry, v, this.labelPoint);
+      const dist = p.distanceTo(eye);
+      const s = this.toCanvas(p);
+      const d = Math.hypot(s.x - x, s.y - y);
+      // Within a few pixels, prefer the front surface; otherwise simply the nearest on screen.
+      const score = d < 10 ? dist : 1000 + d;
+      if (score < bestScore) {
+        bestScore = score;
+        best = v;
+      }
+    }
+    return best;
+  }
+
+  private emitLabels() {
+    if (!this.labelsOn) return;
+    const out: LabelAnchor[] = [];
+    for (const t of this.tracked) {
+      if (!t.entry.mesh.visible) continue;
+      const s = this.toCanvas(this.vertexWorld(t.entry, t.vertex, this.labelPoint));
+      if (s.front) out.push({ part: t.entry.part, name: t.name, x: s.x, y: s.y });
+    }
+    this.callbacks.onLabels(out, { ...this.insets });
   }
 
   private emitHover() {
@@ -1277,6 +1374,7 @@ export class AnatomyViewer {
       this.dirty = false;
       this.renderer.render(this.scene, this.camera);
       this.trackFrameRate(now);
+      if (this.tracked.length) this.emitLabels();
     }
     this.updateLabels(now);
   };

@@ -4,7 +4,6 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { Insets, LabelAnchor } from "./anatomy-viewer";
 import { SYSTEM_BY_KEY, type AtlasPart, type SystemKey } from "./atlas-data";
 import type { Channel } from "./channel";
-import { georgianName } from "./georgian-names";
 
 export interface LabelFrame {
   anchors: LabelAnchor[];
@@ -26,61 +25,35 @@ interface Placed {
 }
 
 const ROW = 38; // vertical spacing between cards (one-line cards are 30 px tall)
-const MAX_LABELS = 12;
-const MIN_SPACING = 56; // keep arrow tips apart so labels point at different structures
 
-/**
- * Picks the largest clearly visible structures and lays them out in two columns beside the body, like
- * a labelled textbook figure, with no line crossing another card.
- */
+/** Two columns beside the body, like a labelled textbook figure; cards never overlap. */
 function layout({ anchors, free, w, h }: LabelFrame): Placed[] {
   const top = free.top + 24;
   const bottom = h - free.bottom - 24;
   const left = free.left + 12;
   const right = w - free.right - 12;
   if (bottom - top < ROW * 2 || right - left < 320) return [];
-
-  // One label per structure name; left/right pairs share a name, the bigger one wins.
-  const byName = new Map<string, { a: LabelAnchor; name: string }>();
-  let minX = Infinity;
-  let maxX = -Infinity;
-  for (const a of anchors) {
-    minX = Math.min(minX, a.x);
-    maxX = Math.max(maxX, a.x);
-    const g = georgianName(a.part.name, a.part.system, a.part.bounds);
-    if (!g.exact) continue;
-    const name = g.name.replace(/^(მარცხენა|მარჯვენა) /, "");
-    const prev = byName.get(name);
-    if (!prev || prev.a.area < a.area) byName.set(name, { a, name });
-  }
-  const count = Math.min(MAX_LABELS, Math.floor((bottom - top) / ROW) * 2);
-  const chosen: { a: LabelAnchor; name: string }[] = [];
-  for (const c of [...byName.values()].sort((p, q) => q.a.area - p.a.area)) {
-    if (chosen.length >= count) break;
-    const { x, y } = c.a;
-    if (x < left || x > right || y < top || y > bottom) continue;
-    if (chosen.some((o) => Math.hypot(o.a.x - x, o.a.y - y) < MIN_SPACING)) continue;
-    chosen.push(c);
-  }
-  if (!chosen.length) return [];
-
+  const inside = anchors.filter((a) => a.x >= left && a.x <= right && a.y >= top && a.y <= bottom);
+  if (!inside.length) return [];
+  const minX = Math.min(...inside.map((a) => a.x));
+  const maxX = Math.max(...inside.map((a) => a.x));
   const mid = (minX + maxX) / 2;
-  const leftEdge = Math.max(left + 150, minX - 36);
-  const rightEdge = Math.min(right - 150, maxX + 36);
+  const leftEdge = Math.max(left + 150, minX - 48);
+  const rightEdge = Math.min(right - 150, maxX + 48);
   const placed: Placed[] = [];
   for (const side of ["left", "right"] as const) {
-    const column = chosen.filter((c) => (side === "left" ? c.a.x < mid : c.a.x >= mid)).sort((p, q) => p.a.y - q.a.y);
+    const column = inside.filter((a) => (side === "left" ? a.x < mid : a.x >= mid)).sort((p, q) => p.y - q.y);
     // Cards sit at their arrow tip's height, pushed apart where they would overlap, then kept on screen.
-    const ys = column.map((c) => c.a.y);
+    const ys = column.map((a) => a.y);
     for (let i = 0; i < ys.length; i++) ys[i] = Math.max(ys[i], top, i ? ys[i - 1] + ROW : top);
     for (let i = ys.length - 1; i >= 0; i--) ys[i] = Math.min(ys[i], i < ys.length - 1 ? ys[i + 1] - ROW : bottom);
-    column.forEach((c, i) =>
+    column.forEach((a, i) =>
       placed.push({
-        part: c.a.part,
-        name: c.name,
-        system: c.a.part.system,
-        ax: c.a.x,
-        ay: c.a.y,
+        part: a.part,
+        name: a.name,
+        system: a.part.system,
+        ax: a.x,
+        ay: a.y,
         cx: side === "left" ? leftEdge : rightEdge,
         cy: ys[i],
         side,
