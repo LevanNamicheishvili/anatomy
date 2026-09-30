@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, HeartPulse, Pause, PersonStanding, Play, QrCode, Waves, Wind, X } from "lucide-react";
+import { ChevronRight, GalleryVerticalEnd, HeartPulse, ListChecks, Pause, PenLine, PersonStanding, Play, Presentation, QrCode, Waves, Wind, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LessonKey } from "./anatomy-groups";
 import type { AnimationSettings } from "./anatomy-viewer";
@@ -9,9 +9,10 @@ import { SYSTEMS, type PresetKey, type SystemKey } from "./atlas-data";
 import type { Strings } from "./i18n";
 import { Slider, Switch, btnGhost, btnPrimary, btnSecondary, iconBtn, sectionLabel } from "./primitives";
 import { ANIMATED_POSES, STATIC_POSES, type PoseKey } from "./rig";
+import { LEVELS, topicFitsLevel, type Level } from "./learn-data";
 import { TOPICS } from "./topics";
 
-export type SidebarTab = "systems" | "animations" | "topics";
+export type SidebarTab = "systems" | "animations" | "topics" | "learn";
 
 const LESSON_ICONS: Record<LessonKey, typeof HeartPulse> = {
   heart: HeartPulse,
@@ -227,13 +228,13 @@ function AnimationsTab({
   );
 }
 
-function TopicsTab({ t, active, onOpen }: { t: Strings; active: string | null; onOpen: (slug: string) => void }) {
+function TopicsTab({ t, active, level, onOpen }: { t: Strings; active: string | null; level: Level; onOpen: (slug: string) => void }) {
   return (
     <>
       <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto">
         <h3 className={cn(sectionLabel, "px-4 pt-4 pb-2")}>{t.topicsTitle}</h3>
         <ul className="border-t border-[#e2e7e5]">
-          {TOPICS.map((topic) => {
+          {TOPICS.filter((topic) => topicFitsLevel(topic.slug, level)).map((topic) => {
             const isActive = active === topic.slug;
             return (
               <li key={topic.slug} className="border-b border-[#e2e7e5]">
@@ -269,6 +270,92 @@ function TopicsTab({ t, active, onOpen }: { t: Strings; active: string | null; o
   );
 }
 
+function LearnTab({
+  level,
+  onLevel,
+  onQuiz,
+  onCards,
+  board,
+  onBoard,
+  drawing,
+  onDraw,
+}: {
+  level: Level;
+  onLevel: (level: Level) => void;
+  onQuiz: () => void;
+  onCards: () => void;
+  board: boolean;
+  onBoard: () => void;
+  drawing: boolean;
+  onDraw: () => void;
+}) {
+  const action = "flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-[#f5f7f6]";
+  return (
+    <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto">
+      <h3 className={cn(sectionLabel, "px-4 pt-4 pb-2")}>საფეხური</h3>
+      <div className="px-4 pb-4">
+        <div className="grid grid-cols-3 overflow-hidden rounded-md border border-[#d5dcd9]">
+          {LEVELS.map((l, i) => (
+            <button
+              key={l.key}
+              type="button"
+              aria-pressed={level === l.key}
+              onClick={() => onLevel(l.key)}
+              className={cn(
+                "flex flex-col items-center px-1 py-1.5 transition-colors max-md:py-2.5",
+                i > 0 && "border-s border-[#d5dcd9]",
+                level === l.key ? "bg-[#e6f3ef] text-[#0c7563]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+              )}
+            >
+              <span className={cn("text-[13px]", level === l.key && "font-semibold")}>{l.name}</span>
+              <span className="text-[11px] text-[#66736f]">{l.grades}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <h3 className={cn(sectionLabel, "border-t border-[#e2e7e5] px-4 pt-4 pb-1")}>ვარჯიში</h3>
+      <button type="button" onClick={onQuiz} className={action}>
+        <ListChecks className="size-5 shrink-0 text-[#0f8a74]" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-[#111a18]">ქვიზი</span>
+          <span className="block text-[13px] leading-5 text-[#66736f]">10 კითხვა: იპოვე მოდელზე და დაასახელე</span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-[#97a29e]" />
+      </button>
+      <button type="button" onClick={onCards} className={action}>
+        <GalleryVerticalEnd className="size-5 shrink-0 text-[#0f8a74]" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-[#111a18]">ბარათები</span>
+          <span className="block text-[13px] leading-5 text-[#66736f]">ტერმინების დამახსოვრება გამეორებით</span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-[#97a29e]" />
+      </button>
+
+      <h3 className={cn(sectionLabel, "mt-2 border-t border-[#e2e7e5] px-4 pt-4 pb-1")}>მასწავლებლისთვის</h3>
+      <div className={cn(row, "hover:bg-[#f5f7f6]")}>
+        <Presentation className="size-4 text-[#33413e]" />
+        <button type="button" onClick={onBoard} className="py-1 text-start text-sm leading-5 text-[#111a18]">
+          დაფის რეჟიმი
+        </button>
+        <span />
+        <Switch checked={board} onChange={onBoard} label="დაფის რეჟიმი" />
+      </div>
+      <div className={cn(row, "hover:bg-[#f5f7f6]")}>
+        <PenLine className="size-4 text-[#33413e]" />
+        <button type="button" onClick={onDraw} className="py-1 text-start text-sm leading-5 text-[#111a18]">
+          ეკრანზე ხატვა
+        </button>
+        <span />
+        <Switch checked={drawing} onChange={onDraw} label="ეკრანზე ხატვა" />
+      </div>
+      <p className="px-4 pt-1 pb-4 text-xs leading-5 text-[#66736f]">
+        დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.
+      </p>
+    </div>
+  );
+}
+
 export function Sidebar({
   t,
   tab,
@@ -278,6 +365,7 @@ export function Sidebar({
   systems,
   animations,
   topics,
+  learn,
 }: {
   t: Strings;
   tab: SidebarTab;
@@ -287,11 +375,13 @@ export function Sidebar({
   systems: Parameters<typeof SystemsTab>[0];
   animations: Parameters<typeof AnimationsTab>[0];
   topics: Parameters<typeof TopicsTab>[0];
+  learn: Parameters<typeof LearnTab>[0];
 }) {
   const tabs: [SidebarTab, string][] = [
     ["systems", t.systems],
     ["animations", t.animations],
     ["topics", t.topics],
+    ["learn", "სწავლა"],
   ];
 
   return (
@@ -305,7 +395,7 @@ export function Sidebar({
       )}
     >
       <div className="flex shrink-0 items-stretch border-b border-[#e2e7e5]">
-        <div role="tablist" className="grid flex-1 grid-cols-3">
+        <div role="tablist" className="grid flex-1 grid-cols-4">
           {tabs.map(([key, label]) => (
             <button
               key={key}
@@ -331,8 +421,10 @@ export function Sidebar({
         <SystemsTab {...systems} />
       ) : tab === "animations" ? (
         <AnimationsTab {...animations} />
-      ) : (
+      ) : tab === "topics" ? (
         <TopicsTab {...topics} />
+      ) : (
+        <LearnTab {...learn} />
       )}
     </section>
   );

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans, Noto_Sans_Georgian } from "next/font/google";
+import { OfflineSupport } from "@/components/OfflineSupport";
 import "./globals.css";
 
 const notoSans = Noto_Sans({
@@ -33,7 +34,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ka" className={`${notoSans.variable} ${georgian.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <OfflineSupport />
+      </body>
     </html>
   );
 }

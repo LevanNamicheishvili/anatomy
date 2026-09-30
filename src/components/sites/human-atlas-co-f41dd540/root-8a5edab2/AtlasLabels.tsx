@@ -22,14 +22,16 @@ interface Placed {
   side: "left" | "right";
 }
 
-const ROW = 38; // vertical spacing between cards (one-line cards are 30 px tall)
+// Vertical spacing between cards: one-line cards are 30 px tall (38 px in board mode).
+const ROW_NORMAL = 38;
+const ROW_LARGE = 48;
 const GAP = 48; // horizontal room between the body and the cards
 
 /**
  * Two columns beside the body, like a labelled textbook figure. Cards never overlap each other and
  * never slide under the side panels: each is kept inside the free area using its measured width.
  */
-function layout({ anchors, free, w, h }: LabelFrame, widths: Map<string, number>): Placed[] {
+function layout({ anchors, free, w, h }: LabelFrame, widths: Map<string, number>, ROW: number): Placed[] {
   const top = free.top + 24;
   const bottom = h - free.bottom - 24;
   const left = free.left + 12;
@@ -68,16 +70,27 @@ interface LabelItem {
  * Labels that are always on screen: made for smart boards and touch screens, where nothing hovers.
  * React renders only when the set of labels changes; every frame just moves the existing elements.
  */
-export function AtlasLabels({ channel, onPick }: { channel: Channel<LabelFrame>; onPick: (part: AtlasPart) => void }) {
+export function AtlasLabels({
+  channel,
+  large = false,
+  onPick,
+}: {
+  channel: Channel<LabelFrame>;
+  /** Board mode: bigger cards, spaced further apart. */
+  large?: boolean;
+  onPick: (part: AtlasPart) => void;
+}) {
+  const rowRef = useRef(ROW_NORMAL);
   const [items, setItems] = useState<LabelItem[]>([]);
   const cards = useRef(new Map<string, HTMLButtonElement>());
   const lines = useRef(new Map<string, SVGPolylineElement>());
   const dots = useRef(new Map<string, SVGCircleElement>());
   const widths = useRef(new Map<string, number>());
+  const heights = useRef(new Map<string, number>());
   const itemsKey = useRef("");
 
   const apply = useRef((frame: LabelFrame | null) => {
-    const placed = frame ? layout(frame, widths.current) : [];
+    const placed = frame ? layout(frame, widths.current, rowRef.current) : [];
     const shown = new Set(placed.map((p) => p.id));
     for (const p of placed) {
       const dir = p.side === "left" ? -1 : 1;
@@ -85,7 +98,7 @@ export function AtlasLabels({ channel, onPick }: { channel: Channel<LabelFrame>;
       if (card) {
         const width = widths.current.get(p.id) ?? card.offsetWidth;
         card.style.visibility = "visible";
-        card.style.transform = `translate(${p.cx + dir * 4 - (p.side === "left" ? width : 0)}px, ${p.cy - 15}px)`;
+        card.style.transform = `translate(${p.cx + dir * 4 - (p.side === "left" ? width : 0)}px, ${p.cy - (heights.current.get(p.id) ?? 30) / 2}px)`;
       }
       lines.current.get(p.id)?.setAttribute("points", `${p.ax},${p.ay} ${p.cx - dir * 14},${p.cy} ${p.cx},${p.cy}`);
       const dot = dots.current.get(p.id);
@@ -117,9 +130,15 @@ export function AtlasLabels({ channel, onPick }: { channel: Channel<LabelFrame>;
 
   // New cards: measure their widths once, then position everything.
   useLayoutEffect(() => {
-    for (const [id, card] of cards.current) widths.current.set(id, card.offsetWidth);
+    rowRef.current = large ? ROW_LARGE : ROW_NORMAL;
+    widths.current.clear();
+    heights.current.clear();
+    for (const [id, card] of cards.current) {
+      widths.current.set(id, card.offsetWidth);
+      heights.current.set(id, card.offsetHeight);
+    }
     apply.current(channel.get());
-  }, [items, channel]);
+  }, [items, channel, large]);
 
   if (!items.length) return null;
   return (
@@ -158,11 +177,9 @@ export function AtlasLabels({ channel, onPick }: { channel: Channel<LabelFrame>;
         <button
           key={part.id}
           ref={(el) => {
+            // Ref callbacks re-run on every render, so sizes are pruned in the layout effect, not here.
             if (el) cards.current.set(part.id, el);
-            else {
-              cards.current.delete(part.id);
-              widths.current.delete(part.id);
-            }
+            else cards.current.delete(part.id);
           }}
           type="button"
           onClick={() => onPick(part)}

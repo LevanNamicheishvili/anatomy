@@ -51,6 +51,9 @@ import { georgianName } from "./georgian-names";
 import { TOPIC_BY_SLUG, type Topic } from "./topics";
 import { TopicSheet } from "./TopicSheet";
 import { ViewControls } from "./ViewControls";
+import { DrawLayer } from "./DrawLayer";
+import { PracticeSheet, type PracticeHost, type PracticeMode } from "./Practice";
+import { loadLevel, saveLevel, type Level } from "./learn-data";
 
 type Popover = "search" | "ask" | null;
 
@@ -127,6 +130,19 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   const [labelChannel] = useState(createChannel<LabelFrame>);
   // Always-on labels: school smart boards are touch screens, so hover never happens there.
   const [labelsOn, setLabelsOn] = useState(true);
+  // Learning: school stage, quiz/flashcards, and the teacher's board mode with a drawing layer.
+  const [level, setLevel] = useState<Level>(() => (typeof window === "undefined" ? "basic" : loadLevel()));
+  const [practice, setPractice] = useState<PracticeMode | null>(null);
+  const [practiceIds, setPracticeIds] = useState<string[]>([]);
+  const [board, setBoard] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  const pickHandlerRef = useRef<((part: AtlasPart) => void) | null>(null);
+  // Read by the 3D view's hover callback (set up once), so hover labels can't give quiz answers away.
+  const practiceRef = useRef(false);
+  useEffect(() => {
+    practiceRef.current = !!practice;
+    if (practice) hoverChannel.set(null);
+  }, [practice, hoverChannel]);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [pose, setPose] = useState<PoseKey>("standing");
   const [dive, setDive] = useState<{ template: DiveTemplate; title: string; ids: string[]; restoreIsolated: string[] | null } | null>(null);
@@ -172,7 +188,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     const viewer = new AnatomyViewer(canvas, {
       onHover: (part, x, y) =>
         hoverChannel.set(
-          part
+          part && !practiceRef.current
             ? {
                 name: georgianName(part.name, part.system, part.bounds).name,
                 system: part.system,
@@ -222,23 +238,24 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   }, [visible, progress.done]);
 
   useEffect(() => {
-    viewerRef.current?.setSelected(selection?.ids ?? []);
-  }, [selection, progress.done]);
+    viewerRef.current?.setSelected(practice ? practiceIds : (selection?.ids ?? []));
+  }, [selection, progress.done, practice, practiceIds]);
 
   useEffect(() => {
     viewerRef.current?.setAnimation(anim);
   }, [anim, loadKey]);
 
   useEffect(() => {
-    viewerRef.current?.setLabels(labelsOn, labelName);
-  }, [labelsOn, loadKey]);
+    // Labels would give quiz answers away.
+    viewerRef.current?.setLabels(labelsOn && !practice, labelName);
+  }, [labelsOn, loadKey, practice]);
 
   // Keep the model centred in the space the panels leave free.
   const sidebarVisible = !mobile;
   useEffect(() => {
     // Must match the docked regions: bar 56 · sidebar 320/288 · rail 56 · bottom bar 64 · sheet 400/340.
     const compact = width <= 1100;
-    const sheetOpen = !!topic || !!selection || !!dive;
+    const sheetOpen = !!topic || !!selection || !!dive || !!practice;
     const sheetHeight = Math.round(window.innerHeight * 0.6);
     viewerRef.current?.setInsets(
       mobile
@@ -257,7 +274,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     );
     if (view && !selection && !lesson) viewerRef.current?.setView(view);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refit only when the layout changes
-  }, [mobile, sidebarVisible, sidebarOpen, selection, topic, dive, width, loadKey]);
+  }, [mobile, sidebarVisible, sidebarOpen, selection, topic, dive, practice, width, loadKey]);
 
   // --- Actions ----------------------------------------------------------------------------------
   const revealSelection = useCallback(
@@ -297,6 +314,10 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   useEffect(() => {
     pickRef.current = (part, focus) => {
       if (!part) return;
+      if (pickHandlerRef.current) {
+        pickHandlerRef.current(part);
+        return;
+      }
       revealSelection(
         {
           name: georgianName(part.name, part.system, part.bounds).name,
@@ -469,6 +490,57 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     openTopic(initialTopic, false);
   }, [loaded, initialTopic, openTopic]);
 
+  // --- Learning: quiz and flashcards ------------------------------------------------------------
+  const practiceHost = useMemo<PracticeHost>(
+    () => ({
+      resolve: (name) => index.find((e) => e.key === name.toLowerCase())?.ids ?? null,
+      present: (item) => {
+        setSelection(null);
+        setTopic(null);
+        setLesson(null);
+        setIsolated(null);
+        setHidden(new Set());
+        setEnabled(new Set(item.show));
+        setExplode(0);
+        viewerRef.current?.setExplode(0);
+        setPracticeIds([]);
+        setView("front");
+        viewerRef.current?.setView("front");
+      },
+      highlight: (ids, frame) => {
+        setPracticeIds(ids ?? []);
+        if (ids && frame) {
+          // Only the structure and the skeleton around it, so nothing in front can hide it.
+          const bones = (manifest?.parts ?? []).filter((p) => p.system === "skeletal").map((p) => p.id);
+          setIsolated([...new Set([...ids, ...bones])]);
+          setView(null);
+          viewerRef.current?.frameParts(ids);
+        }
+      },
+      setPickHandler: (fn) => {
+        pickHandlerRef.current = fn;
+      },
+    }),
+    [index, manifest],
+  );
+
+  const openPractice = (mode: PracticeMode) => {
+    if (dive) closeDive();
+    if (topic) closeTopic();
+    setSelection(null);
+    setPopover(null);
+    setPractice(mode);
+    if (mobile) setSidebarOpen(false);
+  };
+
+  const closePractice = () => {
+    setPractice(null);
+    setPracticeIds([]);
+    pickHandlerRef.current = null;
+    setEnabled(new Set(DEFAULT_SYSTEMS));
+    goHome();
+  };
+
   const showWholeBody = () => {
     setLesson(null);
     setIsolated(null);
@@ -546,6 +618,8 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
         if (aboutOpen) setAboutOpen(false);
         else if (popover) setPopover(null);
         else if (sidebarOpen) setSidebarOpen(false);
+        else if (drawing) setDrawing(false);
+        else if (practice) setPractice(null);
         else if (selection) setSelection(null);
         return;
       }
@@ -565,7 +639,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, popover, sidebarOpen, selection]);
+  }, [aboutOpen, popover, sidebarOpen, selection, drawing, practice]);
 
   const caption = topic
     ? topic.title
@@ -583,7 +657,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   const totalPieces = manifest?.parts.length ?? 2234;
 
   // The 3D view's free area: between sidebar, rail/sheet, header and bottom bar.
-  const sheetOpen = !!topic || !!selection || !!dive;
+  const sheetOpen = !!topic || !!selection || !!dive || !!practice;
   const canvasArea = `pointer-events-none absolute top-14 bottom-16 start-[320px] max-[1100px]:start-[288px] max-md:inset-x-0 max-md:top-[108px] ${
     sheetOpen ? "end-[456px] max-[1100px]:end-[396px]" : "end-14"
   }`;
@@ -591,7 +665,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   return (
     <main
       lang="ka"
-      className="relative isolate h-dvh min-h-[480px] w-full overflow-hidden bg-[#f4f6f5] font-sans text-[#111a18]"
+      className={`${board ? "atlas-board " : ""}relative isolate h-dvh min-h-[480px] w-full overflow-hidden bg-[#f4f6f5] font-sans text-[#111a18]`}
     >
       <div className="absolute inset-0">
         <canvas
@@ -599,7 +673,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           aria-label="3D ანატომიის ხედი"
           className="block size-full cursor-grab touch-none active:cursor-grabbing"
         />
-        <AtlasLabels channel={labelChannel} onPick={(part) => pickRef.current(part, false)} />
+        <AtlasLabels channel={labelChannel} large={board} onPick={(part) => pickRef.current(part, false)} />
         <HoverLayer t={t} channel={hoverChannel} />
       </div>
 
@@ -652,7 +726,24 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
         topics={{
           t,
           active: topic?.slug ?? null,
-          onOpen: (slug) => openTopic(slug),
+          level,
+          onOpen: (slug) => {
+            setPractice(null);
+            openTopic(slug);
+          },
+        }}
+        learn={{
+          level,
+          onLevel: (l) => {
+            setLevel(l);
+            saveLevel(l);
+          },
+          onQuiz: () => openPractice("quiz"),
+          onCards: () => openPractice("cards"),
+          board,
+          onBoard: () => setBoard((b) => !b),
+          drawing,
+          onDraw: () => setDrawing((d) => !d),
         }}
       />
 
@@ -730,10 +821,10 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           onClose={closeDive}
         />
       )}
-      {!dive && topic && !selection && (
-        <TopicSheet t={t} topic={topic} onClose={closeTopic} onDeepDive={diveFromTopic} />
+      {!dive && !practice && topic && !selection && (
+        <TopicSheet t={t} topic={topic} onClose={closeTopic} onDeepDive={diveFromTopic} steps={board} />
       )}
-      {!dive && selection && (
+      {!dive && !practice && selection && (
         <DetailSheet
           t={t}
           selection={selection}
@@ -743,6 +834,14 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           onClear={clearSelection}
           onDeepDive={diveFromSelection}
         />
+      )}
+      {practice && !dive && (
+        <PracticeSheet key={`${practice}-${level}`} mode={practice} level={level} host={practiceHost} onClose={closePractice} />
+      )}
+      {drawing && (
+        <div className={`${canvasArea.replace("pointer-events-none ", "")} z-[42]`}>
+          <DrawLayer board={board} onClose={() => setDrawing(false)} />
+        </div>
       )}
       {aboutOpen && <AboutSheet t={t} onClose={() => setAboutOpen(false)} />}
     </main>

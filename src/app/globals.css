@@ -201,3 +201,17 @@ body {
 .atlas-anchor-ring {
   animation: atlas-anchor-pulse 1.6s ease-in-out infinite;
 }
+
+/* Board mode (smart boards): larger labels and reading text, visible from the back of the class. */
+.atlas-board button.atlas-callout {
+  font-size: 17px;
+  line-height: 26px;
+  padding: 4px 12px;
+}
+.atlas-board .atlas-callout span {
+  font-size: 13px;
+}
+.atlas-board aside .text-\[15px\] {
+  font-size: 17px;
+  line-height: 30px;
+}
