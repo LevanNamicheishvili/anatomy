@@ -255,12 +255,17 @@ const smooth = (a: number, b: number, x: number) => {
  * Per-vertex segment weights for soft tissue (skin, muscles, vessels, organs), blended across
  * each joint so the surface bends smoothly instead of tearing. Up to four segments per vertex.
  */
-export function skinWeights(rig: Rig, positions: Float32Array): { index: Uint8Array; weight: Uint8Array } {
+export function skinWeights(
+  rig: Rig,
+  positions: Float32Array,
+  indices: Uint32Array,
+): { index: Uint8Array; weight: Uint8Array; indices: Uint32Array } {
   const count = positions.length / 3;
   const index = new Uint8Array(count * 4);
   const weight = new Uint8Array(count * 4);
   const { neck, waist } = rig.joints;
   const w = new Float32Array(SEGMENTS.length);
+  const raw = new Float32Array(count * SEGMENTS.length);
   const order: number[] = [];
 
   // Arm "capsules": distance to the bone line decides what follows the arm. Using distance (not
@@ -350,20 +355,33 @@ export function skinWeights(rig: Rig, positions: Float32Array): { index: Uint8Ar
       w[SEGMENT_INDEX.root] += body * (1 - head) * (1 - upper);
     }
 
-    // Keep the four strongest influences and quantise to bytes that sum to 255.
+    raw.set(w, v * SEG_COUNT);
+  }
+
+  // 1. Drop triangles that bridge unjoined parts (e.g. resting hand touching the hip in the scan),
+  //    both so they cannot stretch and so smoothing cannot leak weights across them.
+  const cleaned = dropBridges(indices, raw);
+
+  // 2. Smooth the weights across the surface (Laplacian diffusion) so the skin bends gradually
+  //    at the joints instead of tearing where the classification changes abruptly.
+  smoothOverMesh(raw, cleaned, count, 14);
+
+  // 3. Keep the four strongest influences and quantise to bytes that sum to 255.
+  for (let v = 0; v < count; v++) {
+    const base = v * SEG_COUNT;
     order.length = 0;
-    for (let i = 0; i < w.length; i++) if (w[i] > 0.001) order.push(i);
-    order.sort((a, b) => w[b] - w[a]);
+    for (let i = 0; i < SEG_COUNT; i++) if (raw[base + i] > 0.002) order.push(i);
+    order.sort((a, b) => raw[base + b] - raw[base + a]);
     const n = Math.min(4, order.length);
     let total = 0;
-    for (let k = 0; k < n; k++) total += w[order[k]];
+    for (let k = 0; k < n; k++) total += raw[base + order[k]];
     let used = 0;
     for (let k = 0; k < 4; k++) {
       const o = v * 4 + k;
       if (k < n) {
         index[o] = order[k];
         // Clamp so the bytes can never sum past 255 (an overflow would wrap and fling the vertex away).
-        const q = Math.max(0, Math.min(255 - used, k === n - 1 ? 255 - used : Math.round((w[order[k]] / total) * 255)));
+        const q = Math.max(0, Math.min(255 - used, k === n - 1 ? 255 - used : Math.round((raw[base + order[k]] / total) * 255)));
         weight[o] = q;
         used += q;
       } else {
@@ -376,7 +394,86 @@ export function skinWeights(rig: Rig, positions: Float32Array): { index: Uint8Ar
       weight[v * 4] = 255;
     }
   }
-  return { index, weight };
+  return { index, weight, indices: cleaned };
+}
+
+const SEG_COUNT = SEGMENTS.length;
+
+function dominant(raw: Float32Array, v: number): [number, number] {
+  let best = 0;
+  let bestW = -1;
+  let sum = 0;
+  for (let i = 0; i < SEG_COUNT; i++) {
+    const x = raw[v * SEG_COUNT + i];
+    sum += x;
+    if (x > bestW) {
+      bestW = x;
+      best = i;
+    }
+  }
+  return [best, sum > 0 ? bestW / sum : 0];
+}
+
+function dropBridges(indices: Uint32Array, raw: Float32Array): Uint32Array {
+  const joined = (a: number, b: number) => a === b || PARENT[SEGMENTS[a]] === SEGMENTS[b] || PARENT[SEGMENTS[b]] === SEGMENTS[a];
+  const keep: number[] = [];
+  for (let t = 0; t < indices.length; t += 3) {
+    const d = [dominant(raw, indices[t]), dominant(raw, indices[t + 1]), dominant(raw, indices[t + 2])];
+    let ok = true;
+    for (let i = 0; i < 3 && ok; i++)
+      for (let j = i + 1; j < 3; j++)
+        if (d[i][1] > 0.6 && d[j][1] > 0.6 && !joined(d[i][0], d[j][0])) {
+          ok = false;
+          break;
+        }
+    if (ok) keep.push(indices[t], indices[t + 1], indices[t + 2]);
+  }
+  return keep.length === indices.length ? indices : Uint32Array.from(keep);
+}
+
+function smoothOverMesh(raw: Float32Array, indices: Uint32Array, count: number, iterations: number) {
+  // Compressed adjacency lists built from the triangle edges.
+  const degree = new Uint32Array(count + 1);
+  for (let t = 0; t < indices.length; t += 3)
+    for (let i = 0; i < 3; i++) degree[indices[t + i]] += 2;
+  const start = new Uint32Array(count + 1);
+  for (let v = 0; v < count; v++) start[v + 1] = start[v] + degree[v];
+  const fill = start.slice(0, count);
+  const nbr = new Uint32Array(start[count]);
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t];
+    const b = indices[t + 1];
+    const c = indices[t + 2];
+    nbr[fill[a]++] = b;
+    nbr[fill[a]++] = c;
+    nbr[fill[b]++] = a;
+    nbr[fill[b]++] = c;
+    nbr[fill[c]++] = a;
+    nbr[fill[c]++] = b;
+  }
+  let src: Float32Array = raw;
+  let dst: Float32Array = new Float32Array(raw.length);
+  for (let it = 0; it < iterations; it++) {
+    for (let v = 0; v < count; v++) {
+      const s = start[v];
+      const e = start[v + 1];
+      const base = v * SEG_COUNT;
+      if (e === s) {
+        for (let i = 0; i < SEG_COUNT; i++) dst[base + i] = src[base + i];
+        continue;
+      }
+      const inv = 1 / (e - s);
+      for (let i = 0; i < SEG_COUNT; i++) {
+        let acc = 0;
+        for (let k = s; k < e; k++) acc += src[nbr[k] * SEG_COUNT + i];
+        dst[base + i] = 0.5 * src[base + i] + 0.5 * acc * inv;
+      }
+    }
+    const tmp = src;
+    src = dst;
+    dst = tmp;
+  }
+  if (src !== raw) raw.set(src);
 }
 
 // ---- Poses -----------------------------------------------------------------------------------------
@@ -441,7 +538,7 @@ export function evaluatePose(key: PoseKey, t: number): Angles {
     case "standing":
       break;
     case "armsUp":
-      b.both((p, s) => p.shoulderAbduct(s, 165).elbowFlex(s, 5));
+      b.both((p, s) => p.shoulderAbduct(s, 150).elbowFlex(s, 8));
       break;
     case "tPose":
       b.both((p, s) => p.shoulderAbduct(s, 88));
@@ -474,14 +571,14 @@ export function evaluatePose(key: PoseKey, t: number): Angles {
     }
     case "wave": {
       const w = Math.sin((t / 0.55) * TAU);
-      b.shoulderAbduct("R", 150).elbowFlex("R", 20).forearmSwing("R", 25 * w);
+      b.shoulderAbduct("R", 135).elbowFlex("R", 25).forearmSwing("R", 22 * w);
       b.shoulderAbduct("L", 6);
       b.headTurn(-12).headNod(-4);
       break;
     }
     case "jumpingJack": {
       const open = 0.5 - 0.5 * Math.cos((t / 1.1) * TAU);
-      b.both((p, s) => p.shoulderAbduct(s, 8 + 160 * open).hipAbduct(s, 2 + 16 * open).kneeFlex(s, 10 * (1 - open)));
+      b.both((p, s) => p.shoulderAbduct(s, 8 + 140 * open).hipAbduct(s, 2 + 14 * open).kneeFlex(s, 10 * (1 - open)));
       break;
     }
     case "squatExercise": {

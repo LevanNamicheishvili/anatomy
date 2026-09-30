@@ -13,7 +13,6 @@ import {
   buildRig,
   evaluatePose,
   groundOffset,
-  removeBridgeTriangles,
   skinWeights,
   solveSegments,
   type PoseKey,
@@ -78,7 +77,7 @@ interface PartMesh {
   centroid: THREE.Vector3;
   jitter: THREE.Vector3;
   explodeOffset: THREE.Vector3;
-  /** Bones move as one rigid piece; everything else is skinned per vertex in the shader. */
+  /** Everything moves as one rigid piece with its body segment except the body surface (skinned). */
   rigid: boolean;
 }
 
@@ -163,7 +162,7 @@ function makeTissue(system: SystemKey): THREE.MeshPhysicalMaterial {
     metalness: 0,
     clearcoat: m.clearcoat,
     clearcoatRoughness: m.clearcoatRoughness,
-    sheen: m.sheen ?? 0,
+    sheen: 0,
     sheenColor: new THREE.Color(m.sheenColor ?? "#ffffff"),
     sheenRoughness: 0.45,
     specularIntensity: m.specular ?? 0.6,
@@ -305,7 +304,7 @@ export class AnatomyViewer {
     private callbacks: ViewerCallbacks,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -326,7 +325,10 @@ export class AnatomyViewer {
     this.controls.minPolarAngle = THREE.MathUtils.degToRad(12);
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(100);
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-    this.controls.addEventListener("change", () => (this.dirty = true));
+    this.controls.addEventListener("change", () => {
+      this.dirty = true;
+      this.lastMotion = performance.now();
+    });
     this.controls.addEventListener("start", () => (this.tween = null));
 
     // Studio reflections give the tissue its moist, glossy highlights.
@@ -466,7 +468,6 @@ export class AnatomyViewer {
       const entry = this.parts.get(id);
       if (entry) this.applyMaterial(entry);
     }
-    this.gtao.enabled = this.cutIds.size === 0 && this.pose === "standing" && !this.rigActive;
     this.updateCutPlane();
     this.dirty = true;
   }
@@ -547,7 +548,9 @@ export class AnatomyViewer {
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3, true));
     geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-    const rigid = part.system === "skeletal" || !this.rig;
+    // Muscles, vessels and organs attach across joints in ways a heuristic can't weight well, so they
+    // move rigidly with their segment (no stretching). Only the continuous body surface is skinned.
+    const rigid = part.system !== "integumentary" || !this.rig;
     if (rigid) {
       const idx = new Uint8Array(part.vertexCount * 4).fill(IDENTITY_SLOT);
       const wts = new Uint8Array(part.vertexCount * 4);
@@ -555,11 +558,10 @@ export class AnatomyViewer {
       geometry.setAttribute("aSegI", new THREE.BufferAttribute(idx, 4));
       geometry.setAttribute("aSegW", new THREE.BufferAttribute(wts, 4, true));
     } else if (this.rig) {
-      const { index, weight } = skinWeights(this.rig, positions);
-      geometry.setAttribute("aSegI", new THREE.BufferAttribute(index, 4));
-      geometry.setAttribute("aSegW", new THREE.BufferAttribute(weight, 4, true));
-      const cleaned = removeBridgeTriangles(indices, index, weight);
-      if (cleaned !== indices) geometry.setIndex(new THREE.BufferAttribute(cleaned, 1));
+      const skin = skinWeights(this.rig, positions, indices);
+      geometry.setAttribute("aSegI", new THREE.BufferAttribute(skin.index, 4));
+      geometry.setAttribute("aSegW", new THREE.BufferAttribute(skin.weight, 4, true));
+      if (skin.indices !== indices) geometry.setIndex(new THREE.BufferAttribute(skin.indices, 1));
     }
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
@@ -594,10 +596,17 @@ export class AnatomyViewer {
   // ---- State from React ------------------------------------------------------------------------
 
   private visibility: Set<string> | null = null;
+  private skinVisible = false;
+  /** Last time anything moved; ambient occlusion only renders once the view is still. */
+  private lastMotion = 0;
 
   setVisible(ids: Set<string>) {
     this.visibility = ids;
-    for (const [id, entry] of this.parts) entry.mesh.visible = ids.has(id);
+    this.skinVisible = false;
+    for (const [id, entry] of this.parts) {
+      entry.mesh.visible = ids.has(id);
+      if (entry.mesh.visible && !entry.rigid) this.skinVisible = true;
+    }
     if (this.hovered && !ids.has(this.hovered)) this.setHovered(null);
     this.dirty = true;
   }
@@ -616,9 +625,6 @@ export class AnatomyViewer {
     this.anim = settings;
     this.lastTick = performance.now();
     const animating = settings.heartbeat || settings.breathing || settings.bloodFlow;
-    // Keep motion smooth on school laptops: render a little softer while animating.
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, animating ? 1.5 : 2));
-    this.resize();
     if (!animating) {
       this.uniforms.uAnim.value.set(0, 0, 0, 0);
       this.uniforms.uFlow.value.set(0, this.beats);
@@ -682,8 +688,9 @@ export class AnatomyViewer {
     this.lastRigTick = now;
     this.poseTime += dt;
     const target = evaluatePose(this.pose, this.poseTime);
-    // Critically-damped approach: smooth transitions between poses and smooth looping motion.
-    const k = 1 - Math.exp(-dt * 9);
+    // Smooth transitions between poses; looping movements follow their target closely so they don't lag.
+    const looping = this.pose === "walk" || this.pose === "wave" || this.pose === "jumpingJack" || this.pose === "squatExercise";
+    const k = 1 - Math.exp(-dt * (looping && this.poseTime > 0.6 ? 22 : 8));
     let settled = true;
     for (const seg of SEGMENTS) {
       anglesToQuaternion(target[seg], this.tmpQuat);
@@ -698,8 +705,6 @@ export class AnatomyViewer {
     for (const entry of this.parts.values()) this.updatePartMatrix(entry);
     const animated = this.pose === "walk" || this.pose === "wave" || this.pose === "jumpingJack" || this.pose === "squatExercise";
     if (settled && !animated) this.rigActive = false;
-    // The AO pass renders the rest-pose geometry, so it is only correct when standing still.
-    this.gtao.enabled = this.pose === "standing" && settled && this.cutIds.size === 0;
     return true;
   }
 
@@ -968,9 +973,21 @@ export class AnatomyViewer {
     this.clampTarget();
     this.updateCutPlane();
     this.processHover();
-    if (this.tickRig(now)) this.dirty = true;
-    if (this.tickAnimation(now)) this.dirty = true;
-    else this.lastTick = now;
+    const rigMoved = this.tickRig(now);
+    const animated = this.tickAnimation(now);
+    if (!animated) this.lastTick = now;
+    if (rigMoved || animated || this.tween) {
+      this.dirty = true;
+      this.lastMotion = now;
+    }
+    // Ambient occlusion re-renders the whole scene, so only add it once the view has settled.
+    // (It sees rest-pose geometry, so skip it for a posed, skinned body surface or a 3D cut.)
+    const wantAO =
+      now - this.lastMotion > 350 && this.cutIds.size === 0 && !(this.pose !== "standing" && this.skinVisible);
+    if (wantAO !== this.gtao.enabled) {
+      this.gtao.enabled = wantAO;
+      this.dirty = true;
+    }
     if (this.dirty) {
       this.dirty = false;
       this.composer.render();
