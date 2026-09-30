@@ -92,10 +92,176 @@ const skinRaw = new Float32Array(skinCount * SEG_COUNT);
 for (let v = 0; v < skinCount; v++) {
   skinRaw[v * SEG_COUNT + nearestBoneSegment(skinPos[v * 3], skinPos[v * 3 + 1], skinPos[v * 3 + 2])] = 1;
 }
+// Patch holes left in the scanned skin (armpits, hands, groin). Face openings — eyes, mouth, nostrils,
+// ears — are real openings and stay open. Loops are filled with a fan in the reverse direction of the
+// boundary so the new triangles face the same way as their neighbours.
+function fillHoles(tris: Uint32Array, pos: Float32Array): Uint32Array {
+  const directed = new Set<string>();
+  for (let t = 0; t < tris.length; t += 3)
+    for (let e = 0; e < 3; e++) directed.add(`${tris[t + e]},${tris[t + ((e + 1) % 3)]}`);
+  // Boundary edges by start vertex. A vertex can start several boundary edges (holes touching at a
+  // point), so loops are traced edge by edge rather than vertex by vertex.
+  const next = new Map<number, number[]>();
+  for (const k of directed) {
+    const [a, b] = k.split(",").map(Number);
+    if (directed.has(`${b},${a}`)) continue;
+    const l = next.get(a);
+    if (l) l.push(b);
+    else next.set(a, [b]);
+  }
+  const added: number[] = [];
+  const usedEdge = new Set<string>();
+  let loops = 0;
+  const takeEdge = (from: number): number | undefined => {
+    for (const to of next.get(from) ?? []) {
+      const k = `${from},${to}`;
+      if (!usedEdge.has(k)) {
+        usedEdge.add(k);
+        return to;
+      }
+    }
+    return undefined;
+  };
+  for (const [start, outs] of next) {
+    for (let o = 0; o < outs.length; o++) {
+      if (usedEdge.has(`${start},${outs[o]}`)) continue;
+      usedEdge.add(`${start},${outs[o]}`);
+      const loop = [start];
+      let cur: number | undefined = outs[o];
+      while (cur !== undefined && cur !== start && loop.length < 2000) {
+        loop.push(cur);
+        cur = takeEdge(cur);
+      }
+      if (cur !== start || loop.length < 3) continue;
+      fill(loop);
+    }
+  }
+  function fill(loop: number[]) {
+    const cy = loop.reduce((s, v) => s + pos[v * 3 + 1], 0) / loop.length;
+    if (cy > 1.45) return; // face and ear openings stay open
+    for (let i = 1; i < loop.length - 1; i++) added.push(loop[0], loop[i + 1], loop[i]);
+    loops++;
+  }
+  console.log(`skin holes patched: ${loops} (${added.length / 3} triangles)`);
+  const out = new Uint32Array(tris.length + added.length);
+  out.set(tris);
+  out.set(added, tris.length);
+  return out;
+}
+
 const skinIndices = indicesOf(skinPart);
-const cleanedSkin = dropBridges(skinIndices, skinRaw);
+const filledSkin = fillHoles(skinIndices, skinPos);
+// Removing the fingertip-to-thigh bridges opens small gaps on the thigh and fingertips: patch those
+// separately, then drop any patch that would bridge the hand and thigh again.
+const cleanedSkin = dropBridges(fillHoles(dropBridges(filledSkin, skinRaw), skinPos), skinRaw);
 smoothOverMesh(skinRaw, cleanedSkin, skinCount, 10);
 const skin = { raw: skinRaw, indices: cleanedSkin };
+
+// Adaptive push-out: the visible outer skin layer is moved out just far enough to cover any inner
+// structure lying close under (or through) it — at least the default 5.5 mm, at most 25 mm.
+const skinNrm = new Int16Array(chunks[skinPart.chunk].slice(skinPart.normals, skinPart.normals + skinCount * 6));
+const skinInflate = new Uint8Array(skinCount).fill(55); // units of 0.1 mm
+{
+  // The skin is a two-layer shell; find the outer layer (the component whose torso normals face out).
+  const parent = new Int32Array(skinCount).map((_, i) => i);
+  const find = (x: number): number => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  for (let t = 0; t < skinIndices.length; t += 3) {
+    const r0 = find(skinIndices[t]);
+    for (const q of [skinIndices[t + 1], skinIndices[t + 2]]) {
+      const r = find(q);
+      if (r !== r0) parent[r] = r0;
+    }
+  }
+  const facing = new Map<number, number>();
+  for (let v = 0; v < skinCount; v++) {
+    const x = skinPos[v * 3];
+    const y = skinPos[v * 3 + 1];
+    const z = skinPos[v * 3 + 2];
+    if (y < 1.0 || y > 1.35 || Math.abs(x) > 0.14) continue;
+    const r = find(v);
+    facing.set(r, (facing.get(r) ?? 0) + Math.sign(x * skinNrm[v * 3] + z * skinNrm[v * 3 + 2]));
+  }
+  const outerRoot = [...facing].sort((a, b) => b[1] - a[1])[0][0];
+  const outer = new Uint8Array(skinCount);
+  for (let v = 0; v < skinCount; v++) outer[v] = find(v) === outerRoot ? 1 : 0;
+
+  const OCELL = 0.02;
+  const ogrid = new Map<string, number[]>();
+  for (let v = 0; v < skinCount; v++) {
+    if (!outer[v]) continue;
+    const k = `${Math.floor(skinPos[v * 3] / OCELL)},${Math.floor(skinPos[v * 3 + 1] / OCELL)},${Math.floor(skinPos[v * 3 + 2] / OCELL)}`;
+    const l = ogrid.get(k);
+    if (l) l.push(v);
+    else ogrid.set(k, [v]);
+  }
+  const need = new Float32Array(skinCount);
+  let covered = 0;
+  for (const p of manifest.parts) {
+    if (p.system === "integumentary") continue;
+    const pos = positionsOf(p);
+    for (let v = 0; v < p.vertexCount; v++) {
+      const x = pos[v * 3];
+      const y = pos[v * 3 + 1];
+      const z = pos[v * 3 + 2];
+      if (y > 1.5) continue; // head: eyes, ears and teeth sit in real openings
+      const cx = Math.floor(x / OCELL);
+      const cy = Math.floor(y / OCELL);
+      const cz = Math.floor(z / OCELL);
+      let s = -1;
+      let bd = 0.04 * 0.04;
+      for (let i = -2; i <= 2; i++)
+        for (let j = -2; j <= 2; j++)
+          for (let k = -2; k <= 2; k++)
+            for (const q of ogrid.get(`${cx + i},${cy + j},${cz + k}`) ?? []) {
+              const d = (skinPos[q * 3] - x) ** 2 + (skinPos[q * 3 + 1] - y) ** 2 + (skinPos[q * 3 + 2] - z) ** 2;
+              if (d < bd) {
+                bd = d;
+                s = q;
+              }
+            }
+      if (s < 0) continue;
+      const d =
+        ((x - skinPos[s * 3]) * skinNrm[s * 3] + (y - skinPos[s * 3 + 1]) * skinNrm[s * 3 + 1] + (z - skinPos[s * 3 + 2]) * skinNrm[s * 3 + 2]) /
+        32767;
+      if (d + 0.003 > need[s]) need[s] = d + 0.003;
+      if (d > 0.005) covered++;
+    }
+  }
+  // Spread each bump over two rings of neighbours, then soften it, so the skin swells smoothly.
+  const nbrs: number[][] = Array.from({ length: skinCount }, () => []);
+  for (let t = 0; t < cleanedSkin.length; t += 3)
+    for (let e = 0; e < 3; e++) nbrs[cleanedSkin[t + e]].push(cleanedSkin[t + ((e + 1) % 3)], cleanedSkin[t + ((e + 2) % 3)]);
+  let cur = need;
+  for (let it = 0; it < 2; it++) {
+    const nx = new Float32Array(cur);
+    for (let v = 0; v < skinCount; v++) for (const n of nbrs[v]) if (cur[n] > nx[v]) nx[v] = cur[n];
+    cur = nx;
+  }
+  for (let it = 0; it < 3; it++) {
+    const nx = new Float32Array(cur);
+    for (let v = 0; v < skinCount; v++) {
+      if (!nbrs[v].length) continue;
+      let s = 0;
+      for (const n of nbrs[v]) s += cur[n];
+      nx[v] = Math.max(cur[v] * 0.9, 0.5 * cur[v] + (0.5 * s) / nbrs[v].length);
+    }
+    cur = nx;
+  }
+  let raised = 0;
+  for (let v = 0; v < skinCount; v++) {
+    if (!outer[v]) continue;
+    const mm = Math.min(0.025, Math.max(0.0055, cur[v]));
+    skinInflate[v] = Math.round(mm * 10000);
+    if (mm > 0.0056) raised++;
+  }
+  console.log(`inner points closer than 5 mm to the skin: ${covered}; outer skin points pushed out further: ${raised}`);
+}
 
 // Report where triangles were dropped, so real skin is never removed by accident.
 {
@@ -174,7 +340,7 @@ function transfer(x: number, y: number, z: number, out: Float32Array, o: number)
 }
 
 // 3. Write one weight file per model chunk.
-const partsOut: Record<string, { o: number; i?: number; n?: number }> = {};
+const partsOut: Record<string, { o: number; f?: number; i?: number; n?: number }> = {};
 const chunkBlocks: Buffer[][] = manifest.chunks.map(() => []);
 const chunkSize = manifest.chunks.map(() => 0);
 let baked = 0;
@@ -195,7 +361,13 @@ for (const p of manifest.parts) {
   const offset = chunkSize[p.chunk];
   const blocks = [Buffer.from(index.buffer), Buffer.from(weight.buffer)];
   let size = index.byteLength + weight.byteLength;
-  const entry: { o: number; i?: number; n?: number } = { o: offset };
+  const entry: { o: number; f?: number; i?: number; n?: number } = { o: offset };
+  if (p.id === skinPart.id) {
+    // Per-vertex push-out distance (0.1 mm units) for the outer skin layer.
+    entry.f = offset + size;
+    blocks.push(Buffer.from(skinInflate.buffer, skinInflate.byteOffset, skinInflate.byteLength));
+    size += skinInflate.byteLength;
+  }
   if (cleaned) {
     const pad = (4 - ((offset + size) % 4)) % 4;
     if (pad) blocks.push(Buffer.alloc(pad));

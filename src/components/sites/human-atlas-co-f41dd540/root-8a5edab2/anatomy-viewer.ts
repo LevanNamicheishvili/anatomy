@@ -71,6 +71,8 @@ const BREATH_PERIOD = 4.8;
 interface SkinEntry {
   /** Byte offset of 4×Uint8 segment indices, followed by 4×Uint8 weights, per vertex. */
   o: number;
+  /** Optional Uint8 per-vertex skin push-out (0.1 mm units). */
+  f?: number;
   /** Optional replacement triangle list (Uint32) for the body surface. */
   i?: number;
   n?: number;
@@ -194,6 +196,7 @@ uniform vec3 uChest;
 uniform mat4 uSeg[16];
 attribute vec4 aSegI;
 attribute vec4 aSegW;
+attribute float aInflate;
 varying vec3 vAnimPos;
 `;
 
@@ -215,7 +218,9 @@ vAnimPos = position;
   transformed.y += 0.007 * uAnim.z;
 #elif ANIM_GROUP == 8
   // The simplified skin sits slightly inside some superficial vessels; push it out so it covers them.
-  transformed += normalize(normal) * 0.0055;
+  // Baked per-vertex push-out (0.1 mm units) covers inner structures lying close under the skin;
+  // parts without it (hair, eyebrows) use the 5.5 mm default.
+  transformed += normalize(normal) * max(aInflate * 0.0001, 0.0055);
 #endif
 // Soft-tissue skinning: blend the posed body-segment matrices.
 transformed = (segM * vec4(transformed, 1.0)).xyz;
@@ -437,6 +442,8 @@ export class AnatomyViewer {
       m.sheenColor = new THREE.Color("#5ff2cf");
     }
     if (group === 8) {
+      // Two-sided, so any tiny remaining gap shows skin rather than the muscle behind it.
+      m.side = THREE.DoubleSide;
       // Win depth ties against structures lying exactly on the body surface.
       m.polygonOffset = true;
       m.polygonOffsetFactor = -1;
@@ -590,7 +597,8 @@ export class AnatomyViewer {
       const n = part.vertexCount * 4;
       geometry.setAttribute("aSegI", new THREE.BufferAttribute(new Uint8Array(wb, entry.o, n), 4));
       geometry.setAttribute("aSegW", new THREE.BufferAttribute(new Uint8Array(wb, entry.o + n, n), 4, true));
-      // The body surface ships with bridge triangles (hand touching hip in the scan) removed.
+      if (entry.f !== undefined) geometry.setAttribute("aInflate", new THREE.BufferAttribute(new Uint8Array(wb, entry.f, part.vertexCount), 1));
+      // The body surface ships with its scan holes patched and bridge triangles removed.
       if (entry.i !== undefined && entry.n) geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(wb, entry.i, entry.n), 1));
     }
     geometry.computeBoundingSphere();
