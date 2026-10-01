@@ -5,9 +5,25 @@
  *  - Next.js build files (content-hashed): saved once, served from the cache
  *  - 3D models and other files: served from the cache at once, refreshed in the background
  */
-const CACHE = "atlas-v1";
+const CACHE = "atlas-v2";
+
+// On a developer's machine build files keep their names between changes, so a cache would serve stale
+// styles and scripts. There the worker removes its caches, unregisters and reloads open pages.
+const LOCAL = ["localhost", "127.0.0.1"].includes(self.location.hostname);
 
 self.addEventListener("install", () => self.skipWaiting());
+
+if (LOCAL) {
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      (async () => {
+        await Promise.all((await caches.keys()).map((k) => caches.delete(k)));
+        await self.registration.unregister();
+        for (const client of await self.clients.matchAll({ type: "window" })) client.navigate(client.url);
+      })(),
+    );
+  });
+}
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
@@ -55,6 +71,7 @@ async function staleWhileRevalidate(request, event) {
 }
 
 self.addEventListener("fetch", (event) => {
+  if (LOCAL) return;
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
