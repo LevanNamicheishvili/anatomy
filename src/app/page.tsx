@@ -67,7 +67,7 @@ function SectionTitle({ eyebrow, title, body }: { eyebrow: string; title: string
   return (
     <div className="reveal max-w-2xl">
       <p className="text-[13px] font-semibold text-[#0f8a74]">{eyebrow}</p>
-      <h2 className="mt-2 text-[28px] leading-tight font-semibold tracking-tight sm:text-[34px]">{title}</h2>
+      <h2 className="mt-2 text-[28px] leading-snug font-semibold sm:text-[34px]">{title}</h2>
       {body && <p className="mt-3 text-base leading-7 text-[#33413e]">{body}</p>}
     </div>
   );
@@ -84,7 +84,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <Logo />
-            <span className="truncate text-[15px] font-semibold">{PORTAL_NAME}</span>
+            <span className="truncate text-[15px] font-heading">{PORTAL_NAME}</span>
           </Link>
           <nav className="hidden items-center gap-1 text-sm text-[#33413e] md:flex" aria-label="გვერდის ნაწილები">
             {[
@@ -125,7 +125,7 @@ export default async function LandingPage() {
               <ShieldCheck className="size-3.5" />
               მხოლოდ საგანმანათლებლო დაწესებულებებისთვის
             </p>
-            <h1 className="mt-6 text-[38px] leading-[1.12] font-semibold tracking-tight sm:text-[48px]">ინტერაქტიული მასალა ქართული სკოლებისთვის</h1>
+            <h1 className="mt-6 text-[38px] leading-[1.3] font-semibold sm:text-[48px]">ინტერაქტიული მასალა ქართული სკოლებისთვის</h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-[#33413e]">
               ერთი დახურული პლატფორმა სკოლისთვის: გაკვეთილი სმარტ დაფაზე, დამოუკიდებელი სწავლა კომპიუტერსა და ტელეფონზე — სკოლის მიერ შექმნილი ანგარიშებით.
             </p>
@@ -252,7 +252,7 @@ export default async function LandingPage() {
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <div>
             <p className="text-[13px] font-semibold text-[#7fd1bd]">ჩართვა</p>
-            <h2 className="mt-2 text-[28px] leading-tight font-semibold tracking-tight sm:text-[34px]">როგორ ჩაერთვება სკოლა</h2>
+            <h2 className="mt-2 text-[28px] leading-snug font-semibold sm:text-[34px]">როგორ ჩაერთვება სკოლა</h2>
             <p className="mt-3 text-base leading-7 text-white/65">საჯარო რეგისტრაცია არ არსებობს — სკოლა ერთვება განაცხადით და დადასტურებით.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/request" className="inline-flex h-12 items-center gap-2 rounded-lg bg-white px-6 text-[15px] font-semibold text-[#111a18] transition-colors hover:bg-[#e6f3ef]">
@@ -283,7 +283,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-[#66736f] sm:px-6">
           <div className="flex items-center gap-3">
             <Logo className="size-8" />
-            <span className="font-semibold text-[#111a18]">{PORTAL_NAME}</span>
+            <span className="font-heading text-[#111a18]">{PORTAL_NAME}</span>
           </div>
           <p className="text-xs leading-5">მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © DBCLS, CC BY 4.0</p>
         </div>

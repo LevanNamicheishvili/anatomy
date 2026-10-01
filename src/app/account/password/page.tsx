@@ -32,7 +32,7 @@ export default async function PasswordPage() {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-[#f4f6f5] px-4 py-10 font-sans text-[#111a18]">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="text-[17px] font-semibold">{PORTAL_NAME}</span>
+          <span className="text-[17px] font-heading">{PORTAL_NAME}</span>
         </div>
         {form}
       </div>

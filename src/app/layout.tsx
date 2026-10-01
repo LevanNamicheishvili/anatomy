@@ -10,11 +10,23 @@ const notoSans = Noto_Sans({
   subsets: ["latin"],
 });
 
-// The platform's typeface. BPG Glaho has one weight; Noto stays behind it as the fallback.
+// Headings and the portal's name: BPG Glaho (one weight, lots of character).
 const glaho = localFont({
   src: "./fonts/BPG-Glaho.woff2",
   variable: "--font-glaho",
   weight: "400",
+  display: "swap",
+});
+
+// Everything else — body text, labels, buttons, forms, numbers: FiraGO, readable at small sizes and
+// with real weights. Subset to Latin + Georgian (see src/app/fonts/FiraGO-OFL.txt).
+const firago = localFont({
+  src: [
+    { path: "./fonts/FiraGO-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/FiraGO-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/FiraGO-SemiBold.woff2", weight: "600", style: "normal" },
+  ],
+  variable: "--font-firago",
   display: "swap",
 });
 
@@ -42,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ka" className={`${glaho.variable} ${notoSans.variable} ${georgian.variable} h-full antialiased`}>
+    <html lang="ka" className={`${glaho.variable} ${firago.variable} ${notoSans.variable} ${georgian.variable} h-full antialiased`}>
       <body className="min-h-full">
         {/* Every navigation between pages animates (see the motion rules in globals.css). */}
         <ViewTransition default="page">{children}</ViewTransition>

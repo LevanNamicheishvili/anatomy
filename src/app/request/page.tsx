@@ -18,7 +18,7 @@ export default function RequestPage() {
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
             <Logo />
-            <span className="text-[15px] font-semibold">{PORTAL_NAME}</span>
+            <span className="text-[15px] font-heading">{PORTAL_NAME}</span>
           </Link>
         </div>
       </header>

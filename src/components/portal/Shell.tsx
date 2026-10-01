@@ -29,7 +29,7 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
             <Logo />
             <span className="min-w-0 leading-tight">
-              <span className="block truncate text-[15px] font-semibold">{PORTAL_NAME}</span>
+              <span className="block truncate text-[15px] font-heading">{PORTAL_NAME}</span>
               <span className="block truncate text-xs text-[#66736f]">{user.school ? `${user.school.name} · ${user.school.city}` : "სისტემის მართვა"}</span>
             </span>
           </Link>

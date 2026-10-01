@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="w-full max-w-[420px]">
           <div className="flex flex-col items-center text-center">
             <Logo className="size-12 rounded-xl [&>svg]:size-6" />
-            <h1 className="mt-5 text-[28px] leading-tight font-semibold tracking-tight">შესვლა პორტალზე</h1>
+            <h1 className="mt-5 text-[28px] leading-snug font-semibold">შესვლა პორტალზე</h1>
             <p className="mt-2 text-[15px] leading-7 text-[#66736f]">გამოიყენე სკოლისგან მიღებული მომხმარებლის სახელი და პაროლი.</p>
           </div>
 
