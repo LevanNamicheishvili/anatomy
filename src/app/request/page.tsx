@@ -16,7 +16,7 @@ export default function RequestPage() {
     <div className="min-h-dvh bg-[#f4f6f5] font-sans text-[#111a18]">
       <header className="border-b border-[#e2e7e5] bg-white">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6">
-          <Link href="/login" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <Logo />
             <span className="text-[15px] font-semibold">{PORTAL_NAME}</span>
           </Link>

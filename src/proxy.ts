@@ -2,8 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase/config";
 
-/** Pages open without signing in: the login page and the school application form. */
+/** Pages open without signing in: the landing page, the login page and the school application form. */
 const PUBLIC = ["/login", "/request"];
+const PUBLIC_EXACT = ["/"];
 
 /**
  * Refreshes the Supabase session cookie on every request and sends visitors without a session to the
@@ -12,7 +13,7 @@ const PUBLIC = ["/login", "/request"];
  */
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));
+  const isPublic = PUBLIC_EXACT.includes(path) || PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));
   if (!supabaseConfigured) {
     // Not connected yet: everything except the public pages shows the login page with a setup note.
     return isPublic ? NextResponse.next() : NextResponse.redirect(new URL("/login", request.url));

@@ -1,6 +1,6 @@
 /**
  * Creates the first system administrator (run once: `npx tsx scripts/create-super-admin.ts "სახელი გვარი"`).
- * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local. Prints the username and
+ * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local. Prints the username and
  * a temporary password, which has to be changed on first sign-in.
  */
 import { randomInt } from "node:crypto";
@@ -9,10 +9,10 @@ import { createClient } from "@supabase/supabase-js";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const fullName = process.argv[2]?.trim();
 const username = (process.argv[3] ?? "admin").trim().toLowerCase();
-if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local");
+if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local");
 if (!fullName) throw new Error('Usage: npx tsx scripts/create-super-admin.ts "სახელი გვარი" [username]');
 
 const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";

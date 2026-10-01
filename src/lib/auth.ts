@@ -72,6 +72,6 @@ export async function requireUser(next?: string): Promise<CurrentUser> {
 /** The signed-in user if they have one of the roles; anyone else is sent to the home page. */
 export async function requireRole(roles: Role[], next?: string): Promise<CurrentUser> {
   const user = await requireUser(next);
-  if (!roles.includes(user.role)) redirect("/");
+  if (!roles.includes(user.role)) redirect("/dashboard");
   return user;
 }

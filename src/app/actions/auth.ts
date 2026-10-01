@@ -16,7 +16,7 @@ export interface FormState {
 /** Only same-site paths are followed after signing in. */
 function safeNext(value: FormDataEntryValue | null) {
   const next = typeof value === "string" ? value : "";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  return next.startsWith("/") && !next.startsWith("//") && next !== "/" ? next : "/dashboard";
 }
 
 export async function signIn(_: FormState, form: FormData): Promise<FormState> {
@@ -53,5 +53,5 @@ export async function changePassword(_: FormState, form: FormData): Promise<Form
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: "პაროლი ვერ შეიცვალა. სცადე სხვა პაროლი." };
   await createAdminClient().from("profiles").update({ must_change_password: false }).eq("id", user.id);
-  redirect("/");
+  redirect("/dashboard");
 }

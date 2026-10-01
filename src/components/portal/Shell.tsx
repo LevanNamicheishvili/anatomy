@@ -5,7 +5,7 @@ import { ROLE_NAMES, type CurrentUser } from "@/lib/auth";
 import { Logo, PORTAL_NAME } from "./ui";
 
 function navFor(user: CurrentUser) {
-  const items = [{ href: "/", label: "მთავარი" }];
+  const items = [{ href: "/dashboard", label: "მთავარი" }];
   if (user.role === "super_admin") items.push({ href: "/admin", label: "სკოლები და განაცხადები" });
   if (user.role === "school_admin" || user.role === "teacher") items.push({ href: "/school", label: user.role === "school_admin" ? "სკოლის მართვა" : "ჩემი სკოლა" });
   items.push({ href: "/account/password", label: "პაროლის შეცვლა" });
@@ -26,7 +26,7 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
     <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
       <header className="sticky top-0 z-20 border-b border-[#e2e7e5] bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
             <Logo />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-[15px] font-semibold">{PORTAL_NAME}</span>
