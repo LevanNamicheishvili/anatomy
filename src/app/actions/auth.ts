@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface FormState {
   error?: string;
+  /** Typed username, given back after a failed attempt so it doesn't have to be retyped. */
+  username?: string;
 }
 
 /** Only same-site paths are followed after signing in. */
@@ -18,16 +20,16 @@ function safeNext(value: FormDataEntryValue | null) {
 }
 
 export async function signIn(_: FormState, form: FormData): Promise<FormState> {
-  if (!supabaseConfigured) return { error: "სისტემა ჯერ არ არის დაკავშირებული მონაცემთა ბაზასთან." };
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  if (!username || !password) return { error: "შეიყვანე მომხმარებლის სახელი და პაროლი." };
+  if (!supabaseConfigured) return { error: "სისტემა ჯერ არ არის დაკავშირებული მონაცემთა ბაზასთან.", username };
+  if (!username || !password) return { error: "შეიყვანე მომხმარებლის სახელი და პაროლი.", username };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(username), password });
-  if (error) return { error: "მომხმარებლის სახელი ან პაროლი არასწორია." };
+  if (error) return { error: "მომხმარებლის სახელი ან პაროლი არასწორია.", username };
   if (!(await getCurrentUser())) {
     await supabase.auth.signOut();
-    return { error: "ანგარიში ან სკოლა გათიშულია. მიმართე სკოლის ადმინისტრატორს." };
+    return { error: "ანგარიში ან სკოლა გათიშულია. მიმართე სკოლის ადმინისტრატორს.", username };
   }
   redirect(safeNext(form.get("next")));
 }

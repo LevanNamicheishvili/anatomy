@@ -46,13 +46,20 @@ function layout({ anchors, free, w, h }: LabelFrame, widths: Map<string, number>
     maxX = Math.max(maxX, a.x);
   }
   const mid = (minX + maxX) / 2;
+  // On narrow screens cards from the two sides reach across the body and would overlap each other,
+  // so both sides share one vertical sequence there; on wide screens each side is spaced on its own.
+  const narrow = right - left < 700;
+  const sideOf = (a: LabelAnchor) => (a.x < mid ? "left" : "right") as Placed["side"];
+  const groups = narrow
+    ? [[...inside].sort((p, q) => p.y - q.y)]
+    : (["left", "right"] as const).map((side) => inside.filter((a) => sideOf(a) === side).sort((p, q) => p.y - q.y));
   const placed: Placed[] = [];
-  for (const side of ["left", "right"] as const) {
-    const column = inside.filter((a) => (side === "left" ? a.x < mid : a.x >= mid)).sort((p, q) => p.y - q.y);
+  for (const column of groups) {
     const ys = column.map((a) => a.y);
     for (let i = 0; i < ys.length; i++) ys[i] = Math.max(ys[i], top, i ? ys[i - 1] + ROW : top);
     for (let i = ys.length - 1; i >= 0; i--) ys[i] = Math.min(ys[i], i < ys.length - 1 ? ys[i + 1] - ROW : bottom);
     column.forEach((a, i) => {
+      const side = sideOf(a);
       const width = (widths.get(a.part.id) ?? 180) + 4;
       const cx = side === "left" ? Math.max(left + width, minX - GAP) : Math.min(right - width, maxX + GAP);
       placed.push({ id: a.part.id, ax: a.x, ay: a.y, cx, cy: ys[i], side });
