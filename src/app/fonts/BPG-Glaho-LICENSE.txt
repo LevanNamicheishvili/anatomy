@@ -1,0 +1,11 @@
+BPG Glaho — Georgian typeface by BPG-InfoTech (Besarion Paata Gugushvili), 2011.
+
+Converted unchanged from BPG_Glaho_GPL&GNU_2011.ttf (Fedora package bpg-glaho-fonts) to WOFF2 for the web.
+
+License, as embedded in the font: "May be distributed under the terms of General Public License (GPL).
+http://www.gnu.org/licenses/gpl.html  Are licensed for free distribution by individuals and by companies
+independently, or along with any GNU Linux System or other open-source software, as well for free use of
+the typefaces for commercial and noncommercial needs."
+
+Font exception: embedding this font, or unaltered portions of it, in a document (such as a web page) does
+not by itself cause the document to be covered by the GNU General Public License.
