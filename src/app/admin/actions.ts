@@ -1,9 +1,10 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAccount, resetPassword, type NewAccount } from "@/lib/accounts";
 import { requireRole } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { collections } from "@/lib/db";
 
 export interface ApproveState {
   error?: string;
@@ -14,43 +15,34 @@ export interface ApproveState {
 export async function approveRequest(_: ApproveState, form: FormData): Promise<ApproveState> {
   await requireRole(["super_admin"]);
   const id = String(form.get("id") ?? "");
-  const admin = createAdminClient();
-  const { data: req } = await admin.from("school_requests").select("*").eq("id", id).eq("status", "pending").maybeSingle();
+  const { requests, schools } = await collections();
+  const req = await requests.findOne({ _id: id, status: "pending" });
   if (!req) return { error: "განაცხადი ვერ მოიძებნა ან უკვე განხილულია." };
-  const { data: school, error } = await admin
-    .from("schools")
-    .insert({ name: req.school_name, city: req.city, address: req.address })
-    .select("id, name")
-    .single();
-  if (error || !school) return { error: "სკოლა ვერ შეიქმნა." };
+  const schoolId = randomUUID();
+  await schools.insertOne({ _id: schoolId, name: req.school_name, city: req.city, address: req.address, active: true, created_at: new Date() });
   try {
-    const account = await createAccount({ fullName: req.contact_name, role: "school_admin", schoolId: school.id });
-    await admin.from("school_requests").update({ status: "approved", reviewed_at: new Date().toISOString(), school_id: school.id }).eq("id", id);
+    const account = await createAccount({ fullName: req.contact_name, role: "school_admin", schoolId });
+    await requests.updateOne({ _id: id }, { $set: { status: "approved", reviewed_at: new Date(), school_id: schoolId } });
     revalidatePath("/admin");
-    return { account: { ...account, schoolName: school.name } };
+    return { account: { ...account, schoolName: req.school_name } };
   } catch {
-    await admin.from("schools").delete().eq("id", school.id);
+    await schools.deleteOne({ _id: schoolId });
     return { error: "ადმინისტრატორის ანგარიში ვერ შეიქმნა." };
   }
 }
 
 export async function rejectRequest(form: FormData) {
   await requireRole(["super_admin"]);
-  await createAdminClient()
-    .from("school_requests")
-    .update({ status: "rejected", reviewed_at: new Date().toISOString() })
-    .eq("id", String(form.get("id") ?? ""))
-    .eq("status", "pending");
+  const { requests } = await collections();
+  await requests.updateOne({ _id: String(form.get("id") ?? ""), status: "pending" }, { $set: { status: "rejected", reviewed_at: new Date() } });
   revalidatePath("/admin");
 }
 
 /** Switch a school off (its accounts can no longer sign in) or back on. */
 export async function setSchoolActive(form: FormData) {
   await requireRole(["super_admin"]);
-  await createAdminClient()
-    .from("schools")
-    .update({ active: form.get("active") === "1" })
-    .eq("id", String(form.get("id") ?? ""));
+  const { schools } = await collections();
+  await schools.updateOne({ _id: String(form.get("id") ?? "") }, { $set: { active: form.get("active") === "1" } });
   revalidatePath("/admin");
 }
 
@@ -62,19 +54,15 @@ export interface ResetState {
 /** New temporary password for a school's administrator (e.g. they forgot theirs). */
 export async function resetSchoolAdmin(_: ResetState, form: FormData): Promise<ResetState> {
   await requireRole(["super_admin"]);
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id, full_name, username")
-    .eq("school_id", String(form.get("school_id") ?? ""))
-    .eq("role", "school_admin")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
-  if (!profile) return { error: "ადმინისტრატორი ვერ მოიძებნა." };
+  const { users } = await collections();
+  const admin = await users.findOne(
+    { school_id: String(form.get("school_id") ?? ""), role: "school_admin" },
+    { sort: { created_at: 1 } },
+  );
+  if (!admin) return { error: "ადმინისტრატორი ვერ მოიძებნა." };
   try {
-    const password = await resetPassword(profile.id);
-    return { account: { fullName: profile.full_name, username: profile.username, password } };
+    const password = await resetPassword(admin._id);
+    return { account: { fullName: admin.full_name, username: admin.username, password } };
   } catch {
     return { error: "პაროლი ვერ განახლდა." };
   }

@@ -3,7 +3,7 @@ import { PortalShell } from "@/components/portal/Shell";
 import { Badge, Card, CardHeader, PageHeader, PORTAL_NAME } from "@/components/portal/ui";
 import { requireRole } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { collections } from "@/lib/db";
 import { AddMembersForm, MemberActions } from "./MemberControls";
 
 export const metadata: Metadata = { title: `სკოლის მართვა — ${PORTAL_NAME}` };
@@ -23,12 +23,13 @@ const byClass = (a: string, b: string) => parseInt(a, 10) - parseInt(b, 10) || a
 export default async function SchoolPage() {
   const user = await requireRole(["school_admin", "teacher"], "/school");
   const isAdmin = user.role === "school_admin";
-  const { data } = await createAdminClient()
-    .from("profiles")
-    .select("id, full_name, username, role, class_label, must_change_password")
-    .eq("school_id", user.school?.id ?? "")
-    .order("full_name");
-  const members = (data ?? []) as Member[];
+  const { users } = await collections();
+  const members: Member[] = (
+    await users
+      .find({ school_id: user.school?.id ?? "" }, { projection: { full_name: 1, username: 1, role: 1, class_label: 1, must_change_password: 1 } })
+      .sort({ full_name: 1 })
+      .toArray()
+  ).map((u) => ({ id: u._id, full_name: u.full_name, username: u.username, role: u.role, class_label: u.class_label, must_change_password: u.must_change_password }));
   const teachers = members.filter((m) => m.role === "teacher" || m.role === "school_admin");
   const classes = new Map<string, Member[]>();
   for (const m of members.filter((m) => m.role === "student")) {

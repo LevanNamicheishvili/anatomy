@@ -1,14 +1,9 @@
 import "server-only";
-import { randomInt } from "node:crypto";
-import type { Role } from "./auth";
-import { createAdminClient } from "./supabase/admin";
-
-/**
- * Everyone signs in with a username, so students never need an e-mail address. Behind the scenes each
- * account has an internal address on the reserved ".invalid" domain, which can never receive mail.
- */
-const ACCOUNT_DOMAIN = "accounts.portal.invalid";
-export const loginEmail = (username: string) => `${username.trim().toLowerCase()}@${ACCOUNT_DOMAIN}`;
+import { randomInt, randomUUID } from "node:crypto";
+import { collections } from "./db";
+import { hashPassword } from "./password";
+import type { Role } from "./roles";
+import { destroyUserSessions } from "./session";
 
 // Georgian → Latin (national transliteration system).
 const LATIN: Record<string, string> = {
@@ -28,9 +23,11 @@ export async function makeUsername(fullName: string): Promise<string> {
       .replace(/[^a-z0-9]+/g, ".")
       .replace(/^\.+|\.+$/g, "")
       .slice(0, 30) || "user";
-  const admin = createAdminClient();
-  const { data } = await admin.from("profiles").select("username").like("username", `${base}%`);
-  const taken = new Set((data ?? []).map((r) => r.username as string));
+  const { users } = await collections();
+  const escaped = base.replace(/\./g, "\\.");
+  const taken = new Set(
+    (await users.find({ username: { $regex: `^${escaped}\\d*$` } }, { projection: { username: 1 } }).toArray()).map((u) => u.username),
+  );
   if (!taken.has(base)) return base;
   for (let n = 2; ; n++) if (!taken.has(`${base}${n}`)) return `${base}${n}`;
 }
@@ -50,44 +47,44 @@ export interface NewAccount {
   classLabel: string | null;
 }
 
-/** Creates the sign-in account and its profile; returns the credentials to hand over (shown once). */
+/** Creates an account with a temporary password; returns the details to hand over (shown once). */
 export async function createAccount(input: {
   fullName: string;
   role: Role;
   schoolId: string | null;
   classLabel?: string | null;
 }): Promise<NewAccount> {
-  const admin = createAdminClient();
-  const username = await makeUsername(input.fullName);
+  const { users } = await collections();
   const password = temporaryPassword();
-  const { data, error } = await admin.auth.admin.createUser({
-    email: loginEmail(username),
-    password,
-    email_confirm: true,
-  });
-  if (error || !data.user) throw new Error(error?.message ?? "account not created");
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: data.user.id,
-    school_id: input.schoolId,
-    role: input.role,
-    full_name: input.fullName,
-    username,
-    class_label: input.classLabel ?? null,
-    must_change_password: true,
-  });
-  if (profileError) {
-    await admin.auth.admin.deleteUser(data.user.id);
-    throw new Error(profileError.message);
+  const password_hash = await hashPassword(password);
+  // Two people can be named the same at the same moment: retry if the username was just taken.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const username = await makeUsername(input.fullName);
+    try {
+      await users.insertOne({
+        _id: randomUUID(),
+        username,
+        password_hash,
+        role: input.role,
+        school_id: input.schoolId,
+        full_name: input.fullName,
+        class_label: input.classLabel ?? null,
+        must_change_password: true,
+        created_at: new Date(),
+      });
+      return { fullName: input.fullName, username, password, role: input.role, classLabel: input.classLabel ?? null };
+    } catch (e) {
+      if ((e as { code?: number }).code !== 11000) throw e;
+    }
   }
-  return { fullName: input.fullName, username, password, role: input.role, classLabel: input.classLabel ?? null };
+  throw new Error("could not pick a free username");
 }
 
-/** New temporary password for an existing account (it must be changed again on next sign-in). */
+/** New temporary password for an account; it must be changed again, and other sign-ins end. */
 export async function resetPassword(userId: string): Promise<string> {
-  const admin = createAdminClient();
+  const { users } = await collections();
   const password = temporaryPassword();
-  const { error } = await admin.auth.admin.updateUserById(userId, { password });
-  if (error) throw new Error(error.message);
-  await admin.from("profiles").update({ must_change_password: true }).eq("id", userId);
+  await users.updateOne({ _id: userId }, { $set: { password_hash: await hashPassword(password), must_change_password: true } });
+  await destroyUserSessions(userId);
   return password;
 }

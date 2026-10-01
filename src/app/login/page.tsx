@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { supabaseConfigured } from "@/lib/supabase/config";
+import { dbConfigured } from "@/lib/db";
 import { Alert, Logo, PORTAL_NAME } from "@/components/portal/ui";
 import { LoginForm } from "./LoginForm";
 
@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
 
           <div className="mt-8 rounded-2xl border border-[#e2e7e5] bg-white p-6 shadow-[0_1px_2px_rgba(17,26,24,0.04),0_12px_32px_-12px_rgba(17,26,24,0.12)] sm:p-8">
-            {!supabaseConfigured && (
+            {!dbConfigured && (
               <div className="mb-6">
                 <Alert tone="info">სისტემა ჯერ არ არის დაკავშირებული მონაცემთა ბაზასთან. დაყენების ინსტრუქცია: SETUP.md.</Alert>
               </div>

@@ -1,45 +1,21 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase/config";
+import { SESSION_COOKIE } from "@/lib/session-cookie";
 
 /** Pages open without signing in: the landing page, the login page and the school application form. */
 const PUBLIC = ["/login", "/request"];
 const PUBLIC_EXACT = ["/"];
 
 /**
- * Refreshes the Supabase session cookie on every request and sends visitors without a session to the
- * login page. This is only the fast first check; every page and action checks the user again on the
- * server (src/lib/auth.ts).
+ * Fast first check: visitors without a session cookie go to the login page. Whether the session is
+ * real and what the user may do is checked on the server in every page and action (src/lib/auth.ts).
  */
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_EXACT.includes(path) || PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));
-  if (!supabaseConfigured) {
-    // Not connected yet: everything except the public pages shows the login page with a setup note.
-    return isPublic ? NextResponse.next() : NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  let response = NextResponse.next({ request });
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (list) => {
-        for (const { name, value } of list) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of list) response.cookies.set(name, value, options);
-      },
-    },
-  });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user && !isPublic) {
-    const login = new URL("/login", request.url);
-    if (path !== "/") login.searchParams.set("next", path + request.nextUrl.search);
-    return NextResponse.redirect(login);
-  }
-  return response;
+  if (isPublic || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
+  const login = new URL("/login", request.url);
+  login.searchParams.set("next", path + request.nextUrl.search);
+  return NextResponse.redirect(login);
 }
 
 export const config = {

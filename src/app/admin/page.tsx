@@ -3,7 +3,7 @@ import { PortalShell } from "@/components/portal/Shell";
 import { Badge, Card, CardHeader, PageHeader, PORTAL_NAME, btn } from "@/components/portal/ui";
 import { requireRole } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { collections } from "@/lib/db";
 import { rejectRequest, setSchoolActive } from "./actions";
 import { ApproveButton, ResetAdminButton } from "./AdminControls";
 
@@ -16,19 +16,26 @@ const date = (iso: string) => {
 
 export default async function AdminPage() {
   const user = await requireRole(["super_admin"], "/admin");
-  const admin = createAdminClient();
-  const [{ data: pending }, { data: schools }, { data: people }] = await Promise.all([
-    admin.from("school_requests").select("*").eq("status", "pending").order("created_at"),
-    admin.from("schools").select("id, name, city, active, created_at").order("created_at", { ascending: false }),
-    admin.from("profiles").select("school_id, role"),
+  const { requests, schools: schoolsCol, users } = await collections();
+  const [pendingDocs, schoolDocs, counted] = await Promise.all([
+    requests.find({ status: "pending" }).sort({ created_at: 1 }).toArray(),
+    schoolsCol.find().sort({ created_at: -1 }).toArray(),
+    users
+      .aggregate<{ _id: { school: string | null; role: string }; n: number }>([
+        { $match: { role: { $in: ["teacher", "student"] } } },
+        { $group: { _id: { school: "$school_id", role: "$role" }, n: { $sum: 1 } } },
+      ])
+      .toArray(),
   ]);
+  const pending = pendingDocs.map((r) => ({ ...r, id: r._id, created_at: r.created_at.toISOString() }));
+  const schools = schoolDocs.map((s) => ({ ...s, id: s._id, created_at: s.created_at.toISOString() }));
   const counts = new Map<string, { teachers: number; students: number }>();
-  for (const p of people ?? []) {
-    if (!p.school_id) continue;
-    const c = counts.get(p.school_id) ?? { teachers: 0, students: 0 };
-    if (p.role === "teacher") c.teachers++;
-    if (p.role === "student") c.students++;
-    counts.set(p.school_id, c);
+  for (const { _id, n } of counted) {
+    if (!_id.school) continue;
+    const c = counts.get(_id.school) ?? { teachers: 0, students: 0 };
+    if (_id.role === "teacher") c.teachers = n;
+    if (_id.role === "student") c.students = n;
+    counts.set(_id.school, c);
   }
   const url = await siteUrl();
 

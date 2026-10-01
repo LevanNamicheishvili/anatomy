@@ -2,17 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { supabaseConfigured } from "./supabase/config";
-import { createClient } from "./supabase/server";
+import { collections, dbConfigured } from "./db";
+import type { Role } from "./roles";
+import { sessionUserId } from "./session";
 
-export type Role = "super_admin" | "school_admin" | "teacher" | "student";
-
-export const ROLE_NAMES: Record<Role, string> = {
-  super_admin: "სისტემის ადმინისტრატორი",
-  school_admin: "სკოლის ადმინისტრატორი",
-  teacher: "მასწავლებელი",
-  student: "მოსწავლე",
-};
+export type { Role } from "./roles";
+export { ROLE_NAMES } from "./roles";
 
 export interface CurrentUser {
   id: string;
@@ -25,38 +20,32 @@ export interface CurrentUser {
 }
 
 /**
- * The signed-in user with their profile and school, or null. Verified with the auth server on every
- * request (memoised per render), so it is safe to base access decisions on.
+ * The signed-in user with their school, or null. Checked against the database on every request
+ * (memoised per render), so it is safe to base access decisions on.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   // Who is signed in is only known per request: never prerender a page that depends on it.
   await connection();
-  if (!supabaseConfigured) return null;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!dbConfigured) return null;
+  const userId = await sessionUserId();
+  if (!userId) return null;
+  const { users, schools } = await collections();
+  const user = await users.findOne({ _id: userId });
   if (!user) return null;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name, username, class_label, must_change_password, school_id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile) return null;
   let school: CurrentUser["school"] = null;
-  if (profile.school_id) {
-    const { data } = await supabase.from("schools").select("id, name, city, active").eq("id", profile.school_id).maybeSingle();
+  if (user.school_id) {
+    const s = await schools.findOne({ _id: user.school_id });
     // A deactivated school locks its accounts out.
-    if (!data?.active) return null;
-    school = { id: data.id, name: data.name, city: data.city };
+    if (!s?.active) return null;
+    school = { id: s._id, name: s.name, city: s.city };
   }
   return {
-    id: user.id,
-    role: profile.role as Role,
-    fullName: profile.full_name,
-    username: profile.username,
-    classLabel: profile.class_label,
-    mustChangePassword: profile.must_change_password,
+    id: user._id,
+    role: user.role,
+    fullName: user.full_name,
+    username: user.username,
+    classLabel: user.class_label,
+    mustChangePassword: user.must_change_password,
     school,
   };
 });
@@ -69,7 +58,7 @@ export async function requireUser(next?: string): Promise<CurrentUser> {
   return user;
 }
 
-/** The signed-in user if they have one of the roles; anyone else is sent to the home page. */
+/** The signed-in user if they have one of the roles; anyone else is sent to their home page. */
 export async function requireRole(roles: Role[], next?: string): Promise<CurrentUser> {
   const user = await requireUser(next);
   if (!roles.includes(user.role)) redirect("/dashboard");

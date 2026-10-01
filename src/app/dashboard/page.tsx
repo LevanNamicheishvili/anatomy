@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, QrCode, Users, type LucideIcon } from "lucide-react";
 import { PortalShell } from "@/components/portal/Shell";
 import { requireUser, type CurrentUser } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { collections } from "@/lib/db";
 import { SUBJECTS, type Subject, type SubjectIcon } from "@/lib/subjects";
 
 export const metadata: Metadata = { title: "მთავარი — სასწავლო პორტალი" };
@@ -104,12 +104,9 @@ function UpcomingSubject({ subject }: { subject: Subject }) {
 
 /** Management shortcut for administrators, with the numbers that matter to them. */
 async function ManagementCard({ user }: { user: CurrentUser }) {
-  const admin = createAdminClient();
+  const db = await collections();
   if (user.role === "super_admin") {
-    const [{ count: pending }, { count: schools }] = await Promise.all([
-      admin.from("school_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      admin.from("schools").select("id", { count: "exact", head: true }),
-    ]);
+    const [pending, schools] = await Promise.all([db.requests.countDocuments({ status: "pending" }), db.schools.countDocuments()]);
     return (
       <Link href="/admin" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
@@ -126,9 +123,11 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
     );
   }
   if (user.role !== "school_admin" && user.role !== "teacher") return null;
-  const { data } = await admin.from("profiles").select("role").eq("school_id", user.school?.id ?? "");
-  const teachers = (data ?? []).filter((p) => p.role !== "student").length;
-  const students = (data ?? []).filter((p) => p.role === "student").length;
+  const schoolId = user.school?.id ?? "";
+  const [teachers, students] = await Promise.all([
+    db.users.countDocuments({ school_id: schoolId, role: { $ne: "student" } }),
+    db.users.countDocuments({ school_id: schoolId, role: "student" }),
+  ]);
   return (
     <Link href="/school" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
       <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
