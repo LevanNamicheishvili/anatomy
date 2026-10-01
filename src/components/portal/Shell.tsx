@@ -24,7 +24,7 @@ const initials = (name: string) =>
 export function PortalShell({ user, active, children }: { user: CurrentUser; active?: string; children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
-      <header className="sticky top-0 z-20 border-b border-[#e2e7e5] bg-white">
+      <header className="sticky top-0 z-20 border-b border-[#e2e7e5] bg-white [view-transition-name:site-header]">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
             <Logo />

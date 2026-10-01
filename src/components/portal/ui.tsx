@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  */
 
 const button =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/40 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
 export const btn = {
   primary: cn(button, "bg-[#0f8a74] text-white hover:bg-[#0c7563]"),
   dark: cn(button, "bg-[#111a18] text-white hover:bg-[#2a3532]"),

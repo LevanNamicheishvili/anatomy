@@ -65,7 +65,7 @@ const STEPS = [
 
 function SectionTitle({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
   return (
-    <div className="max-w-2xl">
+    <div className="reveal max-w-2xl">
       <p className="text-[13px] font-semibold text-[#0f8a74]">{eyebrow}</p>
       <h2 className="mt-2 text-[28px] leading-tight font-semibold tracking-tight sm:text-[34px]">{title}</h2>
       {body && <p className="mt-3 text-base leading-7 text-[#33413e]">{body}</p>}
@@ -80,7 +80,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-dvh bg-white font-sans text-[#111a18]">
       {/* ---- Header ---- */}
-      <header className="sticky top-0 z-30 border-b border-[#e2e7e5] bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-[#e2e7e5] bg-white/90 backdrop-blur [view-transition-name:site-header]">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <Logo />
@@ -130,7 +130,7 @@ export default async function LandingPage() {
               ერთი დახურული პლატფორმა სკოლისთვის: გაკვეთილი სმარტ დაფაზე, დამოუკიდებელი სწავლა კომპიუტერსა და ტელეფონზე — სკოლის მიერ შექმნილი ანგარიშებით.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={user ? "/dashboard" : "/request"} className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#0f8a74] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#0c7563]">
+              <Link href={user ? "/dashboard" : "/request"} className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#0f8a74] px-6 text-[15px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#0c7563] active:scale-[0.98]">
                 {user ? "პორტალზე გადასვლა" : "სკოლის ჩართვა"}
                 <ArrowRight className="size-[18px]" />
               </Link>
@@ -171,7 +171,7 @@ export default async function LandingPage() {
           <SectionTitle eyebrow="შესაძლებლობები" title="ყველაფერი, რაც გაკვეთილს სჭირდება" body="საერთო ინსტრუმენტები ყველა საგნისთვის — ახალი საგანი იმავე სივრცეში ემატება." />
           <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#e2e7e5] bg-[#e2e7e5] sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="bg-white p-7">
+              <div key={title} className="reveal bg-white p-7 transition-colors duration-200 hover:bg-[#fafcfb]">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-[#e6f3ef] text-[#0c7563]">
                   <Icon className="size-5" />
                 </span>
@@ -192,7 +192,7 @@ export default async function LandingPage() {
               const Icon = SUBJECT_ICONS[s.icon];
               const ready = !!s.href;
               return (
-                <article key={s.slug} className="flex flex-col rounded-2xl border border-[#e2e7e5] bg-white p-7">
+                <article key={s.slug} className="reveal flex flex-col rounded-2xl border border-[#e2e7e5] bg-white p-7 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#cfd8d4] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
                   <div className="flex items-center justify-between">
                     <span className="flex size-11 items-center justify-center rounded-xl text-white" style={{ backgroundColor: s.color }}>
                       <Icon className="size-6" />
@@ -228,7 +228,7 @@ export default async function LandingPage() {
           <SectionTitle eyebrow="ვისთვის" title="თითოეულს — თავისი ადგილი" body="ანგარიშებს სკოლა მართავს: ვინ რას ხედავს და რას აკეთებს, როლი განსაზღვრავს." />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {ROLES.map(({ icon: Icon, title, points }) => (
-              <article key={title} className="rounded-2xl border border-[#e2e7e5] p-7">
+              <article key={title} className="reveal rounded-2xl border border-[#e2e7e5] bg-white p-7 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#cfd8d4] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-[#111a18] text-white">
                   <Icon className="size-5" />
                 </span>
@@ -265,7 +265,7 @@ export default async function LandingPage() {
               </Link>
             </div>
           </div>
-          <ol className="flex flex-col">
+          <ol className="reveal flex flex-col">
             {STEPS.map(([title, body], i) => (
               <li key={title} className="grid grid-cols-[44px_1fr] gap-4 border-t border-white/10 py-6 first:border-t-0 first:pt-0">
                 <span className="flex size-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold">{i + 1}</span>

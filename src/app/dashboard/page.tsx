@@ -111,7 +111,7 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
       admin.from("schools").select("id", { count: "exact", head: true }),
     ]);
     return (
-      <Link href="/admin" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-colors hover:border-[#0f8a74]">
+      <Link href="/admin" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
           <ClipboardList className="size-6" />
         </span>
@@ -121,7 +121,7 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
             {schools ?? 0} სკოლა · {pending ? `${pending} ახალი განაცხადი` : "ახალი განაცხადი არ არის"}
           </span>
         </span>
-        <ArrowRight className="size-5 text-[#97a29e] group-hover:text-[#0f8a74]" />
+        <ArrowRight className="size-5 text-[#97a29e] transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-[#0f8a74]" />
       </Link>
     );
   }
@@ -130,7 +130,7 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
   const teachers = (data ?? []).filter((p) => p.role !== "student").length;
   const students = (data ?? []).filter((p) => p.role === "student").length;
   return (
-    <Link href="/school" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-colors hover:border-[#0f8a74]">
+    <Link href="/school" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
       <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
         {user.role === "school_admin" ? <Building2 className="size-6" /> : <Users className="size-6" />}
       </span>
@@ -140,7 +140,7 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
           {teachers} მასწავლებელი · {students} მოსწავლე
         </span>
       </span>
-      <ArrowRight className="size-5 text-[#97a29e] group-hover:text-[#0f8a74]" />
+      <ArrowRight className="size-5 text-[#97a29e] transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-[#0f8a74]" />
     </Link>
   );
 }
