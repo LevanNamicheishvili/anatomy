@@ -15,6 +15,6 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   if (!TOPIC_BY_SLUG[slug]) notFound();
   // QR codes in textbooks lead here: after signing in the pupil comes straight back to this topic.
-  await requireUser(`/topic/${slug}`);
-  return <HumanAtlasApp initialTopic={slug} />;
+  const user = await requireUser(`/topic/${slug}`);
+  return <HumanAtlasApp initialTopic={slug} canShowSensitive={user.role !== "student"} />;
 }

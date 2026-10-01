@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, GalleryVerticalEnd, HeartPulse, ListChecks, Pause, PenLine, PersonStanding, Play, Presentation, QrCode, Waves, Wind, X } from "lucide-react";
+import { ChevronRight, EyeOff, GalleryVerticalEnd, HeartPulse, ListChecks, Pause, PenLine, PersonStanding, Play, Presentation, QrCode, Waves, Wind, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LessonKey } from "./anatomy-groups";
 import type { AnimationSettings } from "./anatomy-viewer";
@@ -33,8 +33,11 @@ function SystemsTab({
   onToggle,
   onPreset,
   onToggleAll,
+  hiddenSystems = [],
 }: {
   t: Strings;
+  /** Systems left out of the list entirely (the reproductive system unless a teacher shows it). */
+  hiddenSystems?: SystemKey[];
   enabled: Set<SystemKey>;
   counts: Record<SystemKey, string>;
   activePreset: PresetKey | null;
@@ -67,7 +70,7 @@ function SystemsTab({
       </div>
 
       <ul className="atlas-scroll min-h-0 flex-1 overflow-y-auto border-t border-[#e2e7e5] py-1">
-        {SYSTEMS.map((s) => {
+        {SYSTEMS.filter((s) => !hiddenSystems.includes(s.key)).map((s) => {
           const on = enabled.has(s.key);
           return (
             <li key={s.key} className={cn(row, "hover:bg-[#f5f7f6]")}>
@@ -279,6 +282,7 @@ function LearnTab({
   onBoard,
   drawing,
   onDraw,
+  sensitive,
 }: {
   level: Level;
   onLevel: (level: Level) => void;
@@ -288,6 +292,8 @@ function LearnTab({
   onBoard: () => void;
   drawing: boolean;
   onDraw: () => void;
+  /** Only for teachers and admins: whether the reproductive organs are shown. */
+  sensitive?: { on: boolean; onToggle: () => void };
 }) {
   const action = "flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-[#f5f7f6]";
   return (
@@ -349,6 +355,16 @@ function LearnTab({
         <span />
         <Switch checked={drawing} onChange={onDraw} label="ეკრანზე ხატვა" />
       </div>
+      {sensitive && (
+        <div className={cn(row, "hover:bg-[#f5f7f6]")}>
+          <EyeOff className="size-4 text-[#33413e]" />
+          <button type="button" onClick={sensitive.onToggle} className="py-1 text-start text-sm leading-5 text-[#111a18]">
+            რეპროდუქციული ორგანოები
+          </button>
+          <span />
+          <Switch checked={sensitive.on} onChange={sensitive.onToggle} label="რეპროდუქციული ორგანოების ჩვენება" />
+        </div>
+      )}
       <p className="px-4 pt-1 pb-4 text-xs leading-5 text-[#66736f]">
         დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.
       </p>

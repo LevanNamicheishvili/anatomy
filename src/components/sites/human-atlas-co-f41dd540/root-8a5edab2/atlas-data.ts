@@ -122,6 +122,14 @@ export const PRESETS: Record<PresetKey, SystemKey[]> = {
   organs: ["cardiac", "respiratory", "digestive", "urinary", "lymphatic", "endocrine", "reproductive"],
 };
 
+/**
+ * Reproductive organs and the structures that show their shape (the male model's penis and scrotum
+ * vessels, the urethra running through the penis, the perineal muscle). Hidden unless a teacher turns
+ * them on, so the model can be shown to a class without awkward moments.
+ */
+const SENSITIVE = /penis|penile|scrot|testicular|spermatic|bulbospong|ischiocavern|cremaster|glans|prepuce|perineal muscle|^urethra$/i;
+export const isSensitive = (p: AtlasPart) => p.system === "reproductive" || SENSITIVE.test(p.name);
+
 export const DEFAULT_SYSTEMS: SystemKey[] = SYSTEMS.filter((s) => s.defaultOn).map((s) => s.key);
 
 /** Emissive glow applied to selected structures. */

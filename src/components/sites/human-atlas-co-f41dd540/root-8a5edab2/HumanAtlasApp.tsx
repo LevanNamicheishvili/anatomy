@@ -15,6 +15,7 @@ import {
 } from "./anatomy-viewer";
 import {
   DEFAULT_SYSTEMS,
+  isSensitive,
   MODEL_BASE,
   PRESETS,
   SYSTEMS,
@@ -92,7 +93,14 @@ function useViewportWidth() {
   return width;
 }
 
-export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
+export function HumanAtlasApp({
+  initialTopic,
+  canShowSensitive = false,
+}: {
+  initialTopic?: string;
+  /** Teachers and admins may turn the reproductive organs on; students never see them. */
+  canShowSensitive?: boolean;
+}) {
   const t = STRINGS.ka;
   const fmt = useMemo(
     () => ({ format: (n: number) => formatNumber(n, "ka") }),
@@ -130,6 +138,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
   const [labelChannel] = useState(createChannel<LabelFrame>);
   // Always-on labels: school smart boards are touch screens, so hover never happens there.
   const [labelsOn, setLabelsOn] = useState(true);
+  const [showSensitive, setShowSensitive] = useState(false);
   // Learning: school stage, quiz/flashcards, and the teacher's board mode with a drawing layer.
   const [level, setLevel] = useState<Level>(() => (typeof window === "undefined" ? "basic" : loadLevel()));
   const [practice, setPractice] = useState<PracticeMode | null>(null);
@@ -154,8 +163,11 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     [manifest],
   );
   const index = useMemo(
-    () => (manifest ? buildSearchIndex(manifest) : []),
-    [manifest],
+    () =>
+      manifest
+        ? buildSearchIndex(showSensitive ? manifest : { ...manifest, parts: manifest.parts.filter((p) => !isSensitive(p)) })
+        : [],
+    [manifest, showSensitive],
   );
 
   const counts = useMemo(() => {
@@ -169,13 +181,15 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
     ) as Record<SystemKey, string>;
   }, [manifest, fmt]);
 
+  const sensitiveIds = useMemo(() => new Set((manifest?.parts ?? []).filter(isSensitive).map((p) => p.id)), [manifest]);
   const visible = useMemo(() => {
-    if (isolated) return new Set(isolated);
     const ids = new Set<string>();
-    for (const p of manifest?.parts ?? [])
-      if (enabled.has(p.system) && !hidden.has(p.id)) ids.add(p.id);
+    if (isolated) for (const id of isolated) ids.add(id);
+    else for (const p of manifest?.parts ?? []) if (enabled.has(p.system) && !hidden.has(p.id)) ids.add(p.id);
+    // Hidden whatever else is switched on, isolated or searched, until the teacher turns them on.
+    if (!showSensitive) for (const id of sensitiveIds) ids.delete(id);
     return ids;
-  }, [manifest, enabled, hidden, isolated]);
+  }, [manifest, enabled, hidden, isolated, showSensitive, sensitiveIds]);
 
   // --- Engine lifecycle -------------------------------------------------------------------------
   const pickRef = useRef<(part: AtlasPart | null, focus: boolean) => void>(
@@ -695,6 +709,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
         onCloseMobile={() => setSidebarOpen(false)}
         systems={{
           t,
+          hiddenSystems: showSensitive ? [] : ["reproductive"],
           enabled,
           counts,
           activePreset,
@@ -744,6 +759,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
           onBoard: () => setBoard((b) => !b),
           drawing,
           onDraw: () => setDrawing((d) => !d),
+          sensitive: canShowSensitive ? { on: showSensitive, onToggle: () => setShowSensitive((v) => !v) } : undefined,
         }}
       />
 

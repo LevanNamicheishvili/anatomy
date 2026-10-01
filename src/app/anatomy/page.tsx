@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default async function AnatomyPage() {
-  await requireUser("/anatomy");
-  return <HumanAtlasApp />;
+  const user = await requireUser("/anatomy");
+  return <HumanAtlasApp canShowSensitive={user.role !== "student"} />;
 }
