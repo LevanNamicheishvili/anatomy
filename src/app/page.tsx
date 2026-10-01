@@ -125,9 +125,11 @@ export default async function LandingPage() {
               <ShieldCheck className="size-3.5" />
               მხოლოდ საგანმანათლებლო დაწესებულებებისთვის
             </p>
-            <h1 className="mt-6 text-[38px] leading-[1.3] font-semibold sm:text-[48px]">ინტერაქტიული მასალა ქართული სკოლებისთვის</h1>
-            <p className="mt-5 max-w-xl text-lg leading-8 text-[#33413e]">
-              ერთი დახურული პლატფორმა სკოლისთვის: გაკვეთილი სმარტ დაფაზე, დამოუკიდებელი სწავლა კომპიუტერსა და ტელეფონზე — სკოლის მიერ შექმნილი ანგარიშებით.
+            <h1 className="mt-6 max-w-[560px] text-[36px] leading-[1.25] text-balance sm:text-[44px]">
+              ინტერაქტიული მასალა <span className="text-[#0f8a74]">ქართული სკოლებისთვის</span>
+            </h1>
+            <p className="mt-5 max-w-[520px] text-[17px] leading-8 text-[#4a5753]">
+              გაკვეთილი სმარტ დაფაზე, სწავლა კომპიუტერსა და ტელეფონზე — ერთ დახურულ სივრცეში, სკოლის ანგარიშებით.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={user ? "/dashboard" : "/request"} className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#0f8a74] px-6 text-[15px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#0c7563] active:scale-[0.98]">
@@ -140,18 +142,17 @@ export default async function LandingPage() {
                 </Link>
               )}
             </div>
-            <dl className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-[#dbe3e0] pt-6">
-              {[
-                ["3", "საგანი"],
-                ["3", "საფეხური"],
-                ["3", "როლი"],
-              ].map(([n, label]) => (
-                <div key={label}>
-                  <dt className="text-2xl font-semibold">{n}</dt>
-                  <dd className="text-sm text-[#66736f]">{label}</dd>
-                </div>
+            {/* What a school actually gets, instead of bare numbers. */}
+            <ul className="mt-10 flex max-w-[520px] flex-col gap-3 border-t border-[#dbe3e0] pt-6">
+              {["ანგარიშებს სკოლა ქმნის", "მოსწავლეს ელ-ფოსტა არ სჭირდება", "მუშაობს სმარტ დაფაზე"].map((item) => (
+                <li key={item} className="flex items-center gap-2 text-sm font-medium text-[#33413e]">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-[#e6f3ef] text-[#0c7563]">
+                    <Check className="size-3" strokeWidth={3} />
+                  </span>
+                  {item}
+                </li>
               ))}
-            </dl>
+            </ul>
           </div>
 
           <div className="relative mx-auto w-full max-w-[640px] pb-6">
