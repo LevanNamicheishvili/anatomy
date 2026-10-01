@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CredentialsCard } from "@/components/portal/Credentials";
 import { Alert, btn } from "@/components/portal/ui";
 import { approveRequest, resetSchoolAdmin, type ApproveState, type ResetState } from "./actions";
@@ -8,13 +9,18 @@ import { approveRequest, resetSchoolAdmin, type ApproveState, type ResetState } 
 export function ApproveButton({ id, siteUrl }: { id: string; siteUrl: string }) {
   const [state, action, pending] = useActionState<ApproveState, FormData>(approveRequest, {});
   const [hidden, setHidden] = useState(false);
+  const router = useRouter();
   if (state.account && !hidden)
     return (
       <div className="col-span-full mt-3">
         <CredentialsCard
           siteUrl={siteUrl}
           items={[{ ...state.account, roleName: `სკოლის ადმინისტრატორი · ${state.account.schoolName}` }]}
-          onDone={() => setHidden(true)}
+          onDone={() => {
+            setHidden(true);
+            // Now the approved request can leave the list and the school appear below.
+            router.refresh();
+          }}
         />
       </div>
     );

@@ -23,7 +23,8 @@ export async function approveRequest(_: ApproveState, form: FormData): Promise<A
   try {
     const account = await createAccount({ fullName: req.contact_name, role: "school_admin", schoolId });
     await requests.updateOne({ _id: id }, { $set: { status: "approved", reviewed_at: new Date(), school_id: schoolId } });
-    revalidatePath("/admin");
+    // No revalidatePath here: refreshing now would drop this request's row, and with it the one-time
+    // credentials card. The page refreshes once the admin has seen them (ApproveButton → onDone).
     return { account: { ...account, schoolName: req.school_name } };
   } catch {
     await schools.deleteOne({ _id: schoolId });
