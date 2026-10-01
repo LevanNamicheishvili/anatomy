@@ -215,3 +215,18 @@ body {
   font-size: 17px;
   line-height: 30px;
 }
+
+/* Printing new sign-in slips: only the slips, nothing else on the page. */
+@media print {
+  body:has([data-print-area]) * {
+    visibility: hidden;
+  }
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+  [data-print-area] {
+    position: absolute;
+    inset: 0 0 auto 0;
+  }
+}

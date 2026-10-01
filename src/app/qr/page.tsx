@@ -4,12 +4,15 @@ import QRCode from "qrcode";
 import { ArrowLeft, Download } from "lucide-react";
 import { STRINGS } from "@/components/sites/human-atlas-co-f41dd540/root-8a5edab2/i18n";
 import { TOPICS } from "@/components/sites/human-atlas-co-f41dd540/root-8a5edab2/topics";
+import { requireRole } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = { title: "QR კოდები — ადამიანის ატლასი 3D" };
 
 export default async function QrPage() {
+  // Printing QR codes for textbooks is a teacher's tool.
+  await requireRole(["super_admin", "school_admin", "teacher"], "/qr");
   const t = STRINGS.ka;
   const base = await siteUrl();
   const codes = await Promise.all(

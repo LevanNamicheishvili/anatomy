@@ -1,9 +1,12 @@
 import QRCode from "qrcode";
 import { TOPIC_BY_SLUG } from "@/components/sites/human-atlas-co-f41dd540/root-8a5edab2/topics";
+import { getCurrentUser } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
 
 // High-resolution SVG of one topic's QR code, for placing in textbook layouts.
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const user = await getCurrentUser();
+  if (!user || user.role === "student") return new Response("Unauthorized", { status: 401 });
   const { slug } = await params;
   if (!TOPIC_BY_SLUG[slug]) return new Response("Not found", { status: 404 });
   const url = `${await siteUrl()}/topic/${slug}`;

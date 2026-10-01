@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Globe2, HeartPulse, Landmark, QrCode, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, QrCode, Users, type LucideIcon } from "lucide-react";
+import { PortalShell } from "@/components/portal/Shell";
+import { requireUser, type CurrentUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SUBJECTS, type Subject, type SubjectIcon } from "@/lib/subjects";
 
 export const metadata: Metadata = {
@@ -28,7 +31,7 @@ function SubjectMark({ subject, size = "md" }: { subject: Subject; size?: "md" |
 }
 
 /** A subject that is ready: large card with a preview of what opens. */
-function FeaturedSubject({ subject }: { subject: Subject & { href: string } }) {
+function FeaturedSubject({ subject, showTools }: { subject: Subject & { href: string }; showTools: boolean }) {
   return (
     <article className="overflow-hidden rounded-xl border border-[#d5dcd9] bg-white md:grid md:grid-cols-[1.15fr_1fr]">
       {subject.image && (
@@ -67,7 +70,7 @@ function FeaturedSubject({ subject }: { subject: Subject & { href: string } }) {
             გახსნა
             <ArrowRight className="size-[18px]" />
           </Link>
-          {subject.tools?.map((tool) => (
+          {showTools && subject.tools?.map((tool) => (
             <Link
               key={tool.href}
               href={tool.href}
@@ -102,44 +105,84 @@ function UpcomingSubject({ subject }: { subject: Subject }) {
   );
 }
 
-export default function PortalPage() {
+/** Management shortcut for administrators, with the numbers that matter to them. */
+async function ManagementCard({ user }: { user: CurrentUser }) {
+  const admin = createAdminClient();
+  if (user.role === "super_admin") {
+    const [{ count: pending }, { count: schools }] = await Promise.all([
+      admin.from("school_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      admin.from("schools").select("id", { count: "exact", head: true }),
+    ]);
+    return (
+      <Link href="/admin" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-colors hover:border-[#0f8a74]">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
+          <ClipboardList className="size-6" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">სკოლები და განაცხადები</span>
+          <span className="block text-sm text-[#66736f]">
+            {schools ?? 0} სკოლა · {pending ? `${pending} ახალი განაცხადი` : "ახალი განაცხადი არ არის"}
+          </span>
+        </span>
+        <ArrowRight className="size-5 text-[#97a29e] group-hover:text-[#0f8a74]" />
+      </Link>
+    );
+  }
+  if (user.role !== "school_admin" && user.role !== "teacher") return null;
+  const { data } = await admin.from("profiles").select("role").eq("school_id", user.school?.id ?? "");
+  const teachers = (data ?? []).filter((p) => p.role !== "student").length;
+  const students = (data ?? []).filter((p) => p.role === "student").length;
+  return (
+    <Link href="/school" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-colors hover:border-[#0f8a74]">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
+        {user.role === "school_admin" ? <Building2 className="size-6" /> : <Users className="size-6" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{user.role === "school_admin" ? "სკოლის მართვა" : "მოსწავლეების ანგარიშები"}</span>
+        <span className="block text-sm text-[#66736f]">
+          {teachers} მასწავლებელი · {students} მოსწავლე
+        </span>
+      </span>
+      <ArrowRight className="size-5 text-[#97a29e] group-hover:text-[#0f8a74]" />
+    </Link>
+  );
+}
+
+const GREETING: Record<CurrentUser["role"], string> = {
+  super_admin: "სისტემის მართვა და სასწავლო მასალა.",
+  school_admin: "სკოლის ანგარიშები და სასწავლო მასალა.",
+  teacher: "მასალა გაკვეთილისთვის — სმარტ დაფაზე, კომპიუტერსა და ტელეფონზე.",
+  student: "აირჩიე საგანი და დაიწყე.",
+};
+
+export default async function PortalPage() {
+  const user = await requireUser("/");
   const ready = SUBJECTS.filter((s): s is Subject & { href: string } => !!s.href);
   const upcoming = SUBJECTS.filter((s) => !s.href);
+  const firstName = user.fullName.split(" ")[0];
 
   return (
-    <div className="min-h-dvh bg-[#f4f6f5] font-sans text-[#111a18]">
-      <header className="border-b border-[#e2e7e5] bg-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#111a18] text-white">
-            <BookOpen className="size-5" strokeWidth={2} />
-          </span>
-          <span className="text-[17px] font-semibold">სასწავლო პორტალი</span>
-        </div>
-      </header>
+    <PortalShell user={user} active="/">
+      <h1 className="text-2xl font-semibold sm:text-3xl">გამარჯობა, {firstName}</h1>
+      <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{GREETING[user.role]}</p>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <h1 className="text-3xl font-semibold sm:text-4xl">საგნები</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-[#33413e]">ინტერაქტიული მასალა გაკვეთილისთვის — სმარტ დაფაზე, კომპიუტერსა და ტელეფონზე.</p>
+      <div className="mt-6 empty:hidden">
+        <ManagementCard user={user} />
+      </div>
 
-        <div className="mt-8 flex flex-col gap-6">
-          {ready.map((s) => (
-            <FeaturedSubject key={s.slug} subject={s} />
-          ))}
-          {upcoming.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {upcoming.map((s) => (
-                <UpcomingSubject key={s.slug} subject={s} />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-
-      <footer className="border-t border-[#e2e7e5]">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-xs leading-5 text-[#66736f] sm:px-6">
-          3D მოდელები: BodyParts3D, © The Database Center for Life Science, CC BY 4.0.
-        </div>
-      </footer>
-    </div>
+      <h2 className="mt-10 text-sm font-semibold text-[#66736f]">საგნები</h2>
+      <div className="mt-3 flex flex-col gap-6">
+        {ready.map((s) => (
+          <FeaturedSubject key={s.slug} subject={s} showTools={user.role !== "student"} />
+        ))}
+        {upcoming.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-2">
+            {upcoming.map((s) => (
+              <UpcomingSubject key={s.slug} subject={s} />
+            ))}
+          </div>
+        )}
+      </div>
+    </PortalShell>
   );
 }
