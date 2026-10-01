@@ -1,18 +1,19 @@
 /**
  * Builds the five lung lobes as surfaces (run: `npx tsx scripts/build-lungs.ts`).
  *
- * BodyParts3D models each lobe only as the bronchial trees and pulmonary vessels inside it (its official
- * part list, partof_element_parts.txt, gives exactly which pieces belong to which lobe). Those branches
- * fill the lobe out to its edges, so the lobe surface is recovered as a smooth envelope around them:
+ * BodyParts3D has no lung surface: each lobe is only the bronchial trees and pulmonary vessels inside it
+ * (its official part list, partof_element_parts.txt, says which). The lungs are therefore built the way
+ * they sit in a body — filling the chest cavity:
  *
- *  1. every piece of every lobe is drawn into a 3 mm voxel grid, labelled by lobe;
- *  2. each lung is closed (grown, holes filled, shrunk back a little less) into one solid;
- *  3. the heart, the skeleton and the diaphragm are carved out, so the lung sits where it should;
- *  4. every voxel goes to the lobe whose branches are nearest, which produces the fissures;
+ *  1. the inside of the rib cage is found slice by slice (hull of ribs, costal cartilages and sternum),
+ *     keeping 6 mm from the bones for the chest wall and pleura;
+ *  2. only what lies above the diaphragm's upper surface is kept, which gives the domed lung base;
+ *  3. the mediastinum is carved out: heart, great vessels, trachea, oesophagus and spine;
+ *  4. every voxel goes to the lobe whose branches are nearest inside the lung, which draws the fissures;
  *  5. each lobe is blurred slightly, meshed with surface nets and smoothed.
  *
- * The result is added to the atlas as one extra chunk (body-15) and five respiratory parts. Re-running
- * the script replaces the previous lobes.
+ * The result is added to the atlas as one extra chunk and five respiratory parts. Re-running the script
+ * replaces the previous lobes.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
@@ -60,20 +61,24 @@ console.log(`lobe pieces found: ${lobeOf.size}`);
 
 // ---- Voxel grid ---------------------------------------------------------------------------------
 const V = 0.003;
-const lo = [Infinity, Infinity, Infinity];
-const hi = [-Infinity, -Infinity, -Infinity];
-for (const id of lobeOf.keys()) {
-  const b = (byId.get(id) as AtlasPart).bounds;
-  for (let k = 0; k < 3; k++) {
-    lo[k] = Math.min(lo[k], b[0][k]);
-    hi[k] = Math.max(hi[k], b[1][k]);
-  }
-}
-const MARGIN = 0.04;
-for (let k = 0; k < 3; k++) {
-  lo[k] -= MARGIN;
-  hi[k] += MARGIN;
-}
+const boxOf = (parts: AtlasPart[]) => {
+  const lo = [Infinity, Infinity, Infinity];
+  const hi = [-Infinity, -Infinity, -Infinity];
+  for (const p of parts)
+    for (let k = 0; k < 3; k++) {
+      lo[k] = Math.min(lo[k], p.bounds[0][k]);
+      hi[k] = Math.max(hi[k], p.bounds[1][k]);
+    }
+  return { lo, hi };
+};
+// The chest wall: ribs, costal cartilages and the sternum.
+const WALL = /\brib\b|costal cartilage|sternum|manubrium|xiphoid/i;
+const wallParts = manifest.parts.filter((p) => (p.system === "skeletal" || p.system === "connective") && WALL.test(p.name));
+const diaphragm = manifest.parts.filter((p) => /^diaphragm$/i.test(p.name));
+const chest = boxOf([...wallParts, ...diaphragm]);
+// The grid spans the chest only, so no branch can pull a lobe outside it.
+const lo = [chest.lo[0] - 0.02, chest.lo[1] - 0.01, chest.lo[2] - 0.02];
+const hi = [chest.hi[0] + 0.02, chest.hi[1] + 0.035, chest.hi[2] + 0.02];
 const NX = Math.ceil((hi[0] - lo[0]) / V) + 1;
 const NY = Math.ceil((hi[1] - lo[1]) / V) + 1;
 const NZ = Math.ceil((hi[2] - lo[2]) / V) + 1;
@@ -207,42 +212,120 @@ function fillEnclosed(mask: Uint8Array) {
   for (let i = 0; i < N; i++) if (!outside[i]) mask[i] = 1;
 }
 
-const GROW = 0.04 / V; // close the gaps between branches, so the surface runs over them, not around each
-const SHRINK = 0.034 / V; // shrink back a little less: the pleura lies just beyond the last branches
-
-/** Morphological closing of one lung's branches into a solid. */
-function closeLung(side: "R" | "L") {
-  const grownDist = edt((i) => seed[i] > 0 && LOBES[seed[i] - 1].side === side);
-  const grown = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (grownDist[i] <= GROW * GROW) grown[i] = 1;
-  fillEnclosed(grown);
-  const outside = edt((i) => !grown[i]);
-  const solid = new Uint8Array(N);
-  const keep = (GROW - SHRINK) * (GROW - SHRINK);
-  for (let i = 0; i < N; i++) if (outside[i] > keep) solid[i] = 1;
-  return solid;
-}
-const right = closeLung("R");
-const left = closeLung("L");
-console.log("lungs closed");
-
-// Only parts near the lungs matter for carving.
 const nearGrid = (p: AtlasPart) =>
   p.bounds[1][0] >= lo[0] && p.bounds[0][0] <= hi[0] && p.bounds[1][1] >= lo[1] && p.bounds[0][1] <= hi[1] && p.bounds[1][2] >= lo[2] && p.bounds[0][2] <= hi[2];
+const mark = (parts: AtlasPart[]) => {
+  const m = new Uint8Array(N);
+  for (const p of parts) if (nearGrid(p)) rasterize(p, (i) => (m[i] = 1));
+  return m;
+};
 
-// Carve out what the lungs must not overlap: the heart (as a solid), bones and the diaphragm.
-const blocked = new Uint8Array(N);
-const heart = new Uint8Array(N);
-for (const p of manifest.parts) if (p.system === "cardiac" && nearGrid(p)) rasterize(p, (i) => (heart[i] = 1));
+// 1. Inside of the rib cage, slice by slice: the 2D hull of the wall within a 3 cm slab around the slice.
+const wall = mark(wallParts);
+function hull(points: [number, number][]) {
+  const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (pts.length < 3) return pts;
+  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: [number, number][] = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper: [number, number][] = [];
+  for (const p of [...pts].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+const inside = (poly: [number, number][], x: number, z: number) => {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c;
+  }
+  return c;
+};
+const cavity = new Uint8Array(N);
+const SLAB = Math.round(0.015 / V);
+const wallAt: [number, number][][] = Array.from({ length: NY }, () => []);
+for (let i = 0; i < N; i++)
+  if (wall[i]) wallAt[Math.floor(i / NX) % NY].push([i % NX, Math.floor(i / (NX * NY))]);
+for (let y = 0; y < NY; y++) {
+  const pts: [number, number][] = [];
+  for (let k = Math.max(0, y - SLAB); k <= Math.min(NY - 1, y + SLAB); k++) pts.push(...wallAt[k]);
+  if (pts.length < 20) continue;
+  const poly = hull(pts);
+  for (let z = 0; z < NZ; z++) for (let x = 0; x < NX; x++) if (inside(poly, x, z)) cavity[at(x, y, z)] = 1;
+}
+// Keep clear of the chest wall (ribs, intercostal muscles, pleura).
+const wallDist = edt((i) => wall[i] === 1);
+const WALL_GAP = (0.006 / V) ** 2;
+
+// 2. Only above the diaphragm's upper surface, column by column.
+const dia = mark(diaphragm);
+const floorY = new Int32Array(NX * NZ).fill(-1);
+for (let i = 0; i < N; i++)
+  if (dia[i]) {
+    const col = (i % NX) + NX * Math.floor(i / (NX * NY));
+    floorY[col] = Math.max(floorY[col], Math.floor(i / NX) % NY);
+  }
+
+// Columns the diaphragm mesh doesn't reach (outside its rim, or small holes in it) take the height of
+// the nearest column it does reach; otherwise thin slivers of lung run down the ribs into the abdomen.
+{
+  const queue: number[] = [];
+  for (let c = 0; c < NX * NZ; c++) if (floorY[c] >= 0) queue.push(c);
+  for (let h = 0; h < queue.length; h++) {
+    const c = queue[h];
+    const x = c % NX;
+    const z = Math.floor(c / NX);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const nx = x + dx;
+      const nz = z + dz;
+      if (nx < 0 || nz < 0 || nx >= NX || nz >= NZ) continue;
+      const n = nx + NX * nz;
+      if (floorY[n] >= 0) continue;
+      floorY[n] = floorY[c];
+      queue.push(n);
+    }
+  }
+}
+
+// 3. The mediastinum and spine.
+const MEDIASTINUM = /aorta|vena cava|pulmonary trunk|brachiocephalic|subclavian|azygos|common carotid|^trachea$|esophag|oesophag|thymus/i;
+const heart = mark(manifest.parts.filter((p) => p.system === "cardiac"));
 fillEnclosed(heart);
 const heartDist = edt((i) => heart[i] === 1);
-for (let i = 0; i < N; i++) if (heartDist[i] <= 2.25) blocked[i] = 1;
-const hard = new Uint8Array(N);
-for (const p of manifest.parts)
-  if ((p.system === "skeletal" || (p.system === "muscular" && /diaphragm/i.test(p.name))) && nearGrid(p)) rasterize(p, (i) => (hard[i] = 1));
-const hardDist = edt((i) => hard[i] === 1);
-for (let i = 0; i < N; i++) if (hardDist[i] <= 1) blocked[i] = 1;
-console.log("carved");
+const middle = mark(manifest.parts.filter((p) => !lobeOf.has(p.id) && MEDIASTINUM.test(p.name)));
+const middleDist = edt((i) => middle[i] === 1);
+const spine = mark(manifest.parts.filter((p) => p.system === "skeletal" && /thoracic vertebra/i.test(p.name)));
+const spineDist = edt((i) => spine[i] === 1);
+
+const blocked = new Uint8Array(N);
+const lungMask = new Uint8Array(N);
+for (let i = 0; i < N; i++) {
+  const x = i % NX;
+  const y = Math.floor(i / NX) % NY;
+  const z = Math.floor(i / (NX * NY));
+  const floor = floorY[x + NX * z];
+  const free =
+    cavity[i] &&
+    wallDist[i] > WALL_GAP &&
+    y > floor + 1 &&
+    heartDist[i] > (0.006 / V) ** 2 &&
+    middleDist[i] > (0.006 / V) ** 2 &&
+    spineDist[i] > (0.012 / V) ** 2 &&
+    // The two lungs never meet: a narrow midline band belongs to the mediastinum.
+    Math.abs(lo[0] + x * V) > 0.012;
+  if (free) lungMask[i] = 1;
+  else blocked[i] = 1;
+}
+// Both lungs share one cavity mask; the lobe labelling below decides which side each voxel belongs to.
+const right = lungMask;
+const left = lungMask;
+console.log("chest cavity found");
 
 // Every lung voxel goes to the lobe whose branches are nearest *inside the lung* (a wave spreading
 // from all branches at once); the waves of neighbouring lobes meet at the fissures. A voxel both lungs
@@ -279,6 +362,26 @@ const labels = new Uint8Array(N);
   for (let i = 0; i < N; i++) if (labels[i] && !(right[i] || left[i])) labels[i] = 0;
 }
 console.log("lobes labelled");
+
+// Debug: DEBUG_SLICES=dir writes cross-sections (lobes coloured; wall, diaphragm, heart, spine in grey/red).
+if (process.env.DEBUG_SLICES) {
+  const colours = [[230, 230, 230], [214, 78, 78], [240, 170, 60], [90, 150, 220], [120, 190, 110], [170, 110, 200]];
+  const pixel = (i: number) =>
+    labels[i] ? colours[labels[i]] : wall[i] || spine[i] ? [60, 60, 60] : dia[i] ? [150, 40, 40] : heart[i] ? [200, 120, 120] : cavity[i] ? [205, 215, 210] : colours[0];
+  const write = (name: string, w: number, h: number, at2: (u: number, v: number) => number) => {
+    const body = Buffer.alloc(w * h * 3);
+    for (let v = 0; v < h; v++)
+      for (let u = 0; u < w; u++) body.set(pixel(at2(u, h - 1 - v)), (v * w + u) * 3);
+    writeFileSync(join(process.env.DEBUG_SLICES as string, `${name}.ppm`), Buffer.concat([Buffer.from(`P6 ${w} ${h} 255\n`), body]));
+  };
+  const zMid = Math.round((0.0 - lo[2]) / V);
+  write("coronal", NX, NY, (x, y) => at(x, y, zMid));
+  for (const [name, xw] of [["sagittal-right", -0.07], ["sagittal-left", 0.07]] as const) {
+    const x = Math.round((xw - lo[0]) / V);
+    write(name, NZ, NY, (z, y) => at(x, y, z));
+  }
+  console.log("debug slices written");
+}
 
 // Keep only each lobe's main body: small pieces cut off by the carving are dropped.
 for (let l = 1; l <= LOBES.length; l++) {
