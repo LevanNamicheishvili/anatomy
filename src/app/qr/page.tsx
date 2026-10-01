@@ -31,7 +31,7 @@ export default async function QrPage() {
       <div className="mx-auto max-w-5xl">
         <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
           <div>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0f8a74] hover:underline">
+            <Link href="/anatomy" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0f8a74] hover:underline">
               <ArrowLeft className="size-4" />
               {t.title}
             </Link>

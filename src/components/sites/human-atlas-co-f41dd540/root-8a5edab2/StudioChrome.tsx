@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { HeartPulse, Info, MessageCircleQuestionMark, QrCode, Search, Wind } from "lucide-react";
+import { HeartPulse, Info, LayoutGrid, MessageCircleQuestionMark, QrCode, Search, Wind } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BreathPhase, HeartPhase } from "./anatomy-viewer";
 import type { Strings } from "./i18n";
@@ -28,9 +28,16 @@ export function AppBar({
     <header className="absolute inset-x-0 top-0 z-30 flex h-14 items-stretch border-b border-[#e2e7e5] bg-white">
       {/* Brand column: same width as the sidebar so both share one vertical edge. */}
       <div className="flex w-[320px] shrink-0 items-center gap-3 border-e border-[#e2e7e5] px-4 max-[1100px]:w-[288px] max-md:w-auto max-md:border-e-0">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#0f8a74] text-white">
-          <HeartPulse className="size-[18px]" strokeWidth={2} />
-        </span>
+        {/* Back to the school portal. */}
+        <Link
+          href="/"
+          title="სასწავლო პორტალი"
+          aria-label="სასწავლო პორტალზე დაბრუნება"
+          className="group relative flex size-8 shrink-0 items-center justify-center rounded-md bg-[#0f8a74] text-white transition-colors hover:bg-[#0c7563]"
+        >
+          <HeartPulse className="size-[18px] group-hover:hidden" strokeWidth={2} />
+          <LayoutGrid className="hidden size-[18px] group-hover:block" strokeWidth={2} />
+        </Link>
         <div className="min-w-0 leading-tight">
           <h1 className="truncate text-[15px] font-semibold text-[#111a18]">{t.title}</h1>
           <p className="truncate text-xs text-[#66736f] max-md:hidden">

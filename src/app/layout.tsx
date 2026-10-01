@@ -14,9 +14,8 @@ const georgian = Noto_Sans_Georgian({
 });
 
 export const metadata: Metadata = {
-  title: "ადამიანის ატლასი 3D — ინტერაქტიული ანატომია",
-  description:
-    "ინტერაქტიული 3D ანატომიის ატლასი საქართველოს სკოლებისთვის: 2 234 სტრუქტურა, გულის მუშაობის, სუნთქვისა და სისხლის მიმოქცევის ანიმაციები.",
+  title: "სასწავლო პორტალი",
+  description: "ინტერაქტიული სასწავლო მასალა საქართველოს სკოლებისთვის.",
   icons: { icon: "/sites/human-atlas-co-f41dd540/shared/seo/favicon.svg" },
 };
 

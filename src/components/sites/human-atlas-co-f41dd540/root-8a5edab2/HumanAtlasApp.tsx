@@ -480,7 +480,7 @@ export function HumanAtlasApp({ initialTopic }: { initialTopic?: string }) {
 
   const closeTopic = () => {
     setTopic(null);
-    window.history.replaceState(null, "", "/");
+    window.history.replaceState(null, "", "/anatomy");
   };
 
   // A QR code opens /topic/<slug>: apply it once the model has loaded.
