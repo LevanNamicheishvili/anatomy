@@ -485,6 +485,13 @@ export class AnatomyViewer {
       m.polygonOffsetFactor = -1;
       m.polygonOffsetUnits = -2;
     }
+    if (system === "connective" && group !== 8) {
+      // Tendons and fascial sheaths are modelled on the very surface of their muscles; without this the
+      // two fight for the same pixels and the muscle shows through in flickering white patches.
+      m.polygonOffset = true;
+      m.polygonOffsetFactor = 4;
+      m.polygonOffsetUnits = 16;
+    }
     if (translucent && state !== "cut") {
       // Lung tissue as a light veil: the airways and vessels inside stay in view.
       m.transparent = true;
