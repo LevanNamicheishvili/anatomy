@@ -17,6 +17,7 @@ import {
   DEFAULT_SYSTEMS,
   isSensitive,
   MODEL_BASE,
+  MODEL_VERSION,
   PRESETS,
   SYSTEMS,
   titleCase,
@@ -224,7 +225,7 @@ export function HumanAtlasApp({
     viewerRef.current = viewer;
     let cancelled = false;
 
-    fetch(`${MODEL_BASE}/atlas.json`)
+    fetch(`${MODEL_BASE}/atlas.json?v=${MODEL_VERSION}`)
       .then((r) => {
         if (!r.ok) throw new Error("manifest");
         return r.json() as Promise<AtlasManifest>;

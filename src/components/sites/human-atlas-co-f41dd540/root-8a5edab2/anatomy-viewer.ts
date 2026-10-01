@@ -16,6 +16,7 @@ import {
 } from "./rig";
 import {
   MODEL_BASE,
+  MODEL_VERSION,
   SELECTED_GLOW,
   SYSTEMS,
   type AtlasManifest,
@@ -141,7 +142,7 @@ function hashUnit(id: string, salt: number): number {
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 async function fetchChunk(path: string): Promise<ArrayBuffer> {
-  const res = await fetch(`${MODEL_BASE}/${path}`);
+  const res = await fetch(`${MODEL_BASE}/${path}?v=${MODEL_VERSION}`);
   if (!res.ok || !res.body) throw new Error(`Failed to load ${path}`);
   // Chunks are stored as raw .gz files and served without Content-Encoding, so inflate client-side.
   const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
@@ -589,7 +590,7 @@ export class AnatomyViewer {
     // Baked skinning weights (scripts/bake-skin-weights.ts); without them everything moves rigidly.
     let skin: SkinManifest | null = null;
     try {
-      const res = await fetch(`${MODEL_BASE}/skin.json`);
+      const res = await fetch(`${MODEL_BASE}/skin.json?v=${MODEL_VERSION}`);
       if (res.ok) skin = (await res.json()) as SkinManifest;
     } catch {
       skin = null;

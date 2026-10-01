@@ -1,4 +1,9 @@
 export const MODEL_BASE = "/sites/human-atlas-co-f41dd540/shared/models";
+/**
+ * Bump whenever the model files change (rebaked weights, new parts like the lung lobes): it is added to
+ * every model URL, so browsers and the offline cache fetch the new files instead of keeping old ones.
+ */
+export const MODEL_VERSION = "2026-10-02";
 
 export type SystemKey =
   | "skeletal"
