@@ -38,11 +38,57 @@ const COLORS = {
   basoGranule: "#2c2266",
 };
 
-/** Biconcave disc (Evans–Fung): thin centre, thick rounded rim. */
+// ---- Natural-looking noise -------------------------------------------------------------------------
+
+/** Smooth 3D value noise in [-1, 1]. */
+function noise3(x: number, y: number, z: number) {
+  const hash = (i: number, j: number, k: number) => {
+    let h = (i * 374761393 + j * 668265263 + k * 2147483647) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  };
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const zi = Math.floor(z);
+  const f = (t: number) => t * t * (3 - 2 * t);
+  const u = f(x - xi);
+  const v = f(y - yi);
+  const w = f(z - zi);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const c = (i: number, j: number, k: number) => hash(xi + i, yi + j, zi + k);
+  const x00 = lerp(c(0, 0, 0), c(1, 0, 0), u);
+  const x10 = lerp(c(0, 1, 0), c(1, 1, 0), u);
+  const x01 = lerp(c(0, 0, 1), c(1, 0, 1), u);
+  const x11 = lerp(c(0, 1, 1), c(1, 1, 1), u);
+  return lerp(lerp(x00, x10, v), lerp(x01, x11, v), w) * 2 - 1;
+}
+
+/** Layered noise: large soft shapes plus finer detail. */
+function fbm(x: number, y: number, z: number, octaves = 4) {
+  let sum = 0;
+  let amp = 0.5;
+  let freq = 1;
+  for (let o = 0; o < octaves; o++) {
+    sum += amp * noise3(x * freq, y * freq, z * freq);
+    freq *= 2.1;
+    amp *= 0.5;
+  }
+  return sum;
+}
+
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * Biconcave disc (Evans–Fung): thin centre, thick rounded rim. Coloured like a cell under the
+ * microscope — paler in the thin centre, deep red at the rim — with a faintly uneven membrane.
+ */
 function rbcGeometry() {
   const half = (x: number) => 0.5 * Math.sqrt(Math.max(0, 1 - x * x)) * (0.2 + 2.0 * x * x - 1.12 * x ** 4);
   const pts: THREE.Vector2[] = [];
-  const N = 36;
+  const N = 40;
   for (let i = 0; i <= N; i++) {
     const x = Math.sin((i / N) * (Math.PI / 2));
     pts.push(new THREE.Vector2(x, -half(x)));
@@ -51,26 +97,52 @@ function rbcGeometry() {
     const x = Math.sin((i / N) * (Math.PI / 2));
     pts.push(new THREE.Vector2(x, half(x)));
   }
-  const g = new THREE.LatheGeometry(pts, 56);
+  const g = mergeVertices(new THREE.LatheGeometry(pts, 72).deleteAttribute("normal").deleteAttribute("uv"), 1e-5);
+  const p = g.attributes.position;
+  const colors = new Float32Array(p.count * 3);
+  const centre = new THREE.Color("#e2645a");
+  const rim = new THREE.Color("#8f0f17");
+  const c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    const y = p.getY(i);
+    const z = p.getZ(i);
+    const r = Math.hypot(x, z);
+    const d = 1 + 0.012 * fbm(x * 3.1, y * 3.1, z * 3.1, 3);
+    p.setXYZ(i, x * d, y * (1 + 0.04 * fbm(x * 4, 7, z * 4, 2)), z * d);
+    c.copy(centre).lerp(rim, smoothstep(0.12, 0.88, r));
+    c.multiplyScalar(1 + 0.07 * fbm(x * 6, y * 6, z * 6, 3));
+    colors.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   g.computeVertexNormals();
   return { geometry: g, half };
 }
 
-/** Sphere with a gently wrinkled surface (cell membrane). */
-function bumpySphere(radius: number, amount: number, seed: number) {
-  // Indexed, so normals are averaged across faces and the surface shades smoothly.
-  const g = mergeVertices(new THREE.IcosahedronGeometry(radius, 5).deleteAttribute("normal").deleteAttribute("uv"));
+/**
+ * Organic blob: a sphere pushed in and out by layered noise, optionally coloured between two tones by
+ * finer noise (chromatin in a nucleus, ruffles on a membrane).
+ */
+function organic(radius: number, amount: number, seed: number, from?: string, to?: string, detail = 5, freq = 1.6) {
+  const g = mergeVertices(new THREE.IcosahedronGeometry(radius, detail).deleteAttribute("normal").deleteAttribute("uv"));
   const p = g.attributes.position;
   const v = new THREE.Vector3();
+  const colors = from && to ? new Float32Array(p.count * 3) : null;
+  const a = new THREE.Color(from);
+  const b = new THREE.Color(to);
+  const c = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i);
-    const n = v.clone().normalize();
-    const w =
-      Math.sin(n.x * 7 + seed) * Math.sin(n.y * 6 + seed * 2) * Math.sin(n.z * 8 + seed * 3) +
-      0.5 * Math.sin(n.x * 17 + seed) * Math.sin(n.y * 15) * Math.sin(n.z * 19 + seed);
-    v.copy(n.multiplyScalar(radius * (1 + amount * w)));
+    v.fromBufferAttribute(p, i).normalize();
+    const n = fbm(v.x * freq + seed, v.y * freq + seed * 0.7, v.z * freq - seed, 4);
+    const fine = fbm(v.x * 9 + seed, v.y * 9, v.z * 9 - seed, 3);
+    v.multiplyScalar(radius * (1 + amount * n + amount * 0.25 * fine));
     p.setXYZ(i, v.x, v.y, v.z);
+    if (colors) {
+      c.copy(a).lerp(b, smoothstep(-0.35, 0.45, fine + 0.3 * n));
+      colors.set([c.r, c.g, c.b], i * 3);
+    }
   }
+  if (colors) g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   g.computeVertexNormals();
   return g;
 }
@@ -198,24 +270,47 @@ export class BloodScene {
       if (mesh.geometry && mesh.geometry !== this.rbc.geometry && !mesh.userData.shared) mesh.geometry.dispose();
     });
     this.content.clear();
+    // Only the vessel view has its own dark surroundings; other views sit on the page background.
+    this.scene.background = null;
+    this.scene.fog = null;
+  }
+
+  /** Red cell: colours come from the geometry; a soft sheen and wet coat give it a living look. */
+  private rbcMaterial() {
+    return this.mat("rbc", () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#ffffff",
+        vertexColors: true,
+        roughness: 0.36,
+        clearcoat: 0.55,
+        clearcoatRoughness: 0.28,
+        sheen: 0.9,
+        sheenColor: new THREE.Color("#ff9a8a"),
+        sheenRoughness: 0.45,
+      }),
+    );
   }
 
   private rbcMesh() {
-    return new THREE.Mesh(this.rbc.geometry, this.tissue(COLORS.rbc, { sheen: 0.6, sheenColor: new THREE.Color("#ff8a80") }));
+    return new THREE.Mesh(this.rbc.geometry, this.rbcMaterial());
   }
 
   /** Overview: a vessel cut open lengthwise, with cells streaming through plasma. */
   private buildVessel() {
     const R = 4;
     const L = 26;
+    // Inside a vessel: deep red surroundings, cells further away fade into them.
+    const deep = new THREE.Color("#2a0a0d");
+    this.scene.background = deep;
+    this.scene.fog = new THREE.FogExp2(deep, 0.035);
     const wall = new THREE.Mesh(
       new THREE.CylinderGeometry(R, R, L, 64, 1, true, Math.PI, Math.PI),
-      this.tissue(COLORS.vessel, { side: THREE.DoubleSide, roughness: 0.6, clearcoat: 0.6 }),
+      this.tissue(COLORS.vessel, { side: THREE.DoubleSide, roughness: 0.55, clearcoat: 0.7, sheen: 0.5, sheenColor: new THREE.Color("#ffb3a8") }),
     );
     wall.rotation.z = Math.PI / 2;
     const lining = new THREE.Mesh(
       new THREE.CylinderGeometry(R - 0.12, R - 0.12, L, 64, 1, true, Math.PI, Math.PI),
-      this.tissue("#e9a49a", { side: THREE.BackSide, roughness: 0.5 }),
+      this.tissue("#d9827a", { side: THREE.BackSide, roughness: 0.45, clearcoat: 0.8, clearcoatRoughness: 0.3 }),
     );
     lining.rotation.z = Math.PI / 2;
     const plasma = new THREE.Mesh(
@@ -244,7 +339,7 @@ export class BloodScene {
       }
       flows.push({ mesh, items });
     };
-    const rbcs = new THREE.InstancedMesh(this.rbc.geometry, this.tissue(COLORS.rbc, { sheen: 0.6, sheenColor: new THREE.Color("#ff8a80") }), 150);
+    const rbcs = new THREE.InstancedMesh(this.rbc.geometry, this.rbcMaterial(), 150);
     fill(rbcs, 1);
     const plateletGeo = new THREE.SphereGeometry(0.3, 16, 12).scale(1, 0.35, 1);
     const platelets = new THREE.InstancedMesh(plateletGeo, this.tissue(COLORS.platelet), 70);
@@ -331,7 +426,7 @@ export class BloodScene {
     whole.position.set(-1.9, 0.9, 0);
     const half = new THREE.Mesh(
       new THREE.LatheGeometry(this.lathePoints(), 40, 0, Math.PI),
-      this.tissue(COLORS.rbc, { side: THREE.DoubleSide, sheen: 0.6, sheenColor: new THREE.Color("#ff8a80") }),
+      this.mat("rbc-half", () => new THREE.MeshPhysicalMaterial({ color: "#c11d27", side: THREE.DoubleSide, roughness: 0.36, clearcoat: 0.55, sheen: 0.9, sheenColor: new THREE.Color("#ff9a8a") })),
     );
     half.scale.setScalar(1.35);
     half.rotation.set(0, Math.PI / 2, 0);
@@ -373,23 +468,37 @@ export class BloodScene {
     const sizes: Record<WbcKind, number> = { neutrophil: 1.6, eosinophil: 1.6, basophil: 1.45, lymphocyte: 1.05, monocyte: 2.1 };
     const R = sizes[kind];
     const cell = new THREE.Group();
+    // Ruffled membrane (white cells crawl and wrinkle), over a faintly tinted cytoplasm.
     const membrane = new THREE.Mesh(
-      bumpySphere(R, kind === "monocyte" ? 0.05 : 0.035, R * 3),
+      organic(R, kind === "monocyte" ? 0.07 : 0.05, R * 3, "#f4f1fa", "#d8d0ea", 6, 2.2),
       this.mat("membrane", () =>
         new THREE.MeshPhysicalMaterial({
-          color: COLORS.wbcMembrane,
+          color: "#ffffff",
+          vertexColors: true,
           transparent: true,
-          opacity: 0.38,
-          roughness: 0.25,
-          clearcoat: 0.6,
+          opacity: 0.42,
+          roughness: 0.3,
+          clearcoat: 0.7,
+          clearcoatRoughness: 0.25,
+          sheen: 0.6,
+          sheenColor: new THREE.Color("#ffffff"),
           depthWrite: false,
         }),
       ),
     );
     membrane.renderOrder = 2;
-    const nucleusMat = this.tissue(COLORS.nucleus, { roughness: 0.55, clearcoat: 0.2 });
+    const cytoplasm = new THREE.Mesh(
+      new THREE.SphereGeometry(R * 0.93, 48, 32),
+      this.mat("cytoplasm", () =>
+        new THREE.MeshPhysicalMaterial({ color: "#d9dcef", transparent: true, opacity: 0.16, roughness: 0.6, depthWrite: false }),
+      ),
+    );
+    cytoplasm.renderOrder = 1;
+    const nucleusMat = this.mat("nucleus", () =>
+      new THREE.MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.5 }),
+    );
     const lobe = (x: number, y: number, z: number, r: number) => {
-      const m = new THREE.Mesh(bumpySphere(r, 0.06, x + y), nucleusMat);
+      const m = new THREE.Mesh(organic(r, 0.12, x * 5 + y * 3, "#3b1f6e", "#8e6fc9", 5, 1.8), nucleusMat);
       m.position.set(x, y, z);
       return m;
     };
@@ -412,12 +521,24 @@ export class BloodScene {
       nucleus.add(n);
     } else {
       // Monocyte: kidney-shaped nucleus.
-      const kidney = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.42, 24, 48, Math.PI * 1.25), nucleusMat);
+      const kidneyGeo = new THREE.TorusGeometry(0.75, 0.42, 32, 64, Math.PI * 1.25);
+      // Chromatin mottling on the kidney-shaped nucleus too.
+      const kp = kidneyGeo.attributes.position;
+      const kc = new Float32Array(kp.count * 3);
+      const ca = new THREE.Color("#3b1f6e");
+      const cb = new THREE.Color("#8e6fc9");
+      const tmp = new THREE.Color();
+      for (let i = 0; i < kp.count; i++) {
+        tmp.copy(ca).lerp(cb, smoothstep(-0.35, 0.45, fbm(kp.getX(i) * 6, kp.getY(i) * 6, kp.getZ(i) * 6, 3)));
+        kc.set([tmp.r, tmp.g, tmp.b], i * 3);
+      }
+      kidneyGeo.setAttribute("color", new THREE.BufferAttribute(kc, 3));
+      const kidney = new THREE.Mesh(kidneyGeo, nucleusMat);
       kidney.rotation.z = -Math.PI * 0.15;
       kidney.scale.set(1, 1, 0.8);
       nucleus.add(kidney);
     }
-    cell.add(nucleus, membrane);
+    cell.add(nucleus, membrane, cytoplasm);
 
     const granules: Partial<Record<WbcKind, { color: string; size: number; count: number }>> = {
       neutrophil: { color: "#e7c9d6", size: 0.035, count: 220 },
@@ -459,7 +580,12 @@ export class BloodScene {
 
   private platelet(active: boolean) {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 16), this.tissue(COLORS.platelet, { roughness: 0.5 }));
+    const body = new THREE.Mesh(
+      organic(0.42, 0.14, active ? 4 : 9, "#d7b6e2", "#a77cbd", 4, 1.4),
+      this.mat("platelet", () =>
+        new THREE.MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.48, clearcoat: 0.4, sheen: 0.5, sheenColor: new THREE.Color("#f3dcff") }),
+      ),
+    );
     if (active) {
       body.scale.set(1.05, 0.8, 1.05);
       const rand = rng(11);
@@ -517,7 +643,7 @@ export class BloodScene {
       const curve = new THREE.CubicBezierCurve3(a.clone(), c1, c2, b.clone());
       threads.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.018, 5), fibrinMat));
     }
-    const trapped = new THREE.InstancedMesh(this.rbc.geometry, this.tissue(COLORS.rbc, { sheen: 0.6, sheenColor: new THREE.Color("#ff8a80") }), 26);
+    const trapped = new THREE.InstancedMesh(this.rbc.geometry, this.rbcMaterial(), 26);
     const d = new THREE.Object3D();
     for (let i = 0; i < trapped.count; i++) {
       inBall(rand, 3, d.position);
