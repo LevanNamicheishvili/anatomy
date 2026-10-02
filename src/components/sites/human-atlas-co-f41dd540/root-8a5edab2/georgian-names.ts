@@ -131,6 +131,49 @@ const DICT: Record<string, string> = {
   cornea: "რქოვანა",
   "thyroid gland": "ფარისებრი ჯირკვალი",
   thymus: "მკერდუკანა ჯირკვალი (თიმუსი)",
+  "lobe of thymus": "მკერდუკანა ჯირკვლის წილი",
+  // Digestive organs whose names were missing (they fell back to "region + organ")
+  "parenchyma of pancreas": "კუჭქვეშა ჯირკვლის პარენქიმა",
+  "caudate lobe of liver": "ღვიძლის კუდიანი წილი",
+  "duct of caudate lobe of liver": "ღვიძლის კუდიანი წილის სადინარი",
+  "cystic duct": "ნაღვლის ბუშტის სადინარი",
+  "mesentery of small intestine": "წვრილი ნაწლავის ჯორჯალი",
+  "ileocecal junction": "თეძო-ბრმა ნაწლავის შესართავი",
+  "taenia libera": "კოლინჯის თავისუფალი ზოლი",
+  "taenia mesocolica": "კოლინჯის ჯორჯლისეული ზოლი",
+  "taenia omentalis": "კოლინჯის ბადექონისეული ზოლი",
+  "sublingual gland": "ენისქვეშა სანერწყვე ჯირკვალი",
+  "submandibular gland": "ყბისქვეშა სანერწყვე ჯირკვალი",
+  // Pharynx
+  "superior pharyngeal constrictor": "ხახის ზედა შემკუმშველი კუნთი",
+  "middle pharyngeal constrictor": "ხახის შუა შემკუმშველი კუნთი",
+  "inferior pharyngeal constrictor": "ხახის ქვედა შემკუმშველი კუნთი",
+  palatopharyngeus: "სასა-ხახის კუნთი",
+  salpingopharyngeus: "მილ-ხახის კუნთი",
+  stylopharyngeus: "საწრეტ-ხახის კუნთი",
+  "main bronchus proper": "მთავარი ბრონქი",
+  // Endocrine
+  "pituitary gland": "ჰიპოფიზი",
+  "pineal body": "ეპიფიზი (ფიჭვისებრი ჯირკვალი)",
+  // Eye and ear
+  "anterior chamber of eyeball": "თვალის წინა საკანი",
+  choroid: "სისხლძარღვოვანი გარსი",
+  "corona ciliaris": "წამწამოვანი სხეული",
+  iris: "ფერადი გარსი",
+  "optic part of retina": "ბადურა",
+  sclera: "სკლერა (თეთრი გარსი)",
+  "vitreous body": "მინისებრი სხეული",
+  "suspensory ligament of lens": "ბროლის შემკავებელი იოგი",
+  "common tendinous ring": "საერთო მყესოვანი რგოლი",
+  "lacrimal gland": "ცრემლის ჯირკვალი",
+  "lacrimal canaliculus": "ცრემლის მილაკი",
+  "lacrimal lake": "ცრემლის ტბა",
+  "lacrimal sac": "ცრემლის პარკი",
+  "nasolacrimal duct": "ცხვირ-ცრემლის სადინარი",
+  "tarsal plate of upper eyelid": "ზედა ქუთუთოს ხრტილი",
+  "tarsal plate of lower eyelid": "ქვედა ქუთუთოს ხრტილი",
+  "external ear": "გარეთა ყური",
+  "flexor retinaculum of wrist": "მაჯის მომხრელთა შემკავებელი",
   "adrenal gland": "თირკმელზედა ჯირკვალი",
   testis: "სათესლე ჯირკვალი",
   prostate: "წინამდებარე ჯირკვალი",
@@ -546,7 +589,9 @@ export function georgianName(
     return { name: `${side}${muscle} ${partOf[1] === "head" ? "თავი" : "ნაწილი"}`, exact: true };
   }
 
-  const direct = DICT[n] ?? DICT[n.replace(/ of (left|right) (foot|hand)$/, " of $2")];
+  // "anterior chamber of left eyeball", "left duct of caudate lobe": the side is already taken above.
+  const direct =
+    DICT[n] ?? DICT[n.replace(/ of (left|right) (foot|hand)$/, " of $2")] ?? DICT[n.replace(/\b(left|right) /g, "")];
   if (direct) return { name: `${side}${direct}`, exact: true };
 
   const bronchi = n.match(/^(.*)segmental bronchial tree$/);
