@@ -82,6 +82,7 @@ export const SUBJECTS: Subject[] = [
     icon: "geography",
     color: "#2f6fb0",
     href: "/geography",
+    image: "/images/portal/georgia.jpg",
     facts: ["3D რელიეფი", "12 ადმინისტრაციული ერთეული", "ქალაქები და მწვერვალები"],
     topics: [
       {
@@ -91,6 +92,7 @@ export const SUBJECTS: Subject[] = [
         icon: "map",
         grades: "VII–XII",
         href: "/geography/georgia",
+        image: "/images/portal/georgia.jpg",
       },
       { slug: "relief", name: "რელიეფი და მთები", description: "კავკასიონი, დაბლობები, ზეგნები — როგორ ჩამოყალიბდა.", icon: "mountain", grades: "VII–IX" },
       { slug: "climate", name: "ჰავა და ბუნებრივი ზონები", description: "ნალექები, ტემპერატურა, ჰავის ტიპები საქართველოში.", icon: "climate", grades: "VII–IX" },

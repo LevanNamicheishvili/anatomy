@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -157,10 +158,10 @@ export default async function LandingPage() {
 
           <div className="relative mx-auto w-full max-w-[640px] pb-6">
             <div className="pe-[12%]">
-              <Laptop src="/images/portal/atlas-laptop.jpg" alt="პლატფორმა ლეპტოპზე — ბიოლოგიის 3D ატლასი" priority />
+              <Laptop src="/images/portal/atlas-laptop.jpg" alt="ბიოლოგია — ადამიანის 3D ატლასი ლეპტოპზე" priority />
             </div>
             <div className="absolute right-0 -bottom-2 w-[24%] min-w-[110px]">
-              <Phone src="/images/portal/atlas-phone.jpg" alt="პლატფორმა ტელეფონზე" />
+              <Phone src="/images/portal/georgia-phone.jpg" alt="გეოგრაფია — საქართველოს 3D რუკა ტელეფონზე" />
             </div>
           </div>
         </div>
@@ -187,13 +188,20 @@ export default async function LandingPage() {
       {/* ---- Subjects ---- */}
       <section id="subjects" className="scroll-mt-20 border-b border-[#e2e7e5] bg-[#f4f6f5]">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <SectionTitle eyebrow="საგნები" title="იწყება ბიოლოგიით — ემატება სხვა საგნები" />
+          <SectionTitle eyebrow="საგნები" title="ბიოლოგია და გეოგრაფია — ემატება სხვა საგნები" />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {SUBJECTS.map((s) => {
               const Icon = SUBJECT_ICONS[s.icon];
               const ready = !!s.href;
               return (
-                <article key={s.slug} className="reveal flex flex-col rounded-2xl border border-[#e2e7e5] bg-white p-7 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#cfd8d4] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
+                <article key={s.slug} className="reveal flex flex-col overflow-hidden rounded-2xl border border-[#e2e7e5] bg-white p-7 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#cfd8d4] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
+                  {s.image ? (
+                    <span className="relative -mx-7 -mt-7 mb-6 block aspect-[16/9] border-b border-[#e2e7e5] bg-[#eef2f0]">
+                      <Image src={s.image} alt={s.name} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover object-top" />
+                    </span>
+                  ) : (
+                    <span className="-mx-7 -mt-7 mb-6 block aspect-[16/9] border-b border-[#e2e7e5]" style={{ background: `linear-gradient(135deg, ${s.color}14, ${s.color}33)` }} />
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="flex size-11 items-center justify-center rounded-xl text-white" style={{ backgroundColor: s.color }}>
                       <Icon className="size-6" />
