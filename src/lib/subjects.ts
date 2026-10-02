@@ -63,7 +63,14 @@ export const SUBJECTS: Subject[] = [
         grades: "VIII–XII",
         href: "/biology/blood",
       },
-      { slug: "dna", name: "დნმ და მემკვიდრეობა", description: "დნმ-ის აგებულება, რეპლიკაცია, ცილის სინთეზი, ქრომოსომები.", icon: "dna", grades: "X–XII" },
+      {
+        slug: "dna",
+        name: "დნმ და მემკვიდრეობა",
+        description: "ნამდვილი ატომური მოდელი: ორმაგი სპირალი, რეპლიკაცია, ცილის სინთეზი, ქრომოსომა, მუტაციები.",
+        icon: "dna",
+        grades: "X–XII",
+        href: "/biology/dna",
+      },
       { slug: "cell", name: "უჯრედი", description: "ორგანოიდები, მემბრანა, უჯრედის გაყოფა — მიტოზი და მეიოზი.", icon: "cell", grades: "VII–XII" },
       {
         slug: "qr",

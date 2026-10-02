@@ -38,4 +38,7 @@ Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · three.js
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). შეყვანილია `scripts/import-lungs.mjs`-ით
 (გადაყვანილია ჩვენს კოორდინატებში); შეცვლილი ფილტვის მოდელიც (`body-15.bin.gz`) იმავე ლიცენზიით ვრცელდება.
 
+დნმ-ის მოლეკულები: **RCSB Protein Data Bank** — 1BNA (Drew et al., 1981) და 1KX5 (Davey et al., 2002),
+მონაცემები [CC0](https://www.rcsb.org/pages/usage-policy). `public/dna/dna.json` იქმნება `scripts/build-dna.mjs`-ით.
+
 სასწავლო მასალა — არ ცვლის ექიმის შეფასებას.
