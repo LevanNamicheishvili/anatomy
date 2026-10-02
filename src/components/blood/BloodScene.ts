@@ -238,6 +238,9 @@ export class BloodScene {
       platelets: () => this.buildPlatelets(),
       clot: () => this.buildClot(),
       groups: () => this.buildGroup(opts.group, opts.rh),
+      immunity: () => this.buildImmunity(),
+      bleeding: () => this.buildBleeding(),
+      diseases: () => this.buildDiseases(),
     };
     const built = builders[view]();
     const { rotate } = built;
@@ -270,24 +273,48 @@ export class BloodScene {
       if (mesh.geometry && mesh.geometry !== this.rbc.geometry && !mesh.userData.shared) mesh.geometry.dispose();
     });
     this.content.clear();
-    // Only the vessel view has its own dark surroundings; other views sit on the page background.
+    // Only the vessel view has its own surroundings; other views sit on the page background.
     this.scene.background = null;
     this.scene.fog = null;
+    this.renderer.toneMappingExposure = 1;
+  }
+
+  /**
+   * Living tissue lets some light through: edges facing away from the viewer glow softly in the
+   * tissue's own colour, and the whole surface gets a faint inner light. A cheap stand-in for
+   * subsurface scattering that runs fine on school computers.
+   */
+  private translucent<T extends THREE.MeshPhysicalMaterial>(m: T, strength = 1): T {
+    m.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        `{
+          float facing = abs(dot(normalize(normal), normalize(vViewPosition)));
+          float rim = pow(1.0 - facing, 2.2);
+          outgoingLight += diffuseColor.rgb * (0.16 + 0.55 * rim) * ${strength.toFixed(2)};
+        }
+        #include <opaque_fragment>`,
+      );
+    };
+    m.customProgramCacheKey = () => `translucent-${strength}`;
+    return m;
   }
 
   /** Red cell: colours come from the geometry; a soft sheen and wet coat give it a living look. */
   private rbcMaterial() {
     return this.mat("rbc", () =>
-      new THREE.MeshPhysicalMaterial({
-        color: "#ffffff",
-        vertexColors: true,
-        roughness: 0.36,
-        clearcoat: 0.55,
-        clearcoatRoughness: 0.28,
-        sheen: 0.9,
-        sheenColor: new THREE.Color("#ff9a8a"),
-        sheenRoughness: 0.45,
-      }),
+      this.translucent(
+        new THREE.MeshPhysicalMaterial({
+          color: "#ffffff",
+          vertexColors: true,
+          roughness: 0.36,
+          clearcoat: 0.55,
+          clearcoatRoughness: 0.28,
+          sheen: 0.9,
+          sheenColor: new THREE.Color("#ff9a8a"),
+          sheenRoughness: 0.45,
+        }),
+      ),
     );
   }
 
@@ -300,9 +327,11 @@ export class BloodScene {
     const R = 4;
     const L = 26;
     // Inside a vessel: deep red surroundings, cells further away fade into them.
-    const deep = new THREE.Color("#2a0a0d");
+    // Warm, bright red surroundings: it reads as the inside of a vessel without going dark.
+    const deep = new THREE.Color("#8a3a3c");
     this.scene.background = deep;
-    this.scene.fog = new THREE.FogExp2(deep, 0.035);
+    this.scene.fog = new THREE.FogExp2(deep, 0.016);
+    this.renderer.toneMappingExposure = 1.25;
     const wall = new THREE.Mesh(
       new THREE.CylinderGeometry(R, R, L, 64, 1, true, Math.PI, Math.PI),
       this.tissue(COLORS.vessel, { side: THREE.DoubleSide, roughness: 0.55, clearcoat: 0.7, sheen: 0.5, sheenColor: new THREE.Color("#ffb3a8") }),
@@ -701,6 +730,163 @@ export class BloodScene {
     }
     if (!kinds.length) this.label(cell, "ანტიგენები არ არის (I ჯგუფი)", new THREE.Vector3(0, 0.5, 0));
     return { distance: 10, rotate: true };
+  }
+
+  /** A Y-shaped antibody: two arms and a stem. */
+  private antibody() {
+    const g = new THREE.Group();
+    const mat = this.tissue("#f0b431", { roughness: 0.4 });
+    const piece = (len: number) => new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, len, 8), mat);
+    const stem = piece(0.32);
+    stem.position.y = -0.16;
+    const left = piece(0.28);
+    left.position.set(-0.09, 0.11, 0);
+    left.rotation.z = 0.6;
+    const right = piece(0.28);
+    right.position.set(0.09, 0.11, 0);
+    right.rotation.z = -0.6;
+    g.add(stem, left, right);
+    return g;
+  }
+
+  /** Immunity: a phagocyte swallowing bacteria; some bacteria are tagged by antibodies. */
+  private buildImmunity() {
+    const cell = this.leukocyte("neutrophil", 1.15);
+    this.content.add(cell);
+    const R = cell.userData.radius * 1.15;
+    const rand = rng(41);
+    const bacMat = this.mat("bacterium", () =>
+      this.translucent(
+        new THREE.MeshPhysicalMaterial({ color: "#8fb83a", roughness: 0.45, clearcoat: 0.5, sheen: 0.5, sheenColor: new THREE.Color("#e6ffb0") }),
+        0.6,
+      ),
+    );
+    const bacGeo = new THREE.CapsuleGeometry(0.16, 0.5, 8, 16);
+    type Bug = { mesh: THREE.Group; dir: THREE.Vector3; dist: number; speed: number; spin: number };
+    const bugs: Bug[] = [];
+    const place = (b: Bug) => {
+      b.mesh.position.copy(b.dir).multiplyScalar(b.dist);
+      const s = b.dist < R * 0.75 ? Math.max(0.05, (b.dist - R * 0.15) / (R * 0.6)) : 1;
+      b.mesh.scale.setScalar(s);
+    };
+    for (let i = 0; i < 12; i++) {
+      const mesh = new THREE.Group();
+      mesh.add(new THREE.Mesh(bacGeo, bacMat));
+      // Antibodies stuck to some bacteria, arms first.
+      if (i % 2 === 0)
+        for (let k = 0; k < 3; k++) {
+          const ab = this.antibody();
+          const a = (k / 3) * Math.PI * 2 + i;
+          const n = new THREE.Vector3(Math.cos(a), (rand() - 0.5) * 0.6, Math.sin(a)).normalize();
+          ab.position.copy(n).multiplyScalar(0.36);
+          ab.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), n);
+          mesh.add(ab);
+        }
+      mesh.rotation.set(rand() * 6, rand() * 6, rand() * 6);
+      const bug = { mesh, dir: inBall(rand, 1).normalize(), dist: R + 0.8 + rand() * 3, speed: 0.25 + rand() * 0.25, spin: (rand() - 0.5) * 1.5 };
+      place(bug);
+      bugs.push(bug);
+      this.content.add(mesh);
+    }
+    if (!this.reduceMotion)
+      this.tickers.push((_, dt) => {
+        for (const b of bugs) {
+          b.dist -= b.speed * dt;
+          b.mesh.rotation.y += b.spin * dt;
+          // Swallowed and digested: start again further out.
+          if (b.dist < R * 0.2) {
+            b.dist = R + 2.5 + rand() * 1.5;
+            b.dir = inBall(rand, 1).normalize();
+          }
+          place(b);
+        }
+      });
+    this.label(cell.children[1], "ფაგოციტი (ნეიტროფილი)", new THREE.Vector3(0.9, 1.2, 0));
+    this.label(bugs[1].mesh, "ბაქტერია");
+    this.label(bugs[0].mesh.children[1], "ანტისხეული");
+    return { distance: 13, rotate: true };
+  }
+
+  /** A short piece of vessel, cut across so the wall thickness shows. */
+  private vesselPiece(outer: number, inner: number, length: number, wall: string, blood: string) {
+    const g = new THREE.Group();
+    const wallMat = this.tissue(wall, { roughness: 0.5, clearcoat: 0.6, sheen: 0.5, sheenColor: new THREE.Color("#ffd2c9") });
+    const out = new THREE.Mesh(new THREE.CylinderGeometry(outer, outer, length, 48, 1, true), wallMat);
+    const inn = new THREE.Mesh(new THREE.CylinderGeometry(inner, inner, length, 48, 1, true), this.tissue(wall, { side: THREE.BackSide, roughness: 0.5 }));
+    const cap = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 48), this.tissue(wall, { side: THREE.DoubleSide, roughness: 0.7 }));
+    cap.rotation.x = -Math.PI / 2;
+    cap.position.y = length / 2;
+    const core = new THREE.Mesh(
+      new THREE.CylinderGeometry(inner * 0.98, inner * 0.98, length * 0.99, 40),
+      this.mat(`blood:${blood}`, () => this.translucent(new THREE.MeshPhysicalMaterial({ color: blood, roughness: 0.2, clearcoat: 0.9 }), 0.5)),
+    );
+    g.add(out, inn, cap, core);
+    return { group: g, core };
+  }
+
+  /** Bleeding: artery, vein and capillary side by side, cut across. */
+  private buildBleeding() {
+    const artery = this.vesselPiece(1.0, 0.55, 3.4, "#d7675e", "#e0242c");
+    artery.group.position.x = -2.8;
+    const vein = this.vesselPiece(1.0, 0.82, 3.4, "#a98bb5", "#6d1019");
+    const cap = this.vesselPiece(0.32, 0.26, 3.4, "#e8b2a9", "#c71f2a");
+    cap.group.position.x = 2.3;
+    // One red cell squeezing through the capillary.
+    const rbc = this.rbcMesh();
+    rbc.scale.setScalar(0.22);
+    rbc.position.set(2.3, 1.62, 0.55);
+    this.content.add(artery.group, vein.group, cap.group, rbc);
+    for (const g of [artery.group, vein.group, cap.group]) g.rotation.x = 0.35;
+    rbc.rotation.set(0.35 + Math.PI / 2, 0, 0);
+    // The artery pulses with the heartbeat.
+    if (!this.reduceMotion)
+      this.tickers.push((t) => {
+        const beat = Math.max(0, Math.sin(t * 7.5)) ** 3;
+        artery.group.scale.set(1 + 0.05 * beat, 1, 1 + 0.05 * beat);
+      });
+    this.label(artery.group.children[2], "არტერია — სქელი კედელი", new THREE.Vector3(0, 0, 0));
+    this.label(vein.group.children[2], "ვენა — თხელი კედელი", new THREE.Vector3(0, 0, 0));
+    this.label(cap.group.children[2], "კაპილარი — ერთი შრე", new THREE.Vector3(0, 0, 0));
+    return { distance: 13, rotate: false };
+  }
+
+  /** Crescent ("sickle") red cell. */
+  private sickleCell() {
+    const g = new THREE.TorusGeometry(0.75, 0.2, 20, 48, Math.PI * 0.85);
+    g.scale(1, 1, 0.45);
+    return new THREE.Mesh(g, this.tissue("#a8141d", { roughness: 0.4, clearcoat: 0.5 }));
+  }
+
+  /** Diseases: healthy blood, anaemia (few, pale cells) and sickle cells side by side. */
+  private buildDiseases() {
+    const rand = rng(57);
+    const cluster = (x: number, count: number, make: () => THREE.Object3D) => {
+      const g = new THREE.Group();
+      for (let i = 0; i < count; i++) {
+        const c = make();
+        inBall(rand, 1.4, c.position);
+        c.rotation.set(rand() * 6, rand() * 6, rand() * 6);
+        c.scale.multiplyScalar(0.55);
+        g.add(c);
+      }
+      g.position.x = x;
+      this.content.add(g);
+      return g;
+    };
+    const normal = cluster(-3.3, 14, () => this.rbcMesh());
+    const paleMat = this.mat("rbc-pale", () =>
+      this.translucent(
+        new THREE.MeshPhysicalMaterial({ color: "#f3a49c", roughness: 0.45, clearcoat: 0.35, emissive: new THREE.Color("#f0b8b0"), emissiveIntensity: 0.35 }),
+        0.7,
+      ),
+    );
+    const anaemia = cluster(0, 6, () => new THREE.Mesh(this.rbc.geometry, paleMat));
+    let n = 0;
+    const sickle = cluster(3.3, 9, () => (n++ % 4 === 3 ? this.rbcMesh() : this.sickleCell()));
+    this.label(normal, "ნორმა", new THREE.Vector3(0, 1.9, 0));
+    this.label(anaemia, "ანემია", new THREE.Vector3(-0.4, 1.9, 0));
+    this.label(sickle, "ნამგლისებრი", new THREE.Vector3(0, 1.9, 0));
+    return { distance: 15, rotate: false };
   }
 
   // ---- Loop -----------------------------------------------------------------------------------------

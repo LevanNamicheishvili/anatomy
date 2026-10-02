@@ -134,7 +134,7 @@ export function BloodExplorer() {
                   onClick={() => setIndex(i)}
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors",
+                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
                     i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
