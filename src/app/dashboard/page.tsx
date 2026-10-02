@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, QrCode, Users, type LucideIcon, Droplet } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, Users, type LucideIcon } from "lucide-react";
 import { PortalShell } from "@/components/portal/Shell";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { collections } from "@/lib/db";
@@ -27,78 +27,52 @@ function SubjectMark({ subject, size = "md" }: { subject: Subject; size?: "md" |
   );
 }
 
-/** A subject that is ready: large card with a preview of what opens. */
-function FeaturedSubject({ subject, showTools }: { subject: Subject & { href: string }; showTools: boolean }) {
-  return (
-    <article className="overflow-hidden rounded-xl border border-[#d5dcd9] bg-white md:grid md:grid-cols-[1.15fr_1fr]">
-      {subject.image && (
-        <Link href={subject.href} className="relative block aspect-[22/15] border-b border-[#e2e7e5] bg-[#eef2f0] md:aspect-auto md:min-h-[340px] md:border-e md:border-b-0">
-          <Image
-            src={subject.image}
-            alt={`${subject.name} — ატლასის ხედი`}
-            fill
-            priority
-            sizes="(min-width: 768px) 55vw, 100vw"
-            className="object-cover object-top"
-          />
-        </Link>
-      )}
-      <div className="flex flex-col p-6 md:p-8">
-        <div className="flex items-center gap-3">
+/** One card per subject, all the same shape; ready subjects open their page. */
+function SubjectCard({ subject }: { subject: Subject }) {
+  const ready = !!subject.href;
+  const topics = subject.topics.filter((t) => t.href && !t.staffOnly).length;
+  const body = (
+    <>
+      {subject.image ? (
+        <span className="relative block aspect-[16/9] border-b border-[#e2e7e5] bg-[#eef2f0]">
+          <Image src={subject.image} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover object-top" />
+        </span>
+      ) : (
+        <span className="flex aspect-[16/9] items-center justify-center border-b border-[#e2e7e5]" style={{ background: `linear-gradient(135deg, ${subject.color}14, ${subject.color}33)` }}>
           <SubjectMark subject={subject} size="lg" />
-          <h2 className="text-2xl font-semibold">{subject.name}</h2>
-        </div>
-        <p className="mt-4 text-[15px] leading-7 text-[#33413e]">{subject.description}</p>
-        {subject.facts && (
-          <ul className="mt-5 flex flex-wrap gap-2">
-            {subject.facts.map((f) => (
-              <li key={f} className="rounded-md border border-[#e2e7e5] bg-[#f5f7f6] px-2.5 py-1 text-[13px] text-[#33413e]">
-                {f}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-auto flex flex-col gap-3 pt-7">
-          <Link
-            href={subject.href}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-md px-5 text-[15px] font-semibold text-white transition-colors hover:brightness-95"
-            style={{ backgroundColor: subject.color }}
-          >
+        </span>
+      )}
+      <span className="flex flex-1 flex-col p-5">
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2.5">
+            <SubjectMark subject={subject} />
+            <span className="text-lg font-semibold">{subject.name}</span>
+          </span>
+          {ready ? (
+            <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs font-medium text-[#33413e]">{topics} თემა</span>
+          ) : (
+            <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs font-medium text-[#66736f]">მალე</span>
+          )}
+        </span>
+        <span className={`mt-3 text-sm leading-6 ${ready ? "text-[#33413e]" : "text-[#97a29e]"}`}>{subject.description}</span>
+        {ready && (
+          <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold" style={{ color: subject.color }}>
             გახსნა
-            <ArrowRight className="size-[18px]" />
-          </Link>
-          {subject.tools?.filter((tool) => showTools || !tool.staffOnly).map((tool) => (
-            <Link
-              key={tool.href}
-              href={tool.href}
-              className="flex items-center gap-3 rounded-md border border-[#d5dcd9] px-3 py-2.5 transition-colors hover:bg-[#f5f7f6]"
-            >
-              {tool.icon === "blood" ? <Droplet className="size-5 shrink-0 text-[#b8232b]" /> : <QrCode className="size-5 shrink-0 text-[#33413e]" />}
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-[#111a18]">{tool.name}</span>
-                <span className="block text-[13px] text-[#66736f]">{tool.description}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </article>
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        )}
+      </span>
+    </>
   );
-}
-
-/** A subject still being prepared. */
-function UpcomingSubject({ subject }: { subject: Subject }) {
-  return (
-    <article className="flex flex-col rounded-xl border border-[#e2e7e5] bg-white p-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <SubjectMark subject={subject} />
-          <h2 className="text-lg font-semibold">{subject.name}</h2>
-        </div>
-        <span className="rounded-full bg-[#eef2f0] px-2.5 py-0.5 text-xs font-medium text-[#66736f]">მალე</span>
-      </div>
-      <p className="mt-3 text-[15px] leading-7 text-[#66736f]">{subject.description}</p>
-    </article>
+  return ready ? (
+    <Link
+      href={subject.href!}
+      className="group flex flex-col overflow-hidden rounded-xl border border-[#d5dcd9] bg-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]"
+    >
+      {body}
+    </Link>
+  ) : (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-dashed border-[#d5dcd9] bg-white/60">{body}</div>
   );
 }
 
@@ -153,8 +127,6 @@ const GREETING: Record<CurrentUser["role"], string> = {
 
 export default async function PortalPage() {
   const user = await requireUser("/dashboard");
-  const ready = SUBJECTS.filter((s): s is Subject & { href: string } => !!s.href);
-  const upcoming = SUBJECTS.filter((s) => !s.href);
   const firstName = user.fullName.split(" ")[0];
 
   return (
@@ -167,17 +139,10 @@ export default async function PortalPage() {
       </div>
 
       <h2 className="mt-10 text-sm font-semibold text-[#66736f]">საგნები</h2>
-      <div className="mt-3 flex flex-col gap-6">
-        {ready.map((s) => (
-          <FeaturedSubject key={s.slug} subject={s} showTools={user.role !== "student"} />
+      <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {SUBJECTS.map((s) => (
+          <SubjectCard key={s.slug} subject={s} />
         ))}
-        {upcoming.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {upcoming.map((s) => (
-              <UpcomingSubject key={s.slug} subject={s} />
-            ))}
-          </div>
-        )}
       </div>
     </PortalShell>
   );

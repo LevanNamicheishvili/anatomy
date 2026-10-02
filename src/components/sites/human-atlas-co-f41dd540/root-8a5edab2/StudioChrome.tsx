@@ -30,9 +30,9 @@ export function AppBar({
       <div className="flex w-[320px] shrink-0 items-center gap-3 border-e border-[#e2e7e5] px-4 max-[1100px]:w-[288px] max-md:w-auto max-md:border-e-0">
         {/* Back to the school portal. */}
         <Link
-          href="/dashboard"
-          title="სასწავლო პორტალი"
-          aria-label="სასწავლო პორტალზე დაბრუნება"
+          href="/biology"
+          title="ბიოლოგია"
+          aria-label="ბიოლოგიის თემებზე დაბრუნება"
           className="group relative flex size-8 shrink-0 items-center justify-center rounded-md bg-[#0f8a74] text-white transition-colors hover:bg-[#0c7563]"
         >
           <HeartPulse className="size-[18px] group-hover:hidden" strokeWidth={2} />

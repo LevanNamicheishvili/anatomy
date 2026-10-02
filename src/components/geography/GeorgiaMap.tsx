@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Globe2, Loader2, MapPin, Mountain, RotateCcw, ShieldAlert } from "lucide-react";
+import { Loader2, MapPin, Mountain, RotateCcw, ShieldAlert } from "lucide-react";
+import { TopicHeader } from "@/components/portal/TopicHeader";
 import { cn } from "@/lib/utils";
 import { CITIES, COUNTRY, PEAKS, REGIONS, REGION_BY_ID, type City, type Peak, type Region } from "./georgia-data";
 import { ELEVATION_LEGEND, GeorgiaScene, type MapSelection } from "./GeorgiaScene";
@@ -139,55 +139,10 @@ export function GeorgiaMap() {
 
   return (
     <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[#e2e7e5] bg-white px-4">
-        <Link href="/dashboard" aria-label="პორტალზე დაბრუნება" className="flex size-9 items-center justify-center rounded-md text-[#33413e] hover:bg-[#eef2f0]">
-          <ArrowLeft className="size-[18px]" />
-        </Link>
-        <span className="flex size-8 items-center justify-center rounded-md bg-[#2f6fb0] text-white">
-          <Globe2 className="size-[18px]" />
-        </span>
-        <div className="min-w-0 leading-tight">
-          <h1 className="truncate text-[16px]">საქართველოს რუკა</h1>
-          <p className="truncate text-xs text-[#66736f]">გეოგრაფია · 3D რელიეფი</p>
-        </div>
-      </header>
+      <TopicHeader subject={{ name: "გეოგრაფია", href: "/geography" }} topic="საქართველოს რუკა" color="#2f6fb0" icon="map" />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_52dvh_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)_380px] lg:grid-rows-1">
-        <nav aria-label="მხარეები" className="atlas-scroll overflow-y-auto border-[#e2e7e5] bg-white max-lg:border-b lg:border-e">
-          <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
-            <li>
-              <button
-                type="button"
-                onClick={() => select({ kind: "country" })}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold whitespace-nowrap transition-colors",
-                  selection.kind === "country" ? "bg-[#e7f0f8] text-[#1d4f84]" : "text-[#33413e] hover:bg-[#f5f7f6]",
-                )}
-              >
-                <Globe2 className="size-4 shrink-0" />
-                მთელი საქართველო
-              </button>
-            </li>
-            {REGIONS.map((r) => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => select({ kind: "region", region: r })}
-                  onMouseEnter={() => setHover(r.id)}
-                  onMouseLeave={() => setHover(null)}
-                  aria-current={activeRegion === r.id ? "true" : undefined}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    activeRegion === r.id ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : hover === r.id ? "bg-[#f5f7f6] text-[#111a18]" : "text-[#33413e] hover:bg-[#f5f7f6]",
-                  )}
-                >
-                  <span className={cn("size-2 shrink-0 rounded-full", activeRegion === r.id ? "bg-[#1d4f84]" : "bg-[#c3ccc9]")} />
-                  {r.name}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[56dvh_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-1">
+
 
         <div className="relative min-h-0 overflow-hidden bg-[#dfeaf1]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს 3D რუკა" />
@@ -302,10 +257,40 @@ export function GeorgiaMap() {
               </div>
             </section>
           )}
+          {(selection.kind === "country" || selection.kind === "region") && (
+            <section className="mt-7 border-t border-[#e2e7e5] pt-5">
+              <h3 className="text-xs font-semibold text-[#66736f]">მხარეები</h3>
+              <ul className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-1">
+                {REGIONS.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      onClick={() => select({ kind: "region", region: r })}
+                      onMouseEnter={() => setHover(r.id)}
+                      onMouseLeave={() => setHover(null)}
+                      aria-current={activeRegion === r.id ? "true" : undefined}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
+                        activeRegion === r.id ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : hover === r.id ? "bg-[#f5f7f6]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                      )}
+                    >
+                      <span className={cn("size-2 shrink-0 rounded-full", activeRegion === r.id ? "bg-[#1d4f84]" : "bg-[#c3ccc9]")} />
+                      {r.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {selection.kind === "country" && (
             <p className="mt-6 rounded-lg border border-[#e2e7e5] px-3 py-2.5 text-sm leading-6 text-[#66736f]">
               აირჩიე მხარე, ქალაქი ან მწვერვალი რუკაზე. რუკის შემობრუნება — გადათრევით, გადიდება — ბორბლით ან თითებით.
             </p>
+          )}
+          {selection.kind !== "country" && (
+            <button type="button" onClick={() => select({ kind: "country" })} className="mt-6 text-sm font-semibold text-[#2f6fb0] hover:underline">
+              ← მთელი საქართველო
+            </button>
           )}
           <p className="mt-8 text-[11px] leading-5 text-[#97a29e]">
             რელიეფი: AWS Terrain Tiles (Mapzen); საზღვრები: geoBoundaries (CC BY 3.0); მდინარეები გამოთვლილია რელიეფიდან; სიმაღლეები 6-ჯერ გაზრდილია. აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.

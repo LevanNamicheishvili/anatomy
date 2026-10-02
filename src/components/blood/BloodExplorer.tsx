@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Droplet, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { TopicHeader } from "@/components/portal/TopicHeader";
 import { cn } from "@/lib/utils";
 import { BloodScene } from "./BloodScene";
 import { GROUP_NAMES, SECTIONS, WBC, compatible, type BloodGroup, type WbcKind } from "./blood-data";
@@ -107,21 +108,11 @@ export function BloodExplorer() {
 
   return (
     <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[#e2e7e5] bg-white px-4">
-        <Link href="/dashboard" aria-label="პორტალზე დაბრუნება" className="flex size-9 items-center justify-center rounded-md text-[#33413e] hover:bg-[#eef2f0]">
-          <ArrowLeft className="size-[18px]" />
-        </Link>
-        <span className="flex size-8 items-center justify-center rounded-md bg-[#b8232b] text-white">
-          <Droplet className="size-[18px]" />
-        </span>
-        <div className="min-w-0 leading-tight">
-          <h1 className="truncate text-[16px]">სისხლი</h1>
-          <p className="truncate text-xs text-[#66736f]">ბიოლოგია · 3D</p>
-        </div>
-        <Link href="/anatomy" className="ms-auto rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+      <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="სისხლი" color="#b8232b" icon="blood">
+        <Link href="/anatomy" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           ადამიანის ატლასი
         </Link>
-      </header>
+      </TopicHeader>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_42dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">
         {/* Sections, in reading order. */}
