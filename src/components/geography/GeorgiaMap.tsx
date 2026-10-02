@@ -38,9 +38,9 @@ export function GeorgiaMap() {
       const c = scene.regionCentre(s.region.id);
       scene.select({ kind: "region", id: s.region.id }, c ?? undefined);
     } else if (s.kind === "city") {
-      scene.select({ kind: "city", id: s.city.id }, { lon: s.city.lon, lat: s.city.lat, span: 0.9 });
+      scene.select({ kind: "city", id: s.city.id }, { lon: s.city.lon, lat: s.city.lat, span: 1.4 });
     } else {
-      scene.select({ kind: "peak", id: s.peak.id }, { lon: s.peak.lon, lat: s.peak.lat, span: 1 });
+      scene.select({ kind: "peak", id: s.peak.id }, { lon: s.peak.lon, lat: s.peak.lat, span: 1.8 });
     }
   };
   const selectRef = useRef(select);

@@ -10,10 +10,10 @@ import gzip, json, math, os, struct, sys
 from PIL import Image, ImageDraw
 
 TILES = sys.argv[1]
-Z = 8
+Z = int(next(f for f in os.listdir(TILES) if f.endswith(".png")).split("_")[0])
 LON0, LON1 = 39.9, 46.8
 LAT0, LAT1 = 43.7, 40.95  # north to south
-W, H = 640, 344
+W, H = 1024, 550
 
 # Stitch the tiles.
 names = [f for f in os.listdir(TILES) if f.endswith(".png")]
@@ -111,7 +111,7 @@ acc = [1] * N
 for k in reversed(order):  # highest first
     if down[k] >= 0:
         acc[down[k]] += acc[k]
-THRESHOLD = 900  # cells (~700 km² of catchment)
+THRESHOLD = 2300  # cells (~700 km² of catchment)
 river = [acc[k] >= THRESHOLD and heights[k] > 0 for k in range(N)]
 near = lambda k: any(regions[(k // W + dj) * W + (k % W + di)] for di in (-6, 0, 6) for dj in (-6, 0, 6)
                      if 0 <= k % W + di < W and 0 <= k // W + dj < H)
@@ -134,9 +134,18 @@ for k in range(N):
             break
         seen[c] = 1
         c = down[c]
-    if len(line) > 3 and any(near(x) for x in line[:: max(1, len(line) // 8)]):
+    if len(line) > 6 and any(near(x) for x in line[:: max(1, len(line) // 8)]):
         lonlat = lambda q: (round(LON0 + (LON1 - LON0) * (q % W) / (W - 1), 4), round(LAT0 + (LAT1 - LAT0) * (q // W) / (H - 1), 4))
-        lines.append([[*lonlat(q), acc[q]] for q in line])
+        pts = [[*lonlat(q), acc[q]] for q in line]
+        # Chaikin smoothing: grid-stepped lines become natural curves (ends kept in place).
+        for _ in range(3):
+            sm = [pts[0]]
+            for a, b in zip(pts, pts[1:]):
+                sm.append([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25, a[2]])
+                sm.append([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75, b[2]])
+            sm.append(pts[-1])
+            pts = sm
+        lines.append([[round(x, 4), round(y, 4), a] for x, y, a in pts[::2]])
 print(f"rivers: {len(lines)} lines, {sum(len(l) for l in lines)} points")
 
 os.makedirs("public/geo", exist_ok=True)

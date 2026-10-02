@@ -39,6 +39,8 @@ interface Lines {
 }
 
 const BASE = "/geo";
+/** Bump when the files in public/geo are rebuilt, so browsers drop their cached copies. */
+const GEO_VERSION = "2026-10-02";
 const BG = "#eef1ef";
 
 /** Elevation tint: lowland green → foothills → brown mountains → grey rock → snow. */
@@ -152,7 +154,11 @@ export class GeorgiaScene {
     const y = Math.floor(gy);
     const fx = gx - x;
     const fy = gy - y;
-    const h = (i: number, j: number) => Math.max(0, this.heights[j * W + i]);
+    const h = (i: number, j: number) => {
+      const k = j * W + i;
+      const v = Math.max(0, this.heights[k]);
+      return this.regionGrid[k] ? v : v * 0.32;
+    };
     return (h(x, y) * (1 - fx) + h(x + 1, y) * fx) * (1 - fy) + (h(x, y + 1) * (1 - fx) + h(x + 1, y + 1) * fx) * fy;
   }
 
@@ -203,9 +209,9 @@ export class GeorgiaScene {
 
   private async load() {
     const [meta, buf, lines] = await Promise.all([
-      fetch(`${BASE}/georgia-terrain.json`).then((r) => r.json() as Promise<Meta>),
-      fetch(`${BASE}/georgia-terrain.bin.gz`).then(async (r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
-      fetch(`${BASE}/georgia-lines.json`).then((r) => r.json() as Promise<Lines>),
+      fetch(`${BASE}/georgia-terrain.json?v=${GEO_VERSION}`).then((r) => r.json() as Promise<Meta>),
+      fetch(`${BASE}/georgia-terrain.bin.gz?v=${GEO_VERSION}`).then(async (r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
+      fetch(`${BASE}/georgia-lines.json?v=${GEO_VERSION}`).then((r) => r.json() as Promise<Lines>),
     ]);
     if (this.disposed) return;
     this.meta = meta;
@@ -227,8 +233,33 @@ export class GeorgiaScene {
     const col = new Float32Array(W * H * 4);
     const reg = new Float32Array(W * H);
     const c = new THREE.Color();
-    const grey = new THREE.Color("#e6e9e7");
+    const grey = new THREE.Color("#e3e6e4");
     const bg = new THREE.Color(BG);
+    const rock = new THREE.Color("#8a8079");
+    const snow = new THREE.Color("#f7f9fb");
+    const N = W * H;
+
+    // 1. Display heights: Georgia at full height; neighbouring countries flattened, so Georgia rises
+    //    above them like a relief model.
+    const hd = new Float32Array(N);
+    for (let k = 0; k < N; k++) {
+      const r = this.regionGrid[k];
+      let h = this.heights[k];
+      if (r && h < 2) h = 2; // keep Georgia's coastal lowland above the water line
+      hd[k] = r ? h : h > 0 ? h * 0.32 : Math.max(-60, h);
+    }
+
+    // 2. Soft valley shadows (ambient occlusion): a point lower than its surroundings gets less sky light.
+    const sum = new Float64Array((W + 1) * (H + 1));
+    for (let j = 0; j < H; j++)
+      for (let i = 0; i < W; i++)
+        sum[(j + 1) * (W + 1) + i + 1] = Math.max(0, hd[j * W + i]) + sum[j * (W + 1) + i + 1] + sum[(j + 1) * (W + 1) + i] - sum[j * (W + 1) + i];
+    const R = 9;
+    const around = (i: number, j: number) => {
+      const x0 = Math.max(0, i - R), x1 = Math.min(W, i + R + 1), y0 = Math.max(0, j - R), y1 = Math.min(H, j + R + 1);
+      return (sum[y1 * (W + 1) + x1] - sum[y0 * (W + 1) + x1] - sum[y1 * (W + 1) + x0] + sum[y0 * (W + 1) + x0]) / ((x1 - x0) * (y1 - y0));
+    };
+
     for (let j = 0; j < H; j++)
       for (let i = 0; i < W; i++) {
         const k = j * W + i;
@@ -236,15 +267,23 @@ export class GeorgiaScene {
         const lat = a0 + ((a1 - a0) * j) / (H - 1);
         const [x, z] = this.toXZ(lon, lat);
         const r = this.regionGrid[k];
-        let h = this.heights[k];
-        if (r && h < 2) h = 2; // keep Georgia's coastal lowland above the water line
+        const h = this.heights[k];
         // Fade out towards the edges of the grid, so the map has no cut-off walls.
         const edge = Math.min(i, W - 1 - i, j, H - 1 - j) / (H * 0.18);
         const fade = edge >= 1 ? 1 : edge * edge * (3 - 2 * edge);
-        pos.set([x, Math.max(-60, h) * M * fade, z], k * 3);
+        pos.set([x, hd[k] * M * fade, z], k * 3);
+
+        // Slope (metres per cell) decides between vegetation, bare rock and snow.
+        const hx = hd[j * W + Math.min(W - 1, i + 1)] - hd[j * W + Math.max(0, i - 1)];
+        const hz = hd[Math.min(H - 1, j + 1) * W + i] - hd[Math.max(0, j - 1) * W + i];
+        const slope = Math.hypot(hx, hz) / 2;
         tint(h, c);
+        if (r && h > 1400) c.lerp(rock, Math.min(0.85, Math.max(0, (slope - 90) / 260)));
+        if (r && h > 3100) c.lerp(snow, Math.min(1, (h - 3100) / 700) * Math.max(0.35, 1 - slope / 500));
+        const ao = Math.max(0, around(i, j) - Math.max(0, hd[k]));
+        c.multiplyScalar(1 - Math.min(0.32, ao / 1400));
         // Neighbouring countries stay pale, so Georgia stands out.
-        if (!r && h > 0) c.lerp(grey, 0.62);
+        if (!r && h > 0) c.lerp(grey, 0.72);
         c.lerp(bg, 1 - fade);
         col.set([c.r, c.g, c.b, fade], k * 4);
         reg[k] = r - 1;
@@ -420,9 +459,23 @@ export class GeorgiaScene {
           gl_FragColor = vec4(c, 0.92 * edge);
         }`,
     });
+    const parts: number[][][] = [];
     for (const line of rivers) {
+      let cur: number[][] = [];
+      for (const p of line) {
+        if (this.regionAt(p[0], p[1])) cur.push(p);
+        else {
+          // Keep the mouth where a river reaches the sea; drop everything abroad.
+          if (cur.length && this.heightAt(p[0], p[1]) <= 0) cur.push(p);
+          if (cur.length >= 4) parts.push(cur);
+          cur = [];
+        }
+      }
+      if (cur.length >= 4) parts.push(cur);
+    }
+    for (const line of parts) {
       const m = new THREE.Mesh(
-        this.ribbon(line, (i) => 0.0018 + 0.0016 * Math.log2(Math.max(1, line[i][2] / 900)), 0.0025),
+        this.ribbon(line, (i) => 0.0018 + 0.0016 * Math.log2(Math.max(1, line[i][2] / 2300)), 0.0025),
         this.riverMat,
       );
       m.renderOrder = 1;
@@ -450,7 +503,14 @@ export class GeorgiaScene {
       const needle = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.07, 6), new THREE.MeshStandardMaterial({ color: "#ffffff" }));
       needle.position.y = 0.035;
       head.position.y = 0.075;
-      g.add(needle, head);
+      // White ring around the head, so markers read on any background.
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(p.kind === "peak" ? 0.026 : p.capital ? 0.028 : 0.021, 0.004, 8, 32),
+        new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.4 }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.075;
+      g.add(needle, head, ring);
       g.position.copy(this.ground(p.lon, p.lat));
       g.userData = { id: p.id, kind: p.kind, baseY: g.position.y };
       this.scene.add(g);
@@ -487,28 +547,29 @@ export class GeorgiaScene {
 
   /** Smooth camera flight so a place of the given size (degrees) fills the view. */
   /** Camera distance at which something `span` units wide fills the view (any screen shape). */
-  private fit(span: number) {
+  private fit(width: number, depth = width) {
     const v = THREE.MathUtils.degToRad(this.camera.fov) / 2;
     const h = Math.atan(Math.tan(v) * this.camera.aspect);
-    return (span / 2 / Math.tan(Math.min(v, h))) * 1.08;
+    // Seen from ~50° above, ground depth shrinks to about 0.78 of its size on screen.
+    return Math.max(width / 2 / Math.tan(h), (depth * 0.78) / 2 / Math.tan(v)) * 1.06;
   }
 
-  flyTo(lon: number, lat: number, span: number) {
+  flyTo(lon: number, lat: number, span: number, depth = span) {
     if (!this.ready) return;
     const target = this.ground(lon, lat);
-    const dist = Math.min(14, Math.max(0.9, this.fit(span)));
+    const dist = Math.min(14, Math.max(0.9, this.fit(span, depth)));
     const dir = new THREE.Vector3(0, 0.78, 0.62).normalize();
     this.startTween(target, target.clone().addScaledVector(dir, dist), this.reduceMotion ? 1 : 1400);
   }
 
-  /** Whole country: Georgia is ~5.1 units wide. */
+  /** Whole country: Georgia is ~5 units wide and ~2.8 deep. */
   home() {
-    this.flyTo(this.centreLon, this.centreLat, 5.2);
+    this.flyTo(this.centreLon, this.centreLat, 5.1, 2.9);
   }
 
   private intro() {
     const target = this.ground(this.centreLon, this.centreLat);
-    const end = target.clone().addScaledVector(new THREE.Vector3(0, 0.78, 0.62).normalize(), Math.min(14, this.fit(5.2)));
+    const end = target.clone().addScaledVector(new THREE.Vector3(0, 0.78, 0.62).normalize(), Math.min(14, this.fit(5.1, 2.9)));
     if (this.reduceMotion) {
       this.camera.position.copy(end);
       this.controls.target.copy(target);
