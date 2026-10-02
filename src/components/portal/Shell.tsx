@@ -71,7 +71,7 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
       <footer className="border-t border-[#e2e7e5]">
         <div className="mx-auto max-w-6xl px-4 py-5 text-xs leading-5 text-[#66736f] sm:px-6">
-          მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © The Database Center for Life Science, CC BY 4.0
+          მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © The Database Center for Life Science, CC BY 4.0 · ფილტვები: Z-Anatomy, CC BY-SA 4.0
         </div>
       </footer>
     </div>

@@ -286,7 +286,7 @@ export default async function LandingPage() {
             <Logo className="size-8" />
             <span className="font-heading text-[#111a18]">{PORTAL_NAME}</span>
           </div>
-          <p className="text-xs leading-5">მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © DBCLS, CC BY 4.0</p>
+          <p className="text-xs leading-5">მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © DBCLS, CC BY 4.0 · ფილტვები: Z-Anatomy, CC BY-SA 4.0</p>
         </div>
       </footer>
     </div>

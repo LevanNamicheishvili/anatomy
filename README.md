@@ -34,4 +34,8 @@ Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · three.js
 ლიცენზია [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 ორიგინალი მონაცემები: https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html
 
+ფილტვის წილები: **Z-Anatomy** (Lluís Vinent, https://github.com/LluisV/Z-Anatomy), ლიცენზია
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). შეყვანილია `scripts/import-lungs.mjs`-ით
+(გადაყვანილია ჩვენს კოორდინატებში); შეცვლილი ფილტვის მოდელიც (`body-15.bin.gz`) იმავე ლიცენზიით ვრცელდება.
+
 სასწავლო მასალა — არ ცვლის ექიმის შეფასებას.
