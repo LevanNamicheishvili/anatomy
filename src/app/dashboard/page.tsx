@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, QrCode, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, QrCode, Users, type LucideIcon, Droplet } from "lucide-react";
 import { PortalShell } from "@/components/portal/Shell";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { collections } from "@/lib/db";
@@ -67,13 +67,13 @@ function FeaturedSubject({ subject, showTools }: { subject: Subject & { href: st
             გახსნა
             <ArrowRight className="size-[18px]" />
           </Link>
-          {showTools && subject.tools?.map((tool) => (
+          {subject.tools?.filter((tool) => showTools || !tool.staffOnly).map((tool) => (
             <Link
               key={tool.href}
               href={tool.href}
               className="flex items-center gap-3 rounded-md border border-[#d5dcd9] px-3 py-2.5 transition-colors hover:bg-[#f5f7f6]"
             >
-              <QrCode className="size-5 shrink-0 text-[#33413e]" />
+              {tool.icon === "blood" ? <Droplet className="size-5 shrink-0 text-[#b8232b]" /> : <QrCode className="size-5 shrink-0 text-[#33413e]" />}
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-[#111a18]">{tool.name}</span>
                 <span className="block text-[13px] text-[#66736f]">{tool.description}</span>

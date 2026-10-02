@@ -8,6 +8,9 @@ export interface SubjectTool {
   name: string;
   description: string;
   href: string;
+  icon: "qr" | "blood";
+  /** Teachers' and admins' tools are hidden from students. */
+  staffOnly?: boolean;
 }
 
 export interface Subject {
@@ -38,7 +41,8 @@ export const SUBJECTS: Subject[] = [
     image: "/images/portal/anatomy.jpg",
     facts: ["2 239 სტრუქტურა", "12 თემა", "ქვიზი და ბარათები"],
     tools: [
-      { name: "QR კოდები სახელმძღვანელოსთვის", description: "დასაბეჭდი კოდები თემებისთვის", href: "/qr" },
+      { name: "სისხლი — 3D", description: "პლაზმა, უჯრედები, შედედება, სისხლის ჯგუფები", href: "/biology/blood", icon: "blood" },
+      { name: "QR კოდები სახელმძღვანელოსთვის", description: "დასაბეჭდი კოდები თემებისთვის", href: "/qr", icon: "qr", staffOnly: true },
     ],
   },
   {

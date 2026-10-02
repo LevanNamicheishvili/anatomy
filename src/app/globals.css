@@ -302,3 +302,33 @@ body {
   }
 }
 
+
+/* Labels on the 3D blood scenes: a dot on the structure and a small card beside it. */
+.blood-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  will-change: transform;
+}
+.blood-label-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #111a18;
+}
+.blood-label-text {
+  border: 1px solid #d5dcd9;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 3px 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111a18;
+  box-shadow: 0 3px 10px rgba(17, 26, 24, 0.1);
+}
