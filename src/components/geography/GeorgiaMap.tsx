@@ -1,79 +1,111 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Globe2, MapPin, Minus, Mountain, Plus, RotateCcw, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Globe2, Loader2, MapPin, Mountain, RotateCcw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CITIES, COUNTRY, PEAKS, REGIONS, REGION_BY_ID, type City, type Peak, type Region } from "./georgia-data";
-import { MAP_HEIGHT, MAP_WIDTH, REGION_SHAPES, project } from "./georgia-shapes";
+import { ELEVATION_LEGEND, GeorgiaScene, type MapSelection } from "./GeorgiaScene";
 
 type Selection = { kind: "country" } | { kind: "region"; region: Region } | { kind: "city"; city: City } | { kind: "peak"; peak: Peak };
 
-// Soft, distinct region tints (same palette family as the rest of the portal).
-const TINTS: Record<string, string> = {
-  tbilisi: "#e9d5cf",
-  adjara: "#d8e9df",
-  abkhazia: "#e6e2d4",
-  "samegrelo-zemo-svaneti": "#d9e4ee",
-  guria: "#e4ecd6",
-  imereti: "#efe3cf",
-  "racha-lechkhumi": "#dde8e3",
-  "samtskhe-javakheti": "#e8dfea",
-  "shida-kartli": "#e7ecd9",
-  "mtskheta-mtianeti": "#d6e6ea",
-  "kvemo-kartli": "#efe0d6",
-  kakheti: "#e2dcec",
-};
+/** Cities labelled even on the whole-country view. */
+const MAJOR = new Set(["tbilisi", "batumi", "kutaisi", "sokhumi"]);
 
-/** Labels on the map, where the full name doesn't fit inside the region. */
+/** Labels on the map, where the full name doesn't fit. */
 const SHORT_NAMES: Record<string, string> = {
-  "samegrelo-zemo-svaneti": "სამეგრელო-ზ. სვანეთი",
-  "racha-lechkhumi": "რაჭა-ლეჩხუმი",
+  "samegrelo-zemo-svaneti": "სამეგრელო",
+  "racha-lechkhumi": "რაჭა",
+  "mtskheta-mtianeti": "მცხეთა-მთიანეთი",
 };
 
 export function GeorgiaMap() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const labelsRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<GeorgiaScene | null>(null);
+  const [ready, setReady] = useState(false);
   const [selection, setSelection] = useState<Selection>({ kind: "country" });
   const [hover, setHover] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+
+  const select = (s: Selection) => {
+    setSelection(s);
+    const scene = sceneRef.current;
+    if (!scene) return;
+    if (s.kind === "country") {
+      scene.select(null);
+      scene.home();
+    } else if (s.kind === "region") {
+      const c = scene.regionCentre(s.region.id);
+      scene.select({ kind: "region", id: s.region.id }, c ?? undefined);
+    } else if (s.kind === "city") {
+      scene.select({ kind: "city", id: s.city.id }, { lon: s.city.lon, lat: s.city.lat, span: 0.9 });
+    } else {
+      scene.select({ kind: "peak", id: s.peak.id }, { lon: s.peak.lon, lat: s.peak.lat, span: 1 });
+    }
+  };
+  const selectRef = useRef(select);
+  useEffect(() => {
+    selectRef.current = select;
+  });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const layer = labelsRef.current;
+    if (!canvas || !layer) return;
+    const scene = new GeorgiaScene(canvas, {
+      onReady: () => setReady(true),
+      onHoverRegion: setHover,
+      onSelect: (s: MapSelection) => {
+        if (!s) return selectRef.current({ kind: "country" });
+        if (s.kind === "region") return selectRef.current({ kind: "region", region: REGION_BY_ID[s.id] });
+        if (s.kind === "city") return selectRef.current({ kind: "city", city: CITIES.find((c) => c.id === s.id)! });
+        selectRef.current({ kind: "peak", peak: PEAKS.find((p) => p.id === s.id)! });
+      },
+    });
+    sceneRef.current = scene;
+    scene.setPins([
+      ...CITIES.map((c) => ({ id: c.id, lon: c.lon, lat: c.lat, kind: "city" as const, capital: c.capital })),
+      ...PEAKS.map((p) => ({ id: p.id, lon: p.lon, lat: p.lat, kind: "peak" as const })),
+    ]);
+
+    // Labels follow the 3D view; they are moved directly, not re-rendered.
+    const els = new Map<string, HTMLElement>();
+    for (const el of layer.querySelectorAll<HTMLElement>("[data-label]")) els.set(el.dataset.label!, el);
+    scene.onFrame = (project, distance) => {
+      for (const [key, el] of els) {
+        const [kind, id] = key.split(":");
+        let p: { x: number; y: number; visible: boolean } | null = null;
+        let show = false;
+        if (kind === "region") {
+          const c = scene.regionCentre(id);
+          if (c) p = project(c.lon, c.lat, 0.04);
+          show = distance > 3.2;
+        } else if (kind === "city") {
+          const c = CITIES.find((x) => x.id === id)!;
+          p = project(c.lon, c.lat, 0.11);
+          show = MAJOR.has(c.id) || (c.centre && distance < 6) || distance < 4 || el.dataset.active === "1";
+        } else {
+          const k = PEAKS.find((x) => x.id === id)!;
+          p = project(k.lon, k.lat, 0.11);
+          show = distance < 4.5 || el.dataset.active === "1";
+        }
+        const visible = !!p?.visible && show;
+        el.style.opacity = visible ? "1" : "0";
+        if (p) el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
+      }
+    };
+    return () => {
+      scene.dispose();
+      sceneRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    sceneRef.current?.setHoverRegion(hover);
+  }, [hover]);
 
   const activeRegion = selection.kind === "region" ? selection.region.id : selection.kind === "city" ? selection.city.region : null;
-  const cities = useMemo(() => CITIES.map((c) => ({ c, p: project(c.lon, c.lat) })), []);
-  const peaks = useMemo(() => PEAKS.map((k) => ({ k, p: project(k.lon, k.lat) })), []);
-  const s = 1 / zoom; // keep markers and labels the same size on screen while zooming
-
-  const zoomBy = (f: number) => setZoom((z) => Math.min(6, Math.max(1, z * f)));
-  const reset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-    setSelection({ kind: "country" });
-  };
-  // Mouse/touch drag pans; a short tap still selects.
-  const onDown = (e: React.PointerEvent) => {
-    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, moved: false };
-  };
-  const onMove = (e: React.PointerEvent) => {
-    const d = drag.current;
-    const svg = svgRef.current;
-    if (!d || !svg) return;
-    const dx = e.clientX - d.x;
-    const dy = e.clientY - d.y;
-    if (Math.hypot(dx, dy) > 4) d.moved = true;
-    if (!d.moved || zoom === 1) return;
-    const k = MAP_WIDTH / svg.clientWidth / zoom;
-    setPan({ x: d.px + dx * k, y: d.py + dy * k });
-  };
-  const onUp = () => setTimeout(() => (drag.current = null), 0);
-  const tap = (fn: () => void) => () => {
-    if (!drag.current?.moved) fn();
-  };
-
-  const vw = MAP_WIDTH / zoom;
-  const vh = MAP_HEIGHT / zoom;
-  const vx = (MAP_WIDTH - vw) / 2 - pan.x;
-  const vy = (MAP_HEIGHT - vh) / 2 - pan.y;
+  const activeKey = selection.kind === "city" ? `city:${selection.city.id}` : selection.kind === "peak" ? `peak:${selection.peak.id}` : null;
 
   const detail = (() => {
     if (selection.kind === "region") {
@@ -89,11 +121,18 @@ export function GeorgiaMap() {
     }
     if (selection.kind === "city") {
       const c = selection.city;
-      return { eyebrow: c.capital ? "დედაქალაქი" : `ქალაქი · ${REGION_BY_ID[c.region].name}`, title: c.name, text: c.text, facts: c.facts, occupied: c.region === "abkhazia" ? REGION_BY_ID.abkhazia.occupied : undefined, list: [] };
+      return {
+        eyebrow: c.capital ? "დედაქალაქი" : `ქალაქი · ${REGION_BY_ID[c.region].name}`,
+        title: c.name,
+        text: c.text,
+        facts: c.facts,
+        occupied: c.region === "abkhazia" ? REGION_BY_ID.abkhazia.occupied : undefined,
+        list: [],
+      };
     }
     if (selection.kind === "peak") {
       const k = selection.peak;
-      return { eyebrow: "მწვერვალი", title: k.name, text: k.text, facts: [`სიმაღლე — ${k.height.toLocaleString("en").replace(",", " ")} მ`], occupied: undefined, list: [] };
+      return { eyebrow: "მწვერვალი", title: k.name, text: k.text, facts: [`სიმაღლე — ${String(k.height).replace(/(\d)(\d{3})$/, "$1 $2")} მ`], occupied: undefined, list: [] };
     }
     return { eyebrow: "ქვეყანა", title: COUNTRY.name, text: COUNTRY.text, facts: COUNTRY.facts, occupied: undefined, list: [] };
   })();
@@ -109,28 +148,40 @@ export function GeorgiaMap() {
         </span>
         <div className="min-w-0 leading-tight">
           <h1 className="truncate text-[16px]">საქართველოს რუკა</h1>
-          <p className="truncate text-xs text-[#66736f]">გეოგრაფია</p>
+          <p className="truncate text-xs text-[#66736f]">გეოგრაფია · 3D რელიეფი</p>
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_48dvh_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)_380px] lg:grid-rows-1">
-        {/* Regions list */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_52dvh_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)_380px] lg:grid-rows-1">
         <nav aria-label="მხარეები" className="atlas-scroll overflow-y-auto border-[#e2e7e5] bg-white max-lg:border-b lg:border-e">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
+            <li>
+              <button
+                type="button"
+                onClick={() => select({ kind: "country" })}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold whitespace-nowrap transition-colors",
+                  selection.kind === "country" ? "bg-[#e7f0f8] text-[#1d4f84]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                )}
+              >
+                <Globe2 className="size-4 shrink-0" />
+                მთელი საქართველო
+              </button>
+            </li>
             {REGIONS.map((r) => (
               <li key={r.id}>
                 <button
                   type="button"
-                  onClick={() => setSelection({ kind: "region", region: r })}
+                  onClick={() => select({ kind: "region", region: r })}
                   onMouseEnter={() => setHover(r.id)}
                   onMouseLeave={() => setHover(null)}
                   aria-current={activeRegion === r.id ? "true" : undefined}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    activeRegion === r.id ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    activeRegion === r.id ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : hover === r.id ? "bg-[#f5f7f6] text-[#111a18]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
-                  <span className="size-3 shrink-0 rounded-sm border border-black/10" style={{ background: TINTS[r.id] }} />
+                  <span className={cn("size-2 shrink-0 rounded-full", activeRegion === r.id ? "bg-[#1d4f84]" : "bg-[#c3ccc9]")} />
                   {r.name}
                 </button>
               </li>
@@ -138,104 +189,84 @@ export function GeorgiaMap() {
           </ol>
         </nav>
 
-        {/* Map */}
-        <div className="relative min-h-0 overflow-hidden bg-[#dbe9f2]">
-          <svg
-            ref={svgRef}
-            viewBox={`${vx} ${vy} ${vw} ${vh}`}
-            className={cn("size-full touch-none select-none", zoom > 1 ? "cursor-grab active:cursor-grabbing" : "")}
-            onPointerDown={onDown}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerLeave={onUp}
-            onWheel={(e) => zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2)}
-            role="img"
-            aria-label="საქართველოს ინტერაქტიული რუკა"
-          >
-            <text x={60} y={170} className="fill-[#7fa6c6] text-[22px] italic" style={{ fontSize: 22 * s }}>
-              შავი ზღვა
-            </text>
-            {REGION_SHAPES.map((r) => {
-              const active = activeRegion === r.id;
-              const hovered = hover === r.id;
-              return (
-                <path
-                  key={r.id}
-                  d={r.d}
-                  fill={TINTS[r.id]}
-                  stroke={active ? "#1d4f84" : "#ffffff"}
-                  strokeWidth={(active ? 2.4 : 1.2) * s}
-                  strokeLinejoin="round"
-                  className="cursor-pointer transition-[filter] duration-150"
-                  style={{ filter: active ? "brightness(0.92) saturate(1.6)" : hovered ? "brightness(0.95) saturate(1.3)" : undefined }}
-                  onMouseEnter={() => setHover(r.id)}
-                  onMouseLeave={() => setHover(null)}
-                  onClick={tap(() => setSelection({ kind: "region", region: REGION_BY_ID[r.id] }))}
-                >
-                  <title>{REGION_BY_ID[r.id].name}</title>
-                </path>
-              );
-            })}
-            {/* Region names (hidden when zoomed in, where city names take over) */}
-            {zoom < 2 &&
-              REGION_SHAPES.filter((r) => r.id !== "tbilisi").map((r) => (
-                <text key={r.id} x={r.cx} y={r.cy} textAnchor="middle" className="pointer-events-none fill-[#66736f] font-semibold" style={{ fontSize: 12.5 * s }}>
-                  {SHORT_NAMES[r.id] ?? REGION_BY_ID[r.id].name}
-                </text>
-              ))}
-            {peaks.map(({ k, p }) => (
-              <g key={k.id} transform={`translate(${p[0]} ${p[1]})`} className="cursor-pointer" onClick={tap(() => setSelection({ kind: "peak", peak: k }))}>
-                <path d={`M0 ${-9 * s} L${8 * s} ${5 * s} L${-8 * s} ${5 * s} Z`} fill={selection.kind === "peak" && selection.peak.id === k.id ? "#1d4f84" : "#7b6a58"} stroke="#fff" strokeWidth={1.2 * s} />
-                <title>{`${k.name} — ${k.height} მ`}</title>
-              </g>
+        <div className="relative min-h-0 overflow-hidden bg-[#dfeaf1]">
+          <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს 3D რუკა" />
+          <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
+            {REGIONS.filter((r) => r.id !== "tbilisi").map((r) => (
+              <span
+                key={r.id}
+                data-label={`region:${r.id}`}
+                className="absolute top-0 left-0 text-[13px] font-semibold whitespace-nowrap text-[#33413e] opacity-0 transition-opacity duration-300 [text-shadow:0_0_4px_#fff,0_0_8px_#fff]"
+              >
+                {SHORT_NAMES[r.id] ?? r.name}
+              </span>
             ))}
-            {cities.map(({ c, p }) => {
-              const active = selection.kind === "city" && selection.city.id === c.id;
-              const r = (c.capital ? 7 : c.centre ? 5 : 3.8) * s;
-              const showName = c.capital || c.centre || zoom >= 2 || active;
-              return (
-                <g key={c.id} transform={`translate(${p[0]} ${p[1]})`} className="cursor-pointer" onClick={tap(() => setSelection({ kind: "city", city: c }))}>
-                  <circle r={r + 6 * s} fill="transparent" />
-                  {c.capital && <circle r={r + 3.5 * s} fill="none" stroke="#b8232b" strokeWidth={1.6 * s} />}
-                  <circle r={r} fill={active ? "#1d4f84" : c.capital ? "#b8232b" : "#111a18"} stroke="#fff" strokeWidth={1.6 * s} />
-                  {showName && (
-                    <text x={r + 4 * s} y={4 * s} className="fill-[#111a18] font-semibold" style={{ fontSize: (c.capital ? 15 : 12.5) * s, paintOrder: "stroke", stroke: "#ffffff", strokeWidth: 3.5 * s }}>
-                      {c.name}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-
-          <div className="absolute right-3 bottom-3 flex flex-col overflow-hidden rounded-lg border border-[#d5dcd9] bg-white shadow-sm">
-            <button type="button" aria-label="გადიდება" onClick={() => zoomBy(1.4)} className="flex size-10 items-center justify-center hover:bg-[#f5f7f6]">
-              <Plus className="size-[18px]" />
-            </button>
-            <button type="button" aria-label="დაპატარავება" onClick={() => zoomBy(1 / 1.4)} className="flex size-10 items-center justify-center border-t border-[#e2e7e5] hover:bg-[#f5f7f6]">
-              <Minus className="size-[18px]" />
-            </button>
-            <button type="button" aria-label="საწყისი ხედი" onClick={reset} className="flex size-10 items-center justify-center border-t border-[#e2e7e5] hover:bg-[#f5f7f6]">
-              <RotateCcw className="size-4" />
-            </button>
+            {CITIES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                data-label={`city:${c.id}`}
+                data-active={activeKey === `city:${c.id}` ? "1" : "0"}
+                onClick={() => select({ kind: "city", city: c })}
+                className={cn(
+                  "pointer-events-auto absolute top-0 left-0 rounded-md border px-2 py-0.5 text-[12.5px] font-semibold whitespace-nowrap opacity-0 shadow-sm transition-[opacity,background-color] duration-300",
+                  activeKey === `city:${c.id}` ? "border-[#1d4f84] bg-[#1d4f84] text-white" : c.capital ? "border-[#b8232b] bg-white text-[#8f1c22]" : "border-[#d5dcd9] bg-white/95 text-[#111a18]",
+                )}
+              >
+                {c.name}
+              </button>
+            ))}
+            {PEAKS.map((k) => (
+              <button
+                key={k.id}
+                type="button"
+                data-label={`peak:${k.id}`}
+                data-active={activeKey === `peak:${k.id}` ? "1" : "0"}
+                onClick={() => select({ kind: "peak", peak: k })}
+                className={cn(
+                  "pointer-events-auto absolute top-0 left-0 flex items-center gap-1 rounded-md border px-2 py-0.5 text-[12px] font-semibold whitespace-nowrap opacity-0 shadow-sm transition-opacity duration-300",
+                  activeKey === `peak:${k.id}` ? "border-[#1d4f84] bg-[#1d4f84] text-white" : "border-[#d8cfc4] bg-[#fbf8f4]/95 text-[#5b4a3a]",
+                )}
+              >
+                <Mountain className="size-3" />
+                {k.name.split(" ")[0]} · {k.height}
+              </button>
+            ))}
           </div>
-          <div className="absolute bottom-3 left-3 flex gap-3 rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 text-xs text-[#33413e] shadow-sm">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full border-2 border-[#b8232b] bg-[#b8232b]" />
-              დედაქალაქი
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-[#111a18]" />
-              ქალაქი
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Mountain className="size-3.5 text-[#7b6a58]" />
-              მწვერვალი
-            </span>
+
+          {!ready && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium shadow-sm">
+                <Loader2 className="size-4 animate-spin text-[#2f6fb0]" />
+                რელიეფი იტვირთება…
+              </span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            aria-label="საწყისი ხედი"
+            title="მთელი საქართველო"
+            onClick={() => select({ kind: "country" })}
+            className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
+          >
+            <RotateCcw className="size-4" />
+          </button>
+
+          {/* Elevation legend */}
+          <div className="absolute bottom-3 left-3 rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 shadow-sm">
+            <p className="text-[11px] font-semibold text-[#66736f]">სიმაღლე, მ</p>
+            <div className="mt-1.5 flex items-end gap-0">
+              {ELEVATION_LEGEND.map((s) => (
+                <div key={s.height} className="flex w-9 flex-col items-center">
+                  <span className="h-2.5 w-full" style={{ background: s.color }} />
+                  <span className="mt-1 text-[10px] text-[#66736f]">{s.height}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Details */}
         <article className="atlas-scroll min-h-0 overflow-y-auto border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-t lg:border-s">
           <p className="text-xs font-semibold text-[#2f6fb0]">{detail.eyebrow}</p>
           <h2 className="mt-1 text-2xl">{detail.title}</h2>
@@ -255,13 +286,13 @@ export function GeorgiaMap() {
           </ul>
           {detail.list.length > 0 && (
             <section className="mt-6">
-              <h3 className="text-xs font-semibold text-[#66736f]">ქალაქები რუკაზე</h3>
+              <h3 className="text-xs font-semibold text-[#66736f]">ქალაქები</h3>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {detail.list.map((c) => (
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setSelection({ kind: "city", city: c })}
+                    onClick={() => select({ kind: "city", city: c })}
                     className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
                   >
                     <MapPin className="size-3.5 text-[#2f6fb0]" />
@@ -271,12 +302,14 @@ export function GeorgiaMap() {
               </div>
             </section>
           )}
-          {selection.kind !== "country" && (
-            <button type="button" onClick={() => setSelection({ kind: "country" })} className="mt-6 text-sm font-semibold text-[#2f6fb0] hover:underline">
-              ← მთელი საქართველო
-            </button>
+          {selection.kind === "country" && (
+            <p className="mt-6 rounded-lg border border-[#e2e7e5] px-3 py-2.5 text-sm leading-6 text-[#66736f]">
+              აირჩიე მხარე, ქალაქი ან მწვერვალი რუკაზე. რუკის შემობრუნება — გადათრევით, გადიდება — ბორბლით ან თითებით.
+            </p>
           )}
-          <p className="mt-8 text-[11px] leading-5 text-[#97a29e]">საზღვრები: geoBoundaries (CC BY 3.0). აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.</p>
+          <p className="mt-8 text-[11px] leading-5 text-[#97a29e]">
+            რელიეფი: AWS Terrain Tiles (Mapzen); საზღვრები: geoBoundaries (CC BY 3.0); მდინარეები გამოთვლილია რელიეფიდან; სიმაღლეები 6-ჯერ გაზრდილია. აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.
+          </p>
         </article>
       </div>
     </div>
