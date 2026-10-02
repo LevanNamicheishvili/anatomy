@@ -48,9 +48,11 @@ export const SUBJECTS: Subject[] = [
   {
     slug: "geography",
     name: "გეოგრაფია",
-    description: "დედამიწა, კონტინენტები, რელიეფი და საქართველოს გეოგრაფია.",
+    description: "საქართველოს ინტერაქტიული რუკა: მხარეები, ქალაქები და მწვერვალები.",
     icon: "geography",
     color: "#2f6fb0",
+    href: "/geography/georgia",
+    facts: ["12 ადმინისტრაციული ერთეული", "17 ქალაქი", "მწვერვალები"],
   },
   {
     slug: "history",
