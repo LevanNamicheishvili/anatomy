@@ -85,12 +85,12 @@ export const SUBJECTS: Subject[] = [
   {
     slug: "geography",
     name: "გეოგრაფია",
-    description: "საქართველოს 3D რელიეფური რუკა: მხარეები, ქალაქები, მდინარეები და მწვერვალები.",
+    description: "საქართველოს 3D რელიეფური რუკა: მთები, მდინარეები, ტბები, ბუნებრივი ზონები, ჰავა, მხარეები და ქალაქები.",
     icon: "geography",
     color: "#2f6fb0",
     href: "/geography",
     image: "/images/portal/georgia.jpg",
-    facts: ["3D რელიეფი", "12 ადმინისტრაციული ერთეული", "ქალაქები და მწვერვალები"],
+    facts: ["3D რელიეფი", "4 შრე", "18 მდინარე"],
     topics: [
       {
         slug: "georgia",
@@ -101,8 +101,30 @@ export const SUBJECTS: Subject[] = [
         href: "/geography/georgia",
         image: "/images/portal/georgia.jpg",
       },
-      { slug: "relief", name: "რელიეფი და მთები", description: "კავკასიონი, დაბლობები, ზეგნები — როგორ ჩამოყალიბდა.", icon: "mountain", grades: "VII–IX" },
-      { slug: "climate", name: "ჰავა და ბუნებრივი ზონები", description: "ნალექები, ტემპერატურა, ჰავის ტიპები საქართველოში.", icon: "climate", grades: "VII–IX" },
+      {
+        slug: "relief",
+        name: "რელიეფი, მდინარეები და ტბები",
+        description: "კავკასიონი, ლიხის ქედი, დაბლობები და ზეგნები; შავი და კასპიის ზღვების აუზის მდინარეები, ტბები და წყალსაცავები.",
+        icon: "mountain",
+        grades: "VII–IX",
+        href: "/geography/georgia?layer=physical",
+      },
+      {
+        slug: "zones",
+        name: "ბუნებრივი ზონები",
+        description: "ვერტიკალური ზონალობა: კოლხური ტყიდან ალპურ მდელოებამდე და მყინვარებამდე.",
+        icon: "mountain",
+        grades: "VII–IX",
+        href: "/geography/georgia?layer=zones",
+      },
+      {
+        slug: "climate",
+        name: "ჰავა",
+        description: "ჰავის ტიპები: ნოტიო სუბტროპიკულიდან მარადიული თოვლის ჰავამდე — და რატომ.",
+        icon: "climate",
+        grades: "VII–IX",
+        href: "/geography/georgia?layer=climate",
+      },
     ],
   },
   {
