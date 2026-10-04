@@ -272,6 +272,9 @@ export class GeorgiaScene {
   private overlays: Overlays = { rivers: true, lakes: true, cities: true, peaks: true };
   private textures: THREE.Texture[] = [];
   private satellite: THREE.Texture | null = null;
+  private heightTex: THREE.DataTexture | null = null;
+  private regionTex: THREE.DataTexture | null = null;
+  private factorTex: THREE.DataTexture | null = null;
   private water: Water = { lakes: {}, rivers: {} };
   /** Peaks moved onto the highest point near their listed coordinates. */
   private snappedPeaks = new Map<string, { lon: number; lat: number }>();
@@ -465,7 +468,8 @@ export class GeorgiaScene {
       const r = this.regionGrid[k];
       let h = this.heights[k];
       if (r && h < 2) h = 2; // keep Georgia's coastal lowland above the water line
-      hd[k] = r ? h : h > 0 ? h * this.factor[k] : Math.max(-60, h);
+      // Outside Georgia, anything at sea level is sea: it sinks below the water surface.
+      hd[k] = r ? h : h > 1 ? h * this.factor[k] : -60;
     }
     // Soft valley shadows (ambient occlusion): a point lower than its surroundings gets less sky light.
     const sum = new Float64Array((W + 1) * (H + 1));
@@ -513,13 +517,13 @@ export class GeorgiaScene {
     // Textures: detailed heights (half floats, filtered), regions (exact values), colour ramp.
     const half = new Uint16Array(DW * DH);
     for (let k = 0; k < half.length; k++) half[k] = THREE.DataUtils.toHalfFloat(detail[k]);
-    const heightTex = new THREE.DataTexture(half, DW, DH, THREE.RedFormat, THREE.HalfFloatType);
+    const heightTex = (this.heightTex = new THREE.DataTexture(half, DW, DH, THREE.RedFormat, THREE.HalfFloatType));
     heightTex.magFilter = heightTex.minFilter = THREE.LinearFilter;
     heightTex.needsUpdate = true;
-    const regionTex = new THREE.DataTexture(new Uint8Array(this.regionGrid), W, H, THREE.RedFormat, THREE.UnsignedByteType);
+    const regionTex = (this.regionTex = new THREE.DataTexture(new Uint8Array(this.regionGrid), W, H, THREE.RedFormat, THREE.UnsignedByteType));
     regionTex.magFilter = regionTex.minFilter = THREE.NearestFilter;
     regionTex.needsUpdate = true;
-    const factorTex = new THREE.DataTexture(Uint8Array.from(this.factor, (v) => Math.round(v * 255)), W, H, THREE.RedFormat, THREE.UnsignedByteType);
+    const factorTex = (this.factorTex = new THREE.DataTexture(Uint8Array.from(this.factor, (v) => Math.round(v * 255)), W, H, THREE.RedFormat, THREE.UnsignedByteType));
     factorTex.magFilter = factorTex.minFilter = THREE.LinearFilter;
     factorTex.needsUpdate = true;
     this.textures.push(factorTex);
@@ -566,9 +570,24 @@ export class GeorgiaScene {
     g.rotateX(-Math.PI / 2);
     const m = new THREE.MeshPhysicalMaterial({ color: "#3b7fb3", roughness: 0.18, metalness: 0, clearcoat: 1, transparent: true, opacity: 0.88 });
     m.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, this.uniforms, { uSize: { value: new THREE.Vector2(w / 2, d / 2) } });
+      const { lon: [ml0, ml1], lat: [ma0, ma1] } = this.meta;
+      Object.assign(shader.uniforms, this.uniforms, {
+        uSize: { value: new THREE.Vector2(w / 2, d / 2) },
+        uHeight: { value: this.heightTex },
+        uFactor: { value: this.factorTex },
+        // World x/z → texture uv of the map grid.
+        uToUv: { value: new THREE.Vector4(1 / (K * (ml1 - ml0)), (this.centreLon - ml0) / (ml1 - ml0), -1 / (ma1 - ma0), (this.centreLat - ma0) / (ma1 - ma0)) },
+      });
       shader.fragmentShader = shader.fragmentShader
-        .replace("#include <common>", "#include <common>\nuniform vec2 uSize;\nvarying vec2 vSea;")
+        .replace("#include <common>", "#include <common>\nuniform vec2 uSize;\nuniform sampler2D uHeight;\nuniform sampler2D uFactor;\nuniform vec4 uToUv;\nvarying vec2 vSea;\nvarying vec2 vWorldXZ;")
+        .replace(
+          "#include <clipping_planes_fragment>",
+          `#include <clipping_planes_fragment>
+          // Water only where there really is sea: never over Georgia or land above sea level.
+          vec2 suv = vec2(vWorldXZ.x * uToUv.x + uToUv.y, vWorldXZ.y * uToUv.z + uToUv.w);
+          // (the smoothly filtered "Georgia" factor gives a clean, curved coastline)
+          if (texture2D(uFactor, suv).r > 0.97 || texture2D(uHeight, suv).r > 1.0) discard;`,
+        )
         .replace(
           "#include <opaque_fragment>",
           `#include <opaque_fragment>
@@ -578,14 +597,14 @@ export class GeorgiaScene {
           gl_FragColor.a *= fade;`,
         );
       shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nuniform float uTime;\nvarying vec2 vSea;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSea = position.xz;")
+        .replace("#include <common>", "#include <common>\nuniform float uTime;\nvarying vec2 vSea;\nvarying vec2 vWorldXZ;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSea = position.xz;\nvWorldXZ = (modelMatrix * vec4(position, 1.0)).xz;")
         .replace(
           "#include <begin_vertex>",
           `#include <begin_vertex>
           float w1 = sin(position.x * 9.0 + uTime * 1.3) * cos(position.z * 7.0 - uTime * 0.9);
           float w2 = sin((position.x + position.z) * 17.0 - uTime * 1.9);
-          transformed.y += (w1 * 0.6 + w2 * 0.4) * 0.0025;`,
+          transformed.y += (w1 * 0.6 + w2 * 0.4) * 0.0004;`,
         )
         .replace(
           "#include <beginnormal_vertex>",
@@ -994,7 +1013,7 @@ export class GeorgiaScene {
       }
     }
     if (this.overlays.rivers) {
-      let rd = 9;
+      let rd = 6;
       for (const [id, parts] of this.riverParts)
         for (const pts of parts)
           for (let i = 0; i < pts.length; i += 2) {

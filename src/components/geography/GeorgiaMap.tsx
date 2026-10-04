@@ -244,7 +244,8 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
   const [layer, setLayer] = useState<MapLayer>(initialLayer);
   const [labels, setLabels] = useState<Labels>({ rivers: true, lakes: true, cities: true, peaks: true, landforms: true });
   const [tab, setTab] = useState<Tab>("regions");
-  const [layersOpen, setLayersOpen] = useState(true);
+  /** null = not touched yet: open on wide screens, closed on phones (it would cover the map). */
+  const [layersOpen, setLayersOpen] = useState<boolean | null>(null);
   const labelsState = useRef({ ...labels, political: initialLayer === "political" });
 
   const select = (s: Selection) => {
@@ -309,8 +310,25 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
     // Labels follow the 3D view; they are moved directly, not re-rendered.
     const els = new Map<string, HTMLElement>();
     for (const el of layerEl.querySelectorAll<HTMLElement>("[data-label]")) els.set(el.dataset.label!, el);
+    // Label sizes, measured once (they don't change).
+    const sizes = new Map<HTMLElement, { w: number; h: number }>();
+    const size = (el: HTMLElement) => {
+      let s = sizes.get(el);
+      if (!s || !s.w) {
+        s = { w: el.offsetWidth, h: el.offsetHeight };
+        sizes.set(el, s);
+      }
+      return s;
+    };
+    /** Lower number wins when labels overlap. */
+    const priority = (kind: string, id: string, active: boolean) => {
+      if (active) return 0;
+      if (kind === "city") return CITIES.find((c) => c.id === id)?.capital ? 1 : MAJOR.has(id) ? 2 : 3;
+      return { peak: 4, river: 5, lake: 6, landform: 7, region: 8 }[kind] ?? 9;
+    };
     scene.onFrame = (project, distance) => {
       const on = labelsState.current;
+      const shown: { el: HTMLElement; x: number; y: number; w: number; h: number; prio: number }[] = [];
       for (const [key, el] of els) {
         const [kind, id] = key.split(":");
         const active = el.dataset.active === "1";
@@ -341,10 +359,25 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           p = project(f.lon, f.lat, 0.05);
           show = on.landforms && !on.political && ((distance > 1.6 && (distance < 4.2 || MAJOR_LANDFORMS.has(id))) || active);
         }
-        const visible = !!p?.visible && show;
-        el.style.opacity = visible ? "1" : "0";
-        el.style.pointerEvents = visible ? "" : "none";
-        if (p) el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, ${kind === "city" || kind === "peak" ? "-100%" : "-50%"})`;
+        const pinned = kind === "city" || kind === "peak";
+        if (p) el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, ${pinned ? "-100%" : "-50%"})`;
+        if (p?.visible && show) {
+          const { w, h } = size(el);
+          // Box in screen space (labels on pins sit above their point).
+          shown.push({ el, x: p.x - w / 2, y: pinned ? p.y - h : p.y - h / 2, w, h, prio: priority(kind, id, active) });
+        } else {
+          el.style.opacity = "0";
+          el.style.pointerEvents = "none";
+        }
+      }
+      // Hide labels that would overlap a more important one.
+      shown.sort((a, b) => a.prio - b.prio);
+      const placed: typeof shown = [];
+      for (const l of shown) {
+        const hit = placed.some((q) => l.x < q.x + q.w + 3 && q.x < l.x + l.w + 3 && l.y < q.y + q.h + 2 && q.y < l.y + l.h + 2);
+        l.el.style.opacity = hit ? "0" : "1";
+        l.el.style.pointerEvents = hit ? "none" : "";
+        if (!hit) placed.push(l);
       }
     };
     return () => {
@@ -553,17 +586,17 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           <div className="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-xl border border-[#d5dcd9] bg-white/95 shadow-sm backdrop-blur">
             <button
               type="button"
-              onClick={() => setLayersOpen(!layersOpen)}
-              aria-expanded={layersOpen}
+              onClick={() => setLayersOpen(!(layersOpen ?? window.matchMedia("(min-width: 1024px)").matches))}
+              aria-expanded={layersOpen ?? undefined}
               className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-semibold"
             >
               <Layers className="size-4 text-[#2f6fb0]" />
               შრეები
               <span className="ms-auto text-xs font-medium text-[#66736f]">{layerInfo.name}</span>
             </button>
-            {layersOpen && (
-              <div className="border-t border-[#e2e7e5] p-2">
-                <div className="grid grid-cols-3 gap-1 sm:grid-cols-5">
+            {layersOpen !== false && (
+              <div className={cn("border-t border-[#e2e7e5] p-2", layersOpen === null && "max-lg:hidden")}>
+                <div className="flex flex-wrap gap-1">
                   {LAYERS.map((l) => (
                     <button
                       key={l.id}
@@ -571,7 +604,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       aria-pressed={layer === l.id}
                       onClick={() => setLayer(l.id)}
                       className={cn(
-                        "h-9 rounded-md px-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors",
+                        "h-9 grow rounded-md px-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors",
                         layer === l.id ? "bg-[#111a18] text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ebe9]",
                       )}
                     >
