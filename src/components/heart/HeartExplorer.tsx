@@ -47,6 +47,7 @@ export function HeartExplorer() {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<HeartPart | null>(null);
   const [phase, setPhase] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [opts, setOpts] = useState<HeartOptions>({ circuit: "both", disease: false, slow: true, playing: true });
   const section = SECTIONS[index];
   const set = (patch: Partial<HeartOptions>) => setOpts((o) => ({ ...o, ...patch }));
@@ -56,7 +57,7 @@ export function HeartExplorer() {
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
     if (!canvas || !overlay) return;
-    const scene = new HeartScene(canvas, overlay, { onPick: setPicked, onPhase: setPhase });
+    const scene = new HeartScene(canvas, overlay, { onPick: setPicked, onPhase: setPhase, onLoading: setLoading });
     sceneRef.current = scene;
     return () => {
       scene.dispose();
@@ -115,6 +116,11 @@ export function HeartExplorer() {
         <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className={cn("absolute inset-0 size-full touch-none", section.view === "structure" && "cursor-pointer")} aria-label={`3D: ${section.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium shadow-sm">გულის მოდელი იტვირთება…</span>
+            </div>
+          )}
           {section.view === "cycle" && (
             <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3 max-sm:top-[88px] max-sm:justify-end">
               <span className="rounded-full bg-[#111a18]/85 px-4 py-1.5 text-sm font-semibold text-white max-sm:px-3 max-sm:text-xs">
@@ -242,6 +248,10 @@ export function HeartExplorer() {
               </p>
             ))}
           </div>
+
+          {(section.view === "structure" || section.view === "cycle" || section.view === "circulation") && (
+            <p className="mt-6 text-[11px] leading-5 text-[#97a29e]">გულისა და ფილტვების მოდელი: BodyParts3D © DBCLS (CC BY 4.0), Z-Anatomy (CC BY-SA 4.0).</p>
+          )}
 
           <div className="mt-8 grid grid-cols-2 gap-2">
             <button

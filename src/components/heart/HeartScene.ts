@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { fbm, smoothstep } from "@/lib/noise";
+import { smoothstep } from "@/lib/noise";
 import { PARTS, type Circuit, type HeartPart, type HeartView } from "./heart-data";
 
 /*
@@ -21,6 +21,7 @@ export interface HeartOptions {
 interface Callbacks {
   onPick: (part: HeartPart | null) => void;
   onPhase: (index: number) => void;
+  onLoading: (loading: boolean) => void;
 }
 
 interface Label {
@@ -46,100 +47,97 @@ function rng(seed: number) {
   };
 }
 
-// ---- Heart geometry (heart frame) ---------------------------------------------------------------------
+// ---- Heart data: BodyParts3D meshes extracted by scripts/build-heart.mjs ------------------------------
 
-/** Outline of the frontal section: wide base on top, narrowing to the apex. */
-function outlinePoint(t: number): [number, number] {
-  const c = Math.cos(t);
-  const s = Math.sin(t);
-  const x = 1.3 * c * (s < 0 ? 1 - 0.38 * Math.pow(-s, 1.5) : 1 - 0.08 * s);
-  const y = s > 0 ? 1.15 * s : 1.75 * s;
-  return [x, y];
+type N3 = [number, number, number];
+interface PartData {
+  id: string;
+  name: string;
+  role: string;
+  key: string;
+  vertexCount: number;
+  indexCount: number;
+  positions: number;
+  normals: number;
+  indices: number;
+  centre: N3;
 }
-const OUTLINE = Array.from({ length: 180 }, (_, i) => outlinePoint((i / 180) * Math.PI * 2));
-const DEPTH = 1.05;
+interface HeartData {
+  parts: PartData[];
+  plane: { normal: N3; point: N3; right: N3; up: N3 };
+  axis: { base: N3; apex: N3 };
+  centres: Record<string, N3>;
+  conduction: { sa: N3 | null; av: N3 | null; septum: N3[] };
+  onSection: Record<string, N3>;
+}
+/** Bump when public/heart is rebuilt. */
+const HEART_VERSION = "2026-10-05";
+let heartPromise: Promise<{ meta: HeartData; buf: ArrayBuffer }> | null = null;
+const loadHeart = () =>
+  (heartPromise ??= Promise.all([
+    fetch(`/heart/heart.json?v=${HEART_VERSION}`).then((r) => r.json() as Promise<HeartData>),
+    fetch(`/heart/heart.bin.gz?v=${HEART_VERSION}`).then((r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
+  ]).then(([meta, buf]) => ({ meta, buf })));
+const vec = (a: N3) => new THREE.Vector3(a[0], a[1], a[2]);
 
-interface Chamber {
-  id: "ra" | "rv" | "la" | "lv";
-  c: [number, number];
-  r: [number, number];
-  depth: number;
+/** How each kind of mesh is drawn: colour, colour of its cut surface, whether it beats. */
+interface Look {
   color: string;
+  cap?: string;
+  clip: boolean;
+  opacity?: number;
+  beat: number;
 }
-const CH: Record<Chamber["id"], Chamber> = {
-  ra: { id: "ra", c: [-0.58, 0.5], r: [0.4, 0.42], depth: 0.5, color: "#5d4e98" },
-  rv: { id: "rv", c: [-0.47, -0.42], r: [0.43, 0.6], depth: 0.55, color: "#4f4389" },
-  la: { id: "la", c: [0.5, 0.52], r: [0.38, 0.32], depth: 0.45, color: "#a8242c" },
-  lv: { id: "lv", c: [0.48, -0.55], r: [0.34, 0.8], depth: 0.5, color: "#931f27" },
+const LOOK: Record<string, Look> = {
+  wall: { color: "#9e3b36", cap: "#c4675c", clip: true, beat: 1 },
+  cavity: { color: "#ffffff", clip: true, opacity: 0.3, beat: 1 },
+  leaflet: { color: "#e8d6b6", cap: "#f4e8d0", clip: true, beat: 0 },
+  cusp: { color: "#e8d6b6", cap: "#f4e8d0", clip: true, beat: 0 },
+  papillary: { color: "#a5423b", cap: "#c96257", clip: true, beat: 1 },
+  artery: { color: "#c62f36", cap: "#e0575c", clip: true, beat: 0.3 },
+  venousArtery: { color: "#4a5fc1", cap: "#7183dc", clip: true, beat: 0.3 },
+  arterialVein: { color: "#c62f36", cap: "#e0575c", clip: true, beat: 0.3 },
+  vein: { color: "#4a5fc1", cap: "#7183dc", clip: true, beat: 0.3 },
+  coronaryArtery: { color: "#d8343a", clip: true, beat: 1 },
+  coronaryVein: { color: "#3f55b8", clip: true, beat: 1 },
+  lung: { color: "#f0a7b0", clip: false, opacity: 0.2, beat: 0 },
 };
-const inside = (ch: Chamber, x: number, y: number) => ((x - ch.c[0]) / ch.r[0]) ** 2 + ((y - ch.c[1]) / ch.r[1]) ** 2 < 1;
+const CAVITY_TINT: Record<string, string> = { ra: "#4a5fc1", rv: "#4a5fc1", la: "#c62f36", lv: "#c62f36" };
+/** Mesh key → the part a click selects. */
+const PICK: Record<string, HeartPart> = {
+  ventricles: "myocardium",
+  raWall: "ra",
+  laWall: "la",
+  lv: "lv",
+  rv: "rv",
+  ra: "ra",
+  la: "la",
+  mitral: "mitral",
+  tricuspid: "tricuspid",
+  aorticValve: "semilunar",
+  pulmonaryValve: "semilunar",
+  papillary: "papillary",
+  coronary: "coronary",
+  aorta: "aorta",
+  aortaDesc: "aorta",
+  aortaBranch: "aorta",
+  pulmonary: "pulmonary",
+  pulmVeins: "pulmVeins",
+  svc: "cava",
+  ivc: "cava",
+  cavaBranch: "cava",
+};
 
-/**
- * The cavity of an atrium joined with its ventricle (they meet where the valve is): the outline of the
- * union of two overlapping ellipses, plus the two points where they cross (the valve ring).
- */
-function union(a: Chamber, b: Chamber) {
-  const pts = (ch: Chamber, other: Chamber) =>
-    Array.from({ length: 120 }, (_, i) => {
-      const t = (i / 120) * Math.PI * 2;
-      return [ch.c[0] + ch.r[0] * Math.cos(t), ch.c[1] + ch.r[1] * Math.sin(t), ch === a ? 0 : 1] as const;
-    }).filter(([x, y]) => !inside(other, x, y));
-  // Centre of the lens where both overlap.
-  let sx = 0;
-  let sy = 0;
-  let n = 0;
-  for (let x = -1.5; x <= 1.5; x += 0.01)
-    for (let y = -1.5; y <= 1.5; y += 0.01)
-      if (inside(a, x, y) && inside(b, x, y)) {
-        sx += x;
-        sy += y;
-        n++;
-      }
-  const lens = [sx / n, sy / n];
-  const all = [...pts(a, b), ...pts(b, a)].sort((p, q) => Math.atan2(p[1] - lens[1], p[0] - lens[0]) - Math.atan2(q[1] - lens[1], q[0] - lens[0]));
-  const corners: [number, number][] = [];
-  for (let i = 0; i < all.length; i++) {
-    const p = all[i];
-    const q = all[(i + 1) % all.length];
-    if (p[2] !== q[2]) corners.push([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]);
-  }
-  corners.sort((p, q) => p[0] - q[0]);
-  return { poly: all.map(([x, y]) => new THREE.Vector2(x, y)), lens, corners };
-}
-const RIGHT = union(CH.ra, CH.rv);
-const LEFT = union(CH.la, CH.lv);
-
-/** Vertex-shader beat: ventricles squeeze towards the base and the septum, atria shrink a little. */
-const DEFORM = /* glsl */ `
-  vec3 hp = transformed;
-  float fv = smoothstep(0.15, -1.5, hp.y);
-  float fa = smoothstep(0.1, 1.1, hp.y);
-  float kv = 0.12 * uVent * fv;
-  float ka = 0.1 * uAtr * fa;
-  transformed.x = 0.05 + (hp.x - 0.05) * (1.0 - kv - ka);
-  transformed.z = hp.z * (1.0 - kv - ka);
-  transformed.y = 0.12 + (hp.y - 0.12) * (1.0 - 0.6 * kv - 0.5 * ka);
+/** Beat along the heart's own long axis: ventricles shorten and narrow, atria a little; WEIGHT per mesh. */
+const BEAT = /* glsl */ `
+  vec3 hd = transformed - uBase;
+  float ha = dot(hd, uAxis);
+  vec3 hr = hd - uAxis * ha;
+  float ht = ha / uLen;
+  float kv = 0.13 * uVent * smoothstep(0.0, 0.5, ht) * WEIGHT;
+  float ka = 0.09 * uAtr * smoothstep(0.0, -0.6, ht) * WEIGHT;
+  transformed = uBase + uAxis * ha * (1.0 - 0.55 * kv - 0.4 * ka) + hr * (1.0 - kv - ka);
 `;
-
-const VESSELS: { part: HeartPart; r: number; color: THREE.Color; pts: [number, number, number][] }[] = [
-  { part: "aorta", r: 0.17, color: RED, pts: [[0.25, 0.85, -0.2], [0.18, 1.5, -0.3], [0.2, 1.9, -0.38], [0.5, 2.1, -0.48], [0.9, 1.85, -0.6], [1.02, 1.2, -0.7], [1.02, 0.3, -0.8]] },
-  { part: "pulmonary", r: 0.16, color: BLUE, pts: [[-0.15, 0.8, 0.05], [-0.12, 1.25, 0.12], [-0.1, 1.5, 0.15]] },
-  { part: "pulmonary", r: 0.11, color: BLUE, pts: [[-0.1, 1.5, 0.15], [-0.6, 1.6, 0.05], [-1.3, 1.5, -0.2]] },
-  { part: "pulmonary", r: 0.11, color: BLUE, pts: [[-0.1, 1.5, 0.15], [0.5, 1.62, 0.05], [1.3, 1.5, -0.2]] },
-  { part: "cava", r: 0.14, color: BLUE, pts: [[-0.72, 2.05, -0.3], [-0.7, 1.4, -0.25], [-0.62, 0.85, -0.2]] },
-  { part: "cava", r: 0.15, color: BLUE, pts: [[-0.6, -1.75, -0.45], [-0.64, -0.7, -0.5], [-0.62, 0.25, -0.3]] },
-  { part: "pulmVeins", r: 0.085, color: RED, pts: [[1.65, 0.95, -0.3], [1.0, 0.78, -0.3], [0.62, 0.62, -0.2]] },
-  { part: "pulmVeins", r: 0.085, color: RED, pts: [[1.65, 0.42, -0.36], [1.0, 0.48, -0.35], [0.62, 0.48, -0.25]] },
-  { part: "pulmVeins", r: 0.08, color: RED, pts: [[-1.45, 0.9, -0.62], [-0.3, 0.72, -0.78], [0.45, 0.62, -0.42]] },
-];
-
-/** Conduction system on the cut face: sinus node, AV node, bundle of His and its branches. */
-const SA = v(-0.55, 0.97, 0.03);
-const AV = v(-0.03, 0.2, 0.03);
-const BUNDLE: [number, number][][] = [
-  [[-0.03, 0.2], [0.05, -0.1], [0.05, -1.0], [0.3, -1.35], [0.82, -0.95]],
-  [[0.05, -1.0], [-0.2, -1.12], [-0.88, -0.8]],
-];
 
 /** Electrocardiogram (one beat, f ∈ [0, 1)). */
 const ecg = (f: number) =>
@@ -168,7 +166,19 @@ export class HeartScene {
   private env: THREE.WebGLRenderTarget;
   private view: HeartView | null = null;
   private opts: HeartOptions = { circuit: "both", disease: false, slow: true, playing: true };
-  private uniforms = { uVent: { value: 0 }, uAtr: { value: 0 } };
+  private uniforms = {
+    uVent: { value: 0 },
+    uAtr: { value: 0 },
+    uBase: { value: new THREE.Vector3() },
+    uAxis: { value: new THREE.Vector3(0, -1, 0) },
+    uLen: { value: 1 },
+  };
+  private heartData: { meta: HeartData; buf: ArrayBuffer } | null = null;
+  private pending: { view: HeartView; opts: HeartOptions } | null = null;
+  private clipPlane: THREE.Plane | null = null;
+  private heartInner: THREE.Group | null = null;
+  private capOrder = 10;
+  private capGeo = new THREE.PlaneGeometry(60, 60);
   /** Heart beats elapsed (fraction = position in the cycle). */
   private beat = 0;
   private phase = -1;
@@ -181,14 +191,15 @@ export class HeartScene {
   private circuitMats: { pulmonary: THREE.MeshStandardMaterial[]; systemic: THREE.MeshStandardMaterial[] } = { pulmonary: [], systemic: [] };
 
   private sphere = new THREE.IcosahedronGeometry(1, 2);
-  private shared = new Set<THREE.BufferGeometry>([this.sphere]);
+  private shared = new Set<THREE.BufferGeometry>([this.sphere, this.capGeo]);
 
   constructor(
     private canvas: HTMLCanvasElement,
     private overlay: HTMLElement,
     private callbacks: Callbacks,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, stencil: true });
+    this.renderer.localClippingEnabled = true;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -211,11 +222,28 @@ export class HeartScene {
     this.observer.observe(canvas);
     this.resize();
     this.loop();
+    loadHeart().then((d) => {
+      if (this.disposed) return;
+      this.heartData = d;
+      if (this.pending) {
+        const { view, opts } = this.pending;
+        this.pending = null;
+        this.callbacks.onLoading(false);
+        this.setView(view, opts);
+      }
+    });
   }
 
   // ---- Public ---------------------------------------------------------------------------------------
 
   setView(view: HeartView, opts: HeartOptions) {
+    // The three heart views need the anatomical model; the others are built from code.
+    if (!this.heartData && (view === "structure" || view === "cycle" || view === "circulation")) {
+      this.pending = { view, opts };
+      this.callbacks.onLoading(true);
+      return;
+    }
+    this.callbacks.onLoading(false);
     const rebuild = view !== this.view || (view === "diseases" && opts.disease !== this.opts.disease);
     this.opts = opts;
     this.applyCircuit();
@@ -268,34 +296,6 @@ export class HeartScene {
     return m;
   }
 
-  /** Heart materials beat with the shared uniforms; chambers also hide the part inside the joined cavity. */
-  private beating<T extends THREE.Material>(m: T, hideInside?: Chamber): T {
-    m.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, this.uniforms);
-      shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nuniform float uVent;\nuniform float uAtr;\nvarying vec3 vHeart;")
-        .replace("#include <begin_vertex>", `#include <begin_vertex>\nvHeart = position;\n${DEFORM}`);
-      if (hideInside) {
-        const [cx, cy] = hideInside.c;
-        const [rx, ry] = hideInside.r;
-        shader.fragmentShader = shader.fragmentShader
-          .replace("#include <common>", "#include <common>\nvarying vec3 vHeart;")
-          .replace(
-            "#include <clipping_planes_fragment>",
-            `#include <clipping_planes_fragment>
-            vec3 q = (vHeart - vec3(${cx.toFixed(3)}, ${cy.toFixed(3)}, 0.0)) / vec3(${rx.toFixed(3)}, ${ry.toFixed(3)}, ${hideInside.depth.toFixed(3)});
-            if (dot(q, q) < 0.995) discard;
-            // Deeper inside the cavity is darker, so it reads as a hollow, not a bulge.
-            diffuseColor.rgb *= 1.0 - 0.6 * clamp(-vHeart.z / ${hideInside.depth.toFixed(3)}, 0.0, 1.0);`,
-          );
-      } else {
-        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vHeart;");
-      }
-    };
-    m.customProgramCacheKey = () => `heart-${hideInside?.id ?? "none"}`;
-    return m;
-  }
-
   private anchor(parent: THREE.Object3D, p: V3) {
     const o = new THREE.Object3D();
     o.position.copy(p);
@@ -341,6 +341,7 @@ export class HeartScene {
     this.circuitMats = { pulmonary: [], systemic: [] };
     this.picking = false;
     this.phase = -1;
+    this.clipPlane = null;
     this.uniforms.uVent.value = 0;
     this.uniforms.uAtr.value = 0;
   }
@@ -441,173 +442,241 @@ export class HeartScene {
     return { f, vent, atr, avOpen, slOpen, phase };
   }
 
-  // ---- The heart ------------------------------------------------------------------------------------
+  // ---- The real heart -------------------------------------------------------------------------------
 
-  /** Builds the cut-open heart into a group (heart frame); returns handles for animation. */
-  private heart(opts: { vessels: boolean; labels: boolean; conduction: boolean }) {
-    const g = new THREE.Group();
-    g.rotation.z = 0.42; // apex down and to the patient's left
-    this.content.add(g);
-
-    // Back half: surface from the section outline curving back to a point.
-    const M = 26;
-    const N = OUTLINE.length;
-    const pos: number[] = [];
-    for (let j = 0; j <= M; j++) {
-      const phi = (j / M) * (Math.PI / 2);
-      const s = Math.cos(phi);
-      for (let i = 0; i < N; i++) {
-        const [ox, oy] = OUTLINE[i];
-        const bump = 1 + 0.02 * fbm(ox * 2, oy * 2, phi * 2, 3);
-        pos.push(ox * s * bump, (oy * s - 0.2 * (1 - s)) * bump, -DEPTH * Math.sin(phi));
-      }
-    }
-    const idx: number[] = [];
-    for (let j = 0; j < M; j++)
-      for (let i = 0; i < N; i++) {
-        const a = j * N + i;
-        const b = j * N + ((i + 1) % N);
-        idx.push(a, a + N, b, b, a + N, b + N);
-      }
-    const back = new THREE.BufferGeometry();
-    back.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    back.setIndex(idx);
-    back.computeVertexNormals();
-    const muscle = this.beating(this.material({ color: "#b5524a", roughness: 0.55, side: THREE.DoubleSide }, "myocardium"));
-    const backMesh = new THREE.Mesh(back, muscle);
-    backMesh.userData.part = "myocardium";
-    g.add(backMesh);
-
-    // Cut face with the two cavities.
-    const shape = new THREE.Shape(OUTLINE.map(([x, y]) => new THREE.Vector2(x, y)));
-    shape.holes = [new THREE.Path(RIGHT.poly), new THREE.Path(LEFT.poly)];
-    const face = new THREE.Mesh(new THREE.ShapeGeometry(shape, 1), this.beating(this.material({ color: "#c76a5f", roughness: 0.7, clearcoat: 0.15 }, "myocardium")));
-    face.userData.part = "cutface";
-    g.add(face);
-
-    // Inner walls of the chambers: half ellipsoids, each hiding what lies inside its partner.
-    const pairs: [Chamber, Chamber][] = [
-      [CH.ra, CH.rv],
-      [CH.rv, CH.ra],
-      [CH.la, CH.lv],
-      [CH.lv, CH.la],
-    ];
-    for (const [ch, partner] of pairs) {
-      const geo = new THREE.SphereGeometry(1, 48, 28, Math.PI, Math.PI);
-      geo.scale(ch.r[0], ch.r[1], ch.depth).translate(ch.c[0], ch.c[1], 0);
-      const m = new THREE.Mesh(geo, this.beating(this.material({ color: ch.color, roughness: 0.45, side: THREE.DoubleSide, sheen: 0.4 }, ch.id), partner));
-      m.userData.part = ch.id;
-      g.add(m);
-    }
-
-    // Valves: two flaps per atrioventricular valve, hinged at the valve ring.
-    const leaflets: { pivot: THREE.Group; open: number; closed: number }[] = [];
-    for (const [side, part] of [
-      [RIGHT, "tricuspid"],
-      [LEFT, "mitral"],
-    ] as const) {
-      const [p, q] = side.corners;
-      const half = Math.hypot(q[0] - p[0], q[1] - p[1]) / 2;
-      const across = Math.atan2(q[1] - p[1], q[0] - p[0]);
-      const mat = this.material({ color: "#efe1c6", roughness: 0.6, side: THREE.DoubleSide }, part);
-      for (const [hinge, closed, open] of [
-        [p, across, -Math.PI / 2 - 0.25],
-        [q, across + Math.PI, -Math.PI / 2 + 0.25],
-      ] as const) {
-        const pivot = new THREE.Group();
-        pivot.position.set(hinge[0], hinge[1], 0.035);
-        const leaf = new THREE.Mesh(new THREE.BoxGeometry(half * 1.02, 0.035, 0.05), mat);
-        leaf.position.x = (half * 1.02) / 2;
-        leaf.userData.part = part;
-        pivot.add(leaf);
-        g.add(pivot);
-        leaflets.push({ pivot, open, closed });
-      }
-    }
-
-    // Great vessels.
-    const semilunar: THREE.Mesh[] = [];
-    if (opts.vessels) {
-      for (const vs of VESSELS) {
-        const m = this.tube(
-          vs.pts.map(([x, y, z]) => v(x, y, z)),
-          vs.r,
-          this.beating(this.material({ color: vs.color, roughness: 0.45 }, vs.part)),
-          g,
-        );
-        m.userData.part = vs.part;
-      }
-      // Semilunar valves: rings with three cusps at the roots of the aorta and the pulmonary trunk.
-      const ringMat = this.material({ color: "#efe1c6", roughness: 0.6 }, "semilunar");
-      for (const [base, dir, r] of [
-        [v(0.21, 1.25, -0.25), v(-0.07, 1, -0.1), 0.16],
-        [v(-0.13, 1.05, 0.09), v(0.06, 1, 0.14), 0.155],
-      ] as const) {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.025, 8, 32), ringMat);
-        ring.position.copy(base);
-        ring.quaternion.setFromUnitVectors(v(0, 0, 1), dir.clone().normalize());
-        ring.userData.part = "semilunar";
-        g.add(ring);
-        semilunar.push(ring);
-      }
-    }
-
-    // Conduction system.
-    const condMat = this.material({ color: "#f5c542", roughness: 0.4, emissive: "#f2b632", emissiveIntensity: 0.4 }, "conduction");
-    const nodes: THREE.Mesh[] = [];
-    if (opts.conduction) {
-      for (const p of [SA, AV]) {
-        const n = new THREE.Mesh(this.sphere, condMat);
-        n.position.copy(p);
-        n.scale.setScalar(0.06);
-        n.userData.part = "conduction";
-        g.add(n);
-        nodes.push(n);
-      }
-      for (const line of BUNDLE) {
-        const m = this.tube(line.map(([x, y]) => v(x, y, 0.02)), 0.022, condMat, g, 40);
-        m.userData.part = "conduction";
-      }
-    }
-
-    if (opts.labels) {
-      const at = (part: HeartPart, p: V3) => this.label(this.anchor(g, p), PARTS[part].name, "label", part);
-      at("ra", v(-0.62, 0.55, -0.1));
-      at("rv", v(-0.5, -0.55, -0.1));
-      at("la", v(0.55, 0.6, -0.1));
-      at("lv", v(0.5, -0.75, -0.1));
-      at("septum", v(0.05, -0.55, 0.02));
-      at("myocardium", v(0.9, -0.35, 0.02));
-      at("tricuspid", v(RIGHT.lens[0], RIGHT.lens[1] - 0.05, 0.04));
-      at("mitral", v(LEFT.lens[0], LEFT.lens[1] - 0.05, 0.04));
-      if (opts.vessels) {
-        at("aorta", v(0.55, 2.08, -0.48));
-        at("pulmonary", v(-0.75, 1.58, 0.03));
-        at("pulmVeins", v(1.5, 0.92, -0.3));
-        at("cava", v(-0.71, 1.75, -0.27));
-        at("semilunar", v(-0.13, 1.05, 0.25));
-      }
-      if (opts.conduction) at("conduction", SA);
-    }
-    return { g, leaflets, semilunar, nodes, condMat };
+  private beatMaterial<T extends THREE.Material>(m: T, weight: number): T {
+    if (!weight) return m;
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, this.uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nuniform float uVent;\nuniform float uAtr;\nuniform vec3 uBase;\nuniform vec3 uAxis;\nuniform float uLen;")
+        .replace("#include <begin_vertex>", `#include <begin_vertex>\n${BEAT.replace(/WEIGHT/g, weight.toFixed(2))}`);
+    };
+    m.customProgramCacheKey = () => `beat-${weight}`;
+    return m;
   }
 
-  /** Beat the heart: shared uniforms, valves, conduction glow. */
-  private animateHeart(h: ReturnType<HeartScene["heart"]>) {
+  /**
+   * Solid cut surface for a closed mesh (stencil capping): back faces add, front faces subtract; where the
+   * count stays non-zero the plane lies inside the solid, and a cap in the solid's cut colour is drawn there.
+   */
+  private capped(geo: THREE.BufferGeometry, parent: THREE.Object3D, color: string, weight: number, part?: HeartPart) {
+    if (!this.clipPlane) return;
+    const pass = (side: THREE.Side, op: THREE.StencilOp) =>
+      this.beatMaterial(
+        new THREE.MeshBasicMaterial({
+          side,
+          depthWrite: false,
+          depthTest: false,
+          colorWrite: false,
+          stencilWrite: true,
+          stencilFunc: THREE.AlwaysStencilFunc,
+          stencilFail: op,
+          stencilZFail: op,
+          stencilZPass: op,
+          clippingPlanes: [this.clipPlane!],
+        }),
+        weight,
+      );
+    const order = this.capOrder;
+    this.capOrder += 3;
+    const back = new THREE.Mesh(geo, pass(THREE.BackSide, THREE.IncrementWrapStencilOp));
+    const front = new THREE.Mesh(geo, pass(THREE.FrontSide, THREE.DecrementWrapStencilOp));
+    this.disposables.push(back.material as THREE.Material, front.material as THREE.Material);
+    back.renderOrder = order;
+    front.renderOrder = order + 1;
+    back.userData.noPick = front.userData.noPick = true;
+    parent.add(back, front);
+    const capMat = this.material(
+      {
+        color,
+        roughness: 0.75,
+        clearcoat: 0.1,
+        stencilWrite: true,
+        stencilRef: 0,
+        stencilFunc: THREE.NotEqualStencilFunc,
+        stencilFail: THREE.ReplaceStencilOp,
+        stencilZFail: THREE.ReplaceStencilOp,
+        stencilZPass: THREE.ReplaceStencilOp,
+      },
+      part,
+    );
+    const cap = new THREE.Mesh(this.capGeo, capMat);
+    cap.renderOrder = order + 2;
+    cap.userData.noPick = true;
+    cap.onAfterRender = (r) => r.clearStencil();
+    this.content.add(cap);
+  }
+
+  /** Where a valve leaflet or cusp is attached, and which way it swings open. */
+  private hinge(geo: THREE.BufferGeometry, attachNearBase: boolean, valveCentre: V3) {
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    const base = this.uniforms.uBase.value;
+    const axis = this.uniforms.uAxis.value;
+    const p = new THREE.Vector3();
+    const list = Array.from({ length: pos.count }, (_, i) => {
+      p.fromBufferAttribute(pos, i);
+      return { i, t: p.clone().sub(base).dot(axis) };
+    }).sort((a, b) => (attachNearBase ? a.t - b.t : b.t - a.t));
+    const edge = list.slice(0, Math.max(4, Math.floor(list.length * 0.22))).map(({ i }) => new THREE.Vector3().fromBufferAttribute(pos, i));
+    const pivot = edge.reduce((s, q) => s.add(q), new THREE.Vector3()).divideScalar(edge.length);
+    let a = edge[0];
+    let b = edge[1];
+    for (const q of edge) if (q.distanceTo(pivot) > a.distanceTo(pivot)) a = q;
+    for (const q of edge) if (q.distanceTo(a) > b.distanceTo(a)) b = q;
+    const hingeAxis = b.clone().sub(a).normalize();
+    const centre = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) centre.add(p.fromBufferAttribute(pos, i));
+    centre.divideScalar(pos.count);
+    const radial = (q: V3) => {
+      const d = q.clone().sub(valveCentre);
+      return d.sub(axis.clone().multiplyScalar(d.dot(axis))).length();
+    };
+    const turned = centre.clone().sub(pivot).applyAxisAngle(hingeAxis, 0.3).add(pivot);
+    return { pivot, hingeAxis, sign: radial(turned) > radial(centre) ? 1 : -1 };
+  }
+
+  /**
+   * The atlas heart, turned into the textbook view: the four-chamber section faces the viewer, base up,
+   * apex down and to the right, right heart on the viewer's left.
+   */
+  private realHeart(o: { cut: boolean; lungs: boolean; blood: boolean; labels: boolean; conduction: boolean }) {
+    const { meta, buf } = this.heartData!;
+    const outer = new THREE.Group();
+    outer.rotation.z = 0.35;
+    const inner = new THREE.Group();
+    outer.add(inner);
+    this.content.add(outer);
+    const pc = vec(meta.plane.point);
+    const up = vec(meta.plane.up);
+    const n = vec(meta.plane.normal);
+    const right = new THREE.Vector3().crossVectors(up, n).normalize();
+    if (vec(meta.centres.rv).sub(pc).dot(right) > 0) {
+      n.negate();
+      right.negate();
+    }
+    inner.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, n)).invert();
+    inner.position.copy(pc).applyQuaternion(inner.quaternion).negate();
+    outer.updateMatrixWorld(true);
+    const base = vec(meta.axis.base);
+    const axis = vec(meta.axis.apex).sub(base);
+    this.uniforms.uBase.value.copy(base);
+    this.uniforms.uLen.value = axis.length();
+    this.uniforms.uAxis.value.copy(axis.normalize());
+    this.clipPlane = o.cut ? new THREE.Plane(new THREE.Vector3(0, 0, -1), 0) : null;
+    this.capOrder = 10;
+
+    const leaves: { group: THREE.Group; axis: V3; sign: number; av: boolean }[] = [];
+    const box = new THREE.Box3();
+    for (const p of meta.parts) {
+      if (p.role === "lung" && !o.lungs) continue;
+      if (p.role === "cavity" && !o.blood) continue;
+      const look = LOOK[p.role];
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buf.slice(p.positions, p.positions + p.vertexCount * 12)), 3));
+      geo.setAttribute("normal", new THREE.BufferAttribute(new Int16Array(buf.slice(p.normals, p.normals + p.vertexCount * 6)), 3, true));
+      geo.setIndex(new THREE.BufferAttribute(new Uint16Array(buf.slice(p.indices, p.indices + p.indexCount * 2)), 1));
+      const part = PICK[p.key];
+      const clip = look.clip && this.clipPlane ? [this.clipPlane] : [];
+      const mat = this.beatMaterial(
+        this.material(
+          {
+            color: p.role === "cavity" ? CAVITY_TINT[p.key] : look.color,
+            roughness: p.role === "wall" ? 0.55 : 0.42,
+            clearcoat: p.role === "lung" ? 0 : 0.35,
+            sheen: p.role === "wall" ? 0.4 : 0,
+            transparent: !!look.opacity,
+            opacity: look.opacity ?? 1,
+            depthWrite: !look.opacity,
+            clippingPlanes: clip,
+          },
+          p.role === "lung" ? undefined : part,
+        ),
+        look.beat,
+      );
+      let parent: THREE.Object3D = inner;
+      if (p.role === "leaflet" || p.role === "cusp") {
+        const h = this.hinge(geo, p.role === "leaflet", vec(meta.centres[p.key]));
+        geo.translate(-h.pivot.x, -h.pivot.y, -h.pivot.z);
+        const group = new THREE.Group();
+        group.position.copy(h.pivot);
+        inner.add(group);
+        parent = group;
+        leaves.push({ group, axis: h.hingeAxis, sign: h.sign, av: p.role === "leaflet" });
+      }
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.userData.partKey = p.key;
+      if (look.opacity) mesh.renderOrder = 500;
+      parent.add(mesh);
+      if (p.role === "wall" || p.key === "aorta" || p.key === "pulmonary") {
+        mesh.updateMatrixWorld(true);
+        box.expandByObject(mesh);
+      }
+      if (look.cap) this.capped(geo, parent, look.cap, look.beat, part);
+    }
+
+    // Conduction system, drawn just in front of the cut surface.
+    const lift = n.clone().multiplyScalar(0.05);
+    const nodes: THREE.Mesh[] = [];
+    const condMat = this.beatMaterial(this.material({ color: "#f5c542", roughness: 0.4, emissive: "#f2b632", emissiveIntensity: 0.4 }, "conduction"), 1);
+    const { sa, av, septum } = meta.conduction;
+    if (o.conduction && sa && av) {
+      for (const q of [sa, av]) {
+        const m = new THREE.Mesh(this.sphere, condMat);
+        m.position.copy(vec(q)).add(lift);
+        m.scale.setScalar(0.09);
+        m.userData.partKey = "conduction";
+        inner.add(m);
+        nodes.push(m);
+      }
+      const path = [vec(av), ...septum.map(vec)].map((q) => q.add(lift));
+      if (path.length > 2) {
+        const m = this.tube(path, 0.03, condMat, inner, 80);
+        m.userData.partKey = "conduction";
+      }
+    }
+
+    // A point to hang a label on: on (just behind) the cut surface, never in the removed half.
+    const onCut = (q: V3) => {
+      const d = q.clone().sub(pc).dot(n);
+      return d > -0.1 && o.cut ? q.clone().sub(n.clone().multiplyScalar(d + 0.1)) : q.clone();
+    };
+    const partCentre = (id: string) => vec(meta.parts.find((x: PartData) => x.id === id)!.centre);
+    if (o.labels) {
+      const at = (part: HeartPart, q: V3) => this.label(this.anchor(inner, q), PARTS[part].name, "label", part);
+      for (const k of ["ra", "rv", "la", "lv"] as const) at(k, vec(meta.onSection[k]).sub(n.clone().multiplyScalar(0.12)));
+      if (septum.length) at("septum", vec(septum[Math.floor(septum.length / 2)]).add(lift));
+      at("myocardium", vec(meta.onSection.wallLV).add(lift));
+      at("tricuspid", onCut(vec(meta.centres.tricuspid)));
+      at("mitral", onCut(vec(meta.centres.mitral)));
+      at("semilunar", onCut(vec(meta.centres.aorticValve)));
+      at("papillary", onCut(vec(meta.centres.papillary)));
+      const coronaries = meta.parts.filter((x: PartData) => x.key === "coronary").sort((x: PartData, y: PartData) => vec(x.centre).sub(pc).dot(n) - vec(y.centre).sub(pc).dot(n));
+      if (coronaries.length) at("coronary", vec(coronaries[0].centre));
+      at("aorta", onCut(partCentre("FJ3411")));
+      at("pulmonary", onCut(partCentre("FJ2966")));
+      at("pulmVeins", onCut(vec(meta.centres.pulmVeins)));
+      at("cava", onCut(vec(meta.centres.svc)));
+      if (sa) at("conduction", vec(sa).add(lift));
+    }
+    this.heartInner = inner;
+    return { outer, inner, leaves, nodes, condMat, n, pc, box, partCentre };
+  }
+
+  /** Beat: shared uniforms, leaflets on their hinges, conduction glow. */
+  private beatHeart(h: ReturnType<HeartScene["realHeart"]>, amplitude = 1, period?: number) {
     this.tickers.push((dt) => {
-      if (this.opts.playing && !this.reduceMotion) this.beat += dt / (this.opts.slow ? 3.2 : 0.8);
+      if (this.opts.playing && !this.reduceMotion) this.beat += dt / (period ?? (this.opts.slow ? 3.2 : 0.8));
       const c = this.cycle();
-      this.uniforms.uVent.value = c.vent;
-      this.uniforms.uAtr.value = c.atr;
-      for (const l of h.leaflets) l.pivot.rotation.z = l.closed + (l.open - l.closed) * c.avOpen;
-      for (const r of h.semilunar) r.scale.setScalar(1 + 0.25 * c.slOpen);
-      // Impulse: sinus node at the P wave, AV node a moment later, the bundle with QRS.
+      this.uniforms.uVent.value = c.vent * amplitude;
+      this.uniforms.uAtr.value = c.atr * amplitude;
+      for (const l of h.leaves) l.group.quaternion.setFromAxisAngle(l.axis, l.sign * (l.av ? -0.12 + 0.5 * c.avOpen : -0.08 + 0.55 * c.slOpen));
       if (h.nodes.length && this.selected !== "conduction") {
         const sa = gauss(c.f, 0.03, 0.03);
         const avn = gauss(c.f, 0.1, 0.03);
         const his = gauss(c.f, 0.145, 0.025);
-        h.nodes[0].scale.setScalar(0.06 * (1 + 0.8 * sa));
-        h.nodes[1].scale.setScalar(0.06 * (1 + 0.8 * avn));
+        h.nodes[0].scale.setScalar(0.09 * (1 + 0.8 * sa));
+        h.nodes[1].scale.setScalar(0.09 * (1 + 0.8 * avn));
         h.condMat.emissiveIntensity = 0.35 + 1.4 * Math.max(sa, avn, his);
       }
       if (c.phase !== this.phase) {
@@ -617,63 +686,56 @@ export class HeartScene {
     });
   }
 
+  private frame3(box: THREE.Box3, k = 1.25) {
+    const size = box.getSize(new THREE.Vector3());
+    return { distance: Math.max(size.y * 1.75, size.x * 1.35) * k, target: box.getCenter(new THREE.Vector3()), width: size.x * 1.1 * k };
+  }
+
   // ---- Views ----------------------------------------------------------------------------------------
 
   private buildStructure() {
     this.picking = true;
-    const h = this.heart({ vessels: true, labels: true, conduction: true });
-    // A gentle, slow beat so the heart looks alive but labels stay readable.
-    this.tickers.push((dt) => {
-      this.beat += dt / 2.4;
-      const c = this.cycle();
-      this.uniforms.uVent.value = c.vent * 0.35;
-      this.uniforms.uAtr.value = c.atr * 0.35;
-      for (const l of h.leaflets) l.pivot.rotation.z = l.closed + (l.open - l.closed) * c.avOpen;
-    });
-    return { distance: 7.2, target: v(0, 0.3, 0) };
+    const h = this.realHeart({ cut: true, lungs: false, blood: true, labels: true, conduction: true });
+    this.beatHeart(h, 0.35, 2.4);
+    return { ...this.frame3(h.box, 1), dir: v(0, 0.08, 1) };
   }
 
   private buildCycle() {
-    const h = this.heart({ vessels: true, labels: false, conduction: true });
-    this.animateHeart(h);
-    const L = (name: string, p: V3) => this.label(this.anchor(h.g, p), name);
-    L("სინუსური კვანძი", SA);
-    L("წინაგულ-პარკუჭოვანი კვანძი", AV);
-    L("ჰისის კონა", v(0.05, -0.6, 0.03));
-    // Blood: particles flowing through each side, held back and pushed on by the valves.
-    const paths: { pts: [number, number, number][]; vent: number; color: THREE.Color }[] = [
-      {
-        pts: [[-0.72, 2.05, -0.28], [-0.68, 1.2, -0.2], [-0.62, 0.6, -0.12], [-0.5, 0.15, -0.12], [-0.45, -0.35, -0.15], [-0.42, -0.7, -0.15], [-0.22, -0.2, -0.1], [-0.15, 0.8, 0.05], [-0.1, 1.5, 0.15], [-0.75, 1.6, 0.03], [-1.3, 1.5, -0.2]],
-        vent: 5,
-        color: BLUE,
-      },
-      {
-        pts: [[1.65, 0.95, -0.3], [1.0, 0.78, -0.3], [0.55, 0.55, -0.12], [0.45, 0.15, -0.12], [0.5, -0.6, -0.15], [0.52, -1.0, -0.15], [0.32, -0.3, -0.12], [0.25, 0.85, -0.2], [0.18, 1.6, -0.32], [0.5, 2.1, -0.48], [0.95, 1.8, -0.6], [1.02, 0.4, -0.8]],
-        vent: 5,
-        color: RED,
-      },
+    const h = this.realHeart({ cut: true, lungs: false, blood: true, labels: false, conduction: true });
+    this.beatHeart(h);
+    const { meta } = this.heartData!;
+    const lift = h.n.clone().multiplyScalar(0.05);
+    const L = (name: string, q: V3) => this.label(this.anchor(h.inner, q), name);
+    const { sa, av, septum } = meta.conduction;
+    if (sa) L("სინუსური კვანძი", vec(sa).add(lift));
+    if (av) L("წინაგულ-პარკუჭოვანი კვანძი", vec(av).add(lift));
+    if (septum.length) L("ჰისის კონა", vec(septum[Math.floor(septum.length * 0.6)]).add(lift));
+    // Blood through the real chambers: held back and pushed on by the valves.
+    const C = (k: string) => vec(meta.centres[k]);
+    const apex = vec(meta.axis.apex);
+    const axis = this.uniforms.uAxis.value.clone();
+    const paths = [
+      { pts: [h.partCentre("FJ3645").addScaledVector(axis, -0.6), C("svc"), C("ra"), C("tricuspid"), C("rv"), C("rv").lerp(apex, 0.35), C("rv"), C("pulmonaryValve"), h.partCentre("FJ2966"), h.partCentre("FJ3019")], vent: 5, color: BLUE },
+      { pts: [C("pulmVeins"), C("la"), C("mitral"), C("lv"), C("lv").lerp(apex, 0.4), C("lv"), C("aorticValve"), h.partCentre("FJ3413"), h.partCentre("FJ3411"), h.partCentre("FJ3427")], vent: 4, color: RED },
     ];
     const rand = rng(5);
-    const COUNT = 70;
+    const COUNT = 80;
     const flows = paths.map((path) => {
-      const curve = new THREE.CatmullRomCurve3(path.pts.map(([x, y, z]) => v(x, y, z)));
-      // Arc-length position of the ventricle point.
+      const curve = new THREE.CatmullRomCurve3(path.pts);
       const samples = curve.getSpacedPoints(400);
-      const target = v(...path.pts[path.vent]);
+      const target = path.pts[path.vent];
       let best = 0;
-      samples.forEach((p, i) => {
-        if (p.distanceTo(target) < samples[best].distanceTo(target)) best = i;
+      samples.forEach((q, i) => {
+        if (q.distanceTo(target) < samples[best].distanceTo(target)) best = i;
       });
-      const sV = best / 400;
-      const mesh = new THREE.InstancedMesh(this.sphere, this.material({ color: path.color, roughness: 0.4 }), COUNT);
-      h.g.add(mesh);
-      const s = Array.from({ length: COUNT }, () => rand());
-      const jitter = Array.from({ length: COUNT }, () => v(rand() - 0.5, rand() - 0.5, rand() * 0.5 - 0.25).multiplyScalar(0.12));
-      return { curve, sV, mesh, s, jitter };
+      const mesh = new THREE.InstancedMesh(this.sphere, this.material({ color: path.color, roughness: 0.4, clippingPlanes: this.clipPlane ? [this.clipPlane] : [] }), COUNT);
+      mesh.userData.noPick = true;
+      h.inner.add(mesh);
+      return { curve, sV: best / 400, mesh, s: Array.from({ length: COUNT }, () => rand()), jitter: Array.from({ length: COUNT }, () => v(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(0.22)) };
     });
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
-    const scl = v(0.035, 0.035, 0.035);
+    const scl = v(0.05, 0.05, 0.05);
     const p = new THREE.Vector3();
     this.tickers.push((dt) => {
       const c = this.cycle();
@@ -682,10 +744,7 @@ export class HeartScene {
       for (const fl of flows) {
         for (let i = 0; i < COUNT; i++) {
           let s = fl.s[i];
-          let speed: number;
-          if (s < fl.sV) speed = systole ? 0 : 0.3;
-          else if (s < fl.sV + 0.1) speed = systole ? 1.6 : 0;
-          else speed = systole ? 1.6 : 0.25;
+          const speed = s < fl.sV ? (systole ? 0 : 0.3) : s < fl.sV + 0.1 ? (systole ? 1.6 : 0) : systole ? 1.6 : 0.25;
           s += speed * step;
           if (s >= 1) s -= 1;
           fl.s[i] = s;
@@ -698,7 +757,7 @@ export class HeartScene {
     });
     const draw = this.chart("ეკგ");
     this.tickers.push(() => draw(ecg, -0.35, 1.05));
-    return { distance: 7.2, target: v(0, 0.3, 0) };
+    return { ...this.frame3(h.box, 1), dir: v(0, 0.08, 1) };
   }
 
   /**
@@ -847,136 +906,108 @@ export class HeartScene {
   }
 
   private buildCirculation() {
-    const h = this.heart({ vessels: false, labels: false, conduction: false });
-    h.g.scale.setScalar(0.85);
-    h.g.updateMatrixWorld();
-    this.tickers.push((dt) => {
-      if (this.opts.playing && !this.reduceMotion) this.beat += dt / 1.6;
-      const c = this.cycle();
-      this.uniforms.uVent.value = c.vent * 0.6;
-      this.uniforms.uAtr.value = c.atr * 0.6;
-      for (const l of h.leaflets) l.pivot.rotation.z = l.closed + (l.open - l.closed) * c.avOpen;
-    });
-    const H = (x: number, y: number, z: number) => v(x, y, z).applyMatrix4(h.g.matrixWorld);
-    // Lungs and body.
-    const organ = (p: V3, scale: V3, color: string, seed: number) => {
-      const geo = new THREE.IcosahedronGeometry(1, 4);
-      const pa = geo.attributes.position;
-      const n = new THREE.Vector3();
-      for (let i = 0; i < pa.count; i++) {
-        n.fromBufferAttribute(pa, i);
-        n.multiplyScalar(1 + 0.08 * fbm(n.x * 2 + seed, n.y * 2, n.z * 2, 3));
-        pa.setXYZ(i, n.x * scale.x, n.y * scale.y, n.z * scale.z);
-      }
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, this.material({ color, roughness: 0.7, transparent: true, opacity: 0.45, depthWrite: false }));
-      m.position.copy(p);
-      this.content.add(m);
-      return m;
+    const h = this.realHeart({ cut: true, lungs: true, blood: false, labels: false, conduction: false });
+    this.beatHeart(h, 0.6, 1.6);
+    const { meta } = this.heartData!;
+    const W = (q: V3) => h.inner.localToWorld(q.clone());
+    const C = (k: string) => W(vec(meta.centres[k]));
+    const P = (id: string) => W(h.partCentre(id));
+    const apex = W(vec(meta.axis.apex));
+    const lv = vec(meta.centres.lv);
+    const rv = vec(meta.centres.rv);
+    const lvApex = W(lv.clone().lerp(vec(meta.axis.apex), 0.35));
+    const rvApex = W(rv.clone().lerp(vec(meta.axis.apex), 0.3));
+    const bodyY = Math.min(apex.y, P("FJ3441").y) - 3.6;
+    // Lungs: capillary zones inside each lung.
+    const lungZone = (key: string) => {
+      const c = C(key);
+      return [c.clone().add(v(0, 1.2, 0.3)), c.clone().add(v(Math.sign(c.x) * 0.9, 0.3, 0.3)), c.clone().add(v(0, -0.9, 0.3)), c.clone().add(v(-Math.sign(c.x) * 0.4, -0.3, 0.3))];
     };
-    organ(v(-2.6, 3.7, -0.3), v(1.0, 1.25, 0.6), "#f0a7b0", 1);
-    organ(v(2.6, 3.7, -0.3), v(1.0, 1.25, 0.6), "#f0a7b0", 2);
-    organ(v(0, -4.1, -0.3), v(2.3, 0.9, 0.7), "#e9c39a", 3);
-
-    // The circuit as one closed loop per lung: oxygenation 0 = venous, 1 = arterial; c = which circuit.
-    type P = [V3, number, "p" | "s"];
-    const loop = (side: -1 | 1): P[] => [
-      [H(-0.58, 0.5, -0.12), 0, "s"],
-      [H(-0.5, 0.15, -0.12), 0, "p"],
-      [H(-0.45, -0.45, -0.12), 0, "p"],
-      [H(-0.22, -0.2, -0.1), 0, "p"],
-      [H(-0.15, 0.8, 0.05), 0, "p"],
-      [H(-0.1, 1.5, 0.15), 0, "p"],
-      [v(side * 1.3, 2.8, 0.15), 0, "p"],
-      [v(side * 2.2, 3.1, 0), 0.1, "p"],
-      [v(side * 2.8, 3.6, 0), 0.4, "p"],
-      [v(side * 2.5, 4.4, 0), 0.7, "p"],
-      [v(side * 2.0, 3.9, 0), 0.95, "p"],
-      [v(side * 1.7, 3.3, -0.1), 1, "p"],
-      [side < 0 ? v(-0.9, 2.2, -0.4) : v(1.0, 2.2, -0.35), 1, "p"],
-      [H(0.55, 0.55, -0.12), 1, "s"],
-      [H(0.45, 0.15, -0.12), 1, "s"],
-      [H(0.5, -0.6, -0.12), 1, "s"],
-      [H(0.32, -0.3, -0.12), 1, "s"],
-      [H(0.25, 0.85, -0.2), 1, "s"],
-      [H(0.2, 1.8, -0.35), 1, "s"],
-      [v(1.15, 2.2, -0.5), 1, "s"],
-      [v(1.8, 1.4, -0.6), 1, "s"],
-      [v(1.9, -1.6, -0.6), 1, "s"],
-      [v(1.4, -3.6, -0.2), 0.95, "s"],
-      [v(0.7, -4.5, 0.1), 0.6, "s"],
-      [v(-0.2, -3.9, 0.2), 0.3, "s"],
-      [v(-1.2, -3.5, -0.2), 0.05, "s"],
-      [v(-1.9, -1.6, -0.5), 0, "s"],
-      [H(-0.64, -1.4, -0.45), 0, "s"],
-      [H(-0.62, 0.0, -0.3), 0, "s"],
-    ];
-    const loops = [loop(-1), loop(1)];
-    // Vessel tubes along the loops (outside the heart), coloured by the blood they carry.
+    type Pt = [V3, number, "p" | "s", boolean];
+    const loop = (lungKey: "lungR" | "lungL"): Pt[] => {
+      const zone = lungZone(lungKey);
+      const artery = lungKey === "lungR" ? P("FJ3019") : P("FJ2924");
+      const vein = lungKey === "lungR" ? P("FJ3020") : P("FJ2933");
+      return [
+        [C("ra"), 0, "s", false],
+        [C("tricuspid"), 0, "p", false],
+        [rvApex, 0, "p", false],
+        [C("pulmonaryValve"), 0, "p", false],
+        [P("FJ2966"), 0, "p", false],
+        [artery, 0, "p", true],
+        [zone[0], 0.05, "p", true],
+        [zone[1], 0.4, "p", true],
+        [zone[2], 0.75, "p", true],
+        [zone[3], 0.96, "p", true],
+        [vein, 1, "p", true],
+        [C("la"), 1, "s", false],
+        [C("mitral"), 1, "s", false],
+        [lvApex, 1, "s", false],
+        [C("aorticValve"), 1, "s", false],
+        [P("FJ3413"), 1, "s", false],
+        [P("FJ3411"), 1, "s", false],
+        [P("FJ3427"), 1, "s", true],
+        [v(1.4, bodyY + 1.2, -0.4), 1, "s", true],
+        [v(1.4, bodyY, 0.1), 0.95, "s", true],
+        [v(0.4, bodyY - 0.9, 0.3), 0.6, "s", true],
+        [v(-0.6, bodyY - 0.2, 0.3), 0.3, "s", true],
+        [v(-1.3, bodyY + 0.5, 0), 0.04, "s", true],
+        [P("FJ3441"), 0, "s", true],
+        [C("ra"), 0, "s", false],
+      ];
+    };
+    const loops = [loop("lungR"), loop("lungL")];
     const venous = { p: this.material({ color: BLUE, roughness: 0.45 }), s: this.material({ color: BLUE, roughness: 0.45 }) };
     const arterial = { p: this.material({ color: RED, roughness: 0.45 }), s: this.material({ color: RED, roughness: 0.45 }) };
     const capMat = { p: this.material({ color: "#9a4f9a", roughness: 0.5 }), s: this.material({ color: "#9a4f9a", roughness: 0.5 }) };
     this.circuitMats.pulmonary.push(venous.p, arterial.p, capMat.p);
     this.circuitMats.systemic.push(venous.s, arterial.s, capMat.s);
-    const matFor = (key: string) => {
-      const c = key.slice(-1) as "p" | "s";
-      return (key.startsWith("cap") ? capMat : key.startsWith("a") ? arterial : venous)[c];
-    };
     loops.forEach((lp, k) => {
-      // Only the parts outside the heart; the systemic part is shared, so it is drawn once.
-      const outside = (i: number) => (i >= 5 && i <= 12) || (k === 0 && i >= 17 && i <= 28);
-      let pts: V3[] = [];
-      let key = "";
-      const flush = () => {
-        if (pts.length > 1) this.tube(pts, key.startsWith("cap") ? 0.07 : 0.12, matFor(key), this.content, 48);
-        pts = [];
-        key = "";
-      };
-      lp.forEach(([p, oxy, c], i) => {
-        if (!outside(i)) return flush();
-        const kk = (oxy > 0.05 && oxy < 0.95 ? "cap" : oxy >= 0.95 ? "a" : "v") + c;
-        if (key && kk !== key) {
-          pts.push(p);
-          flush();
-        }
-        if (!key) key = kk;
-        pts.push(p);
-      });
-      flush();
+      for (let i = 0; i < lp.length - 1; i++) {
+        const [a, oa, ca, ta] = lp[i];
+        const [b, ob] = lp[i + 1];
+        if (!ta || !lp[i + 1][3]) continue;
+        if (k === 1 && ca === "s") continue; // the systemic part is shared
+        const mid = (x: number) => x > 0.02 && x < 0.98;
+        const kind = mid(oa) && mid(ob) ? capMat : (oa + ob) / 2 >= 0.5 ? arterial : venous;
+        this.tube([a, a.clone().lerp(b, 0.5), b], kind === capMat ? 0.06 : 0.11, kind[ca], this.content, 16);
+      }
     });
+    const body = new THREE.Mesh(this.sphere, this.material({ color: "#e9c39a", roughness: 0.7, transparent: true, opacity: 0.4, depthWrite: false }));
+    body.scale.set(2.4, 1.1, 0.8);
+    body.position.set(0.1, bodyY - 0.1, 0);
+    this.content.add(body);
 
-    // Blood particles around both loops.
     const rand = rng(9);
-    const COUNT = 110;
+    const COUNT = 90;
     const flows = loops.map((lp) => {
-      const curve = new THREE.CatmullRomCurve3(lp.map(([p]) => p), true);
-      const n = lp.length;
+      const curve = new THREE.CatmullRomCurve3(lp.slice(0, -1).map(([q]) => q), true);
+      const nPts = lp.length - 1;
       const oxyAt = (t: number) => {
-        const x = t * n;
-        const i = Math.floor(x) % n;
-        return lp[i][1] + (lp[(i + 1) % n][1] - lp[i][1]) * (x - Math.floor(x));
+        const x = t * nPts;
+        const i = Math.floor(x) % nPts;
+        return lp[i][1] + (lp[(i + 1) % nPts][1] - lp[i][1]) * (x - Math.floor(x));
       };
-      const circuitAt = (t: number) => lp[Math.floor(t * n) % n][2];
+      const circuitAt = (t: number) => lp[Math.floor(t * nPts) % nPts][2];
       const mesh = new THREE.InstancedMesh(this.sphere, this.material({ color: "#ffffff", roughness: 0.4 }), COUNT);
+      mesh.userData.noPick = true;
       this.content.add(mesh);
-      const s = Array.from({ length: COUNT }, () => rand());
-      return { curve, oxyAt, circuitAt, mesh, s };
+      return { curve, oxyAt, circuitAt, mesh, s: Array.from({ length: COUNT }, () => rand()) };
     });
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const col = new THREE.Color();
     const p = new THREE.Vector3();
     this.tickers.push((dt) => {
-      const step = this.opts.playing && !this.reduceMotion ? dt * 0.035 : 0;
+      const step = this.opts.playing && !this.reduceMotion ? dt * 0.03 : 0;
       for (const fl of flows) {
         for (let i = 0; i < COUNT; i++) {
           fl.s[i] = (fl.s[i] + step) % 1;
-          const u = fl.s[i];
-          const t = fl.curve.getUtoTmapping(u, 0);
+          const t = fl.curve.getUtoTmapping(fl.s[i], 0);
           fl.curve.getPoint(t, p);
           const c = fl.circuitAt(t);
           const dim = this.opts.circuit !== "both" && (this.opts.circuit === "pulmonary" ? c !== "p" : c !== "s");
-          m4.compose(p, q, v(1, 1, 1).multiplyScalar(dim ? 0.0001 : 0.07));
+          m4.compose(p, q, v(1, 1, 1).multiplyScalar(dim ? 0.0001 : 0.08));
           fl.mesh.setMatrixAt(i, m4);
           fl.mesh.setColorAt(i, col.copy(BLUE).lerp(RED, fl.oxyAt(t)));
         }
@@ -984,21 +1015,29 @@ export class HeartScene {
         if (fl.mesh.instanceColor) fl.mesh.instanceColor.needsUpdate = true;
       }
     });
-
-    const A = (p2: V3, text: string, kind: "label" | "tag" = "label") => this.label(this.anchor(this.content, p2), text, kind);
-    A(v(0, 5.3, 0), "მცირე (ფილტვის) წრე", "tag");
-    A(v(0, -5.3, 0), "დიდი წრე", "tag");
-    A(v(-2.6, 3.7, 0.4), "ფილტვის კაპილარები: CO₂ ↔ O₂");
-    A(v(0.2, -4.1, 0.6), "ორგანოების კაპილარები");
-    A(v(-1.3, 2.8, 0.15), "ფილტვის არტერია");
-    A(v(1.0, 2.2, -0.35), "ფილტვის ვენა");
-    A(v(1.85, 0, -0.6), "აორტა");
-    A(v(-1.9, -1.6, -0.5), "ქვედა ღრუ ვენა");
-    A(H(-0.6, 0.5, 0), "მარჯვ. წინაგული");
-    A(H(-0.45, -0.55, 0), "მარჯვ. პარკუჭი");
-    A(H(0.55, 0.55, 0), "მარცხ. წინაგული");
-    A(H(0.5, -0.7, 0), "მარცხ. პარკუჭი");
-    return { distance: 15, target: v(0, 0, 0), dir: v(0.12, 0.12, 1) };
+    const A = (q2: V3, text: string, kind: "label" | "tag" = "label") => this.label(this.anchor(this.content, q2), text, kind);
+    const lr = C("lungR");
+    const ll = C("lungL");
+    A(v(0, Math.max(lr.y, ll.y) + 3.2, 0), "მცირე (ფილტვის) წრე", "tag");
+    A(v(0, bodyY - 1.6, 0), "დიდი წრე", "tag");
+    A(lr.clone().add(v(0, 1.2, 0.5)), "მარჯვენა ფილტვი: CO₂ ↔ O₂");
+    A(ll.clone().add(v(0, 1.2, 0.5)), "მარცხენა ფილტვი");
+    A(v(0.1, bodyY, 1), "ორგანოების კაპილარები");
+    A(P("FJ2966"), "ფილტვის ღერო");
+    A(P("FJ3411"), "აორტა");
+    A(P("FJ3441"), "ქვედა ღრუ ვენა");
+    A(C("ra"), "მარჯვ. წინაგული");
+    A(rvApex, "მარჯვ. პარკუჭი");
+    A(C("la"), "მარცხ. წინაგული");
+    A(lvApex, "მარცხ. პარკუჭი");
+    const all = h.box.clone();
+    this.content.updateMatrixWorld(true);
+    this.content.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && !m.userData.noPick && m.geometry !== this.capGeo) all.expandByObject(m);
+    });
+    const f = this.frame3(all, 0.95);
+    return { ...f, dir: v(0, 0.05, 1) };
   }
 
   private buildPulse() {
@@ -1083,14 +1122,20 @@ export class HeartScene {
     const rect = this.canvas.getBoundingClientRect();
     this.ray.setFromCamera(new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), this.camera);
     for (const hit of this.ray.intersectObjects(this.content.children, true)) {
-      let part = hit.object.userData.part as string | undefined;
+      if (hit.object.userData.noPick) continue;
+      // The front half is cut away: what lies there is not visible.
+      if (this.clipPlane && this.clipPlane.distanceToPoint(hit.point) < -0.001 && hit.object.userData.partKey !== "conduction") continue;
+      const key = hit.object.userData.partKey as string | undefined;
+      if (!key) continue;
+      let part: HeartPart = key === "conduction" ? "conduction" : PICK[key];
       if (!part) continue;
-      if (part === "cutface") {
-        // The septum is the strip of the cut face between the two ventricles.
-        const local = hit.object.worldToLocal(hit.point.clone());
-        part = Math.abs(local.x - 0.05) < 0.1 && local.y < 0.1 && local.y > -1.2 ? "septum" : "myocardium";
+      if (key === "ventricles" && this.heartInner && this.heartData) {
+        // The septum: ventricle wall close to the line between the two ventricles.
+        const local = this.heartInner.worldToLocal(hit.point.clone());
+        const near = this.heartData.meta.conduction.septum.some((q) => vec(q).distanceTo(local) < 0.22);
+        if (near) part = "septum";
       }
-      return this.callbacks.onPick(part as HeartPart);
+      return this.callbacks.onPick(part);
     }
     this.callbacks.onPick(null);
   };
