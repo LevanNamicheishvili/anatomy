@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Dna, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Sun, type LucideIcon } from "lucide-react";
+import { ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Sun, type LucideIcon } from "lucide-react";
 import type { SubjectIcon, TopicIcon } from "@/lib/subjects";
 import { Logo } from "./ui";
 
@@ -7,6 +7,7 @@ export const SUBJECT_ICONS: Record<SubjectIcon, LucideIcon> = { biology: HeartPu
 
 export const TOPIC_ICONS: Record<TopicIcon, LucideIcon> = {
   body: PersonStanding,
+  heart: Heart,
   blood: Droplet,
   dna: Dna,
   cell: Microscope,
