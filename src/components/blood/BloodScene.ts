@@ -203,7 +203,7 @@ export class BloodScene {
     const built = builders[view]();
     const { rotate } = built;
     // Narrow (portrait) screens see less sideways: step back so the scene still fits.
-    const distance = built.distance * Math.max(1, 1.15 / this.camera.aspect);
+    const distance = built.distance * Math.max(1, 1.6 / this.camera.aspect);
     this.camera.position.set(distance * 0.18, distance * 0.22, distance);
     this.controls.target.set(0, 0, 0);
     this.controls.minDistance = distance * 0.4;

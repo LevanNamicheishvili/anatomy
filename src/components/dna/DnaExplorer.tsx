@@ -244,11 +244,11 @@ export function DnaExplorer() {
           <h2 className="mt-1 text-2xl">{section.title}</h2>
           <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
 
-          <dl className="mt-5 grid grid-cols-3 gap-2">
+          <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
               <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
                 <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
-                <dd className="mt-1 text-sm leading-5 font-semibold">{f.value}</dd>
+                <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
           </dl>

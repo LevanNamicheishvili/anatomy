@@ -255,7 +255,7 @@ export class DnaScene {
     };
     const built = builders[view]();
     this.viewStart = this.clock.elapsedTime;
-    const distance = built.distance * Math.max(1, 1.1 / this.camera.aspect);
+    const distance = built.distance * Math.max(1, 1.3 / this.camera.aspect);
     this.camera.position.set(distance * 0.12, distance * 0.16 + (built.height ?? 0), distance);
     this.controls.target.set(0, built.height ?? 0, 0);
     this.controls.minDistance = distance * 0.35;
