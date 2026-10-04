@@ -87,6 +87,113 @@ function Swatches({ items }: { items: { color: string; label: string }[] }) {
   );
 }
 
+interface Stat {
+  value: number;
+  year: number | null;
+}
+interface MediaEntry {
+  wiki?: { title: string; url: string; lang: string; intro?: string };
+  wikidata?: string;
+  stats?: Partial<Record<"population" | "elevation" | "area" | "length" | "depth" | "basin" | "discharge", Stat>>;
+  image?: { src: string; width: number; height: number; author: string; license: string; page: string };
+}
+type MediaKind = "region" | "city" | "peak" | "river" | "lake" | "landform";
+type Media = Partial<Record<MediaKind, Record<string, MediaEntry>>>;
+
+/** Georgian number style: spaces between thousands, a comma for decimals. */
+const num = (v: number, digits = 0) => {
+  const [int, dec] = v.toFixed(digits).split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return dec && Number(dec) ? `${grouped},${dec.replace(/0+$/, "")}` : grouped;
+};
+
+/** Which Wikidata figures to show for each kind of place, and how. */
+const STAT_ROWS: Record<MediaKind, { key: keyof NonNullable<MediaEntry["stats"]>; label: string; unit: string; digits?: number }[]> = {
+  region: [
+    { key: "population", label: "მოსახლეობა", unit: "" },
+    { key: "area", label: "ფართობი", unit: "კმ²" },
+  ],
+  city: [
+    { key: "population", label: "მოსახლეობა", unit: "" },
+    { key: "elevation", label: "სიმაღლე ზ.დ.", unit: "მ" },
+    { key: "area", label: "ფართობი", unit: "კმ²", digits: 1 },
+  ],
+  peak: [],
+  river: [
+    { key: "length", label: "სიგრძე", unit: "კმ" },
+    { key: "basin", label: "აუზის ფართობი", unit: "კმ²" },
+    { key: "discharge", label: "საშუალო ხარჯი", unit: "მ³/წმ", digits: 1 },
+  ],
+  lake: [
+    { key: "area", label: "ფართობი", unit: "კმ²", digits: 1 },
+    { key: "elevation", label: "სიმაღლე ზ.დ.", unit: "მ" },
+    { key: "depth", label: "უდიდესი სიღრმე", unit: "მ", digits: 1 },
+    { key: "length", label: "სიგრძე", unit: "კმ", digits: 1 },
+  ],
+  landform: [{ key: "length", label: "სიგრძე", unit: "კმ" }],
+};
+
+function Photo({ image, alt }: { image: NonNullable<MediaEntry["image"]>; alt: string }) {
+  return (
+    <figure className="-mx-6 -mt-6 mb-5">
+      {/* eslint-disable-next-line @next/next/no-img-element -- local, pre-sized photos */}
+      <img src={image.src} alt={alt} width={image.width} height={image.height} className="aspect-[16/10] w-full bg-[#eef2f0] object-cover" />
+      <figcaption className="px-6 pt-1.5 text-[10.5px] leading-4 text-[#97a29e]">
+        ფოტო:{" "}
+        <a href={image.page} target="_blank" rel="noreferrer" className="hover:underline">
+          {image.author} · {image.license}
+        </a>{" "}
+        · Wikimedia Commons
+      </figcaption>
+    </figure>
+  );
+}
+
+function Stats({ kind, entry }: { kind: MediaKind; entry?: MediaEntry }) {
+  const rows = STAT_ROWS[kind].filter((r) => entry?.stats?.[r.key]);
+  if (!rows.length) return null;
+  return (
+    <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+      {rows.map((r) => {
+        const st = entry!.stats![r.key]!;
+        return (
+          <div key={r.key} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
+            <dt className="text-[11px] leading-4 text-[#66736f]">
+              {r.label}
+              {st.year ? ` (${st.year})` : ""}
+            </dt>
+            <dd className="mt-1 text-base leading-5 font-semibold tabular-nums">
+              {num(st.value, r.digits ?? 0)} {r.unit}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
+function WikiIntro({ entry }: { entry?: MediaEntry }) {
+  if (!entry?.wiki) return null;
+  return (
+    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+      <h3 className="text-xs font-semibold text-[#66736f]">ვიკიპედიიდან</h3>
+      {entry.wiki.intro && <p className="mt-2 text-sm leading-6 text-[#33413e]">{entry.wiki.intro}</p>}
+      <a href={entry.wiki.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-semibold text-[#2f6fb0] hover:underline">
+        სრული სტატია: {entry.wiki.title} →
+      </a>
+      <p className="mt-2 text-[10.5px] leading-4 text-[#97a29e]">
+        ტექსტი: ვიკიპედია, CC BY-SA 4.0{entry.wikidata ? ` · ციფრები: ვიკიმონაცემები (${entry.wikidata})` : ""}
+      </p>
+    </section>
+  );
+}
+
+function Thumb({ entry }: { entry?: MediaEntry }) {
+  if (!entry?.image) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- small local thumbnail
+  return <img src={entry.image.src} alt="" loading="lazy" className="size-9 shrink-0 rounded-md bg-[#eef2f0] object-cover" />;
+}
+
 function ListItem({
   active,
   onClick,
@@ -119,7 +226,7 @@ function ListItem({
   );
 }
 
-export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLayer }) {
+export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapLayer }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GeorgiaScene | null>(null);
@@ -127,6 +234,13 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
   const [selection, setSelection] = useState<Selection>({ kind: "country" });
   const [hover, setHover] = useState<string | null>(null);
   const [point, setPoint] = useState<HoverInfo | null>(null);
+  const [media, setMedia] = useState<Media>({});
+  useEffect(() => {
+    fetch("/geo/georgia-media.json?v=2026-10-04")
+      .then((r) => r.json() as Promise<Media>)
+      .then(setMedia)
+      .catch(() => setMedia({}));
+  }, []);
   const [layer, setLayer] = useState<MapLayer>(initialLayer);
   const [labels, setLabels] = useState<Labels>({ rivers: true, lakes: true, cities: true, peaks: true, landforms: true });
   const [tab, setTab] = useState<Tab>("regions");
@@ -263,6 +377,24 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               ? `landform:${selection.landform.id}`
               : null;
   const layerInfo = LAYERS.find((l) => l.id === layer)!;
+  const mediaKey: [MediaKind, string] | null =
+    selection.kind === "country"
+      ? null
+      : [
+          selection.kind,
+          selection.kind === "region"
+            ? selection.region.id
+            : selection.kind === "city"
+              ? selection.city.id
+              : selection.kind === "peak"
+                ? selection.peak.id
+                : selection.kind === "river"
+                  ? selection.river.id
+                  : selection.kind === "lake"
+                    ? selection.lake.id
+                    : selection.landform.id,
+        ];
+  const detailMedia = mediaKey ? media[mediaKey[0]]?.[mediaKey[1]] : undefined;
 
   const detail = (() => {
     switch (selection.kind) {
@@ -325,7 +457,13 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
                 onClick={() => select({ kind: "landform", landform: f })}
                 className={cn(
                   "pointer-events-auto absolute top-0 left-0 text-[12.5px] font-semibold tracking-[0.08em] whitespace-nowrap opacity-0 transition-opacity duration-300 [text-shadow:0_0_3px_#fff,0_0_6px_#fff,0_0_10px_#fff]",
-                  activeKey === `landform:${f.id}` ? "text-[#1d4f84]" : f.kind === "range" ? "text-[#6b4a2e]" : "text-[#4b6a35]",
+                  activeKey === `landform:${f.id}`
+                    ? "text-[#1d4f84]"
+                    : layer === "satellite"
+                      ? "text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_8px_rgba(0,0,0,0.6)]"
+                      : f.kind === "range"
+                        ? "text-[#6b4a2e]"
+                        : "text-[#4b6a35]",
                 )}
               >
                 {f.name}
@@ -340,7 +478,11 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
                 onClick={() => select({ kind: "river", river: r })}
                 className={cn(
                   "pointer-events-auto absolute top-0 left-0 text-[12px] font-semibold whitespace-nowrap italic opacity-0 transition-opacity duration-300 [text-shadow:0_0_3px_#fff,0_0_6px_#fff]",
-                  activeKey === `river:${r.id}` ? "text-[#0b4fb0]" : "text-[#2366a8]",
+                  activeKey === `river:${r.id}`
+                    ? "text-[#0b4fb0]"
+                    : layer === "satellite"
+                      ? "text-[#cfe6ff] [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_6px_rgba(0,0,0,0.6)]"
+                      : "text-[#2366a8]",
                 )}
               >
                 {r.name}
@@ -355,7 +497,11 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
                 onClick={() => select({ kind: "lake", lake: l })}
                 className={cn(
                   "pointer-events-auto absolute top-0 left-0 mt-4 rounded px-1 text-[11.5px] font-semibold whitespace-nowrap opacity-0 transition-opacity duration-300 [text-shadow:0_0_3px_#fff,0_0_6px_#fff]",
-                  activeKey === `lake:${l.id}` ? "bg-[#1d4f84] text-white [text-shadow:none]" : "text-[#1f5f99]",
+                  activeKey === `lake:${l.id}`
+                    ? "bg-[#1d4f84] text-white [text-shadow:none]"
+                    : layer === "satellite"
+                      ? "text-[#cfe6ff] [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_6px_rgba(0,0,0,0.6)]"
+                      : "text-[#1f5f99]",
                 )}
               >
                 {l.name}
@@ -417,7 +563,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
             </button>
             {layersOpen && (
               <div className="border-t border-[#e2e7e5] p-2">
-                <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+                <div className="grid grid-cols-3 gap-1 sm:grid-cols-5">
                   {LAYERS.map((l) => (
                     <button
                       key={l.id}
@@ -466,6 +612,12 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
 
           {/* Legend of the active layer */}
           <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 shadow-sm">
+            {layer === "satellite" && (
+              <>
+                <p className="text-[11px] font-semibold text-[#66736f]">სატელიტური სურათი</p>
+                <p className="mt-1 text-[12px] text-[#33413e]">Sentinel-2, 2024 · ღრუბლების გარეშე</p>
+              </>
+            )}
             {layer === "physical" && (
               <>
                 <p className="text-[11px] font-semibold text-[#66736f]">სიმაღლე ზღვის დონიდან, მ</p>
@@ -512,6 +664,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
         <article className="atlas-scroll min-h-0 overflow-y-auto border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-t lg:border-s">
           {detail ? (
             <>
+              {detailMedia?.image && <Photo key={detailMedia.image.src} image={detailMedia.image} alt={detail.title} />}
               <p className="text-xs font-semibold text-[#2f6fb0]">{detail.eyebrow}</p>
               <h2 className="mt-1 text-2xl">{detail.title}</h2>
               {"occupied" in detail && detail.occupied && (
@@ -520,6 +673,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
                   {detail.occupied}
                 </p>
               )}
+              {mediaKey && <Stats kind={mediaKey[0]} entry={detailMedia} />}
               <p className="mt-4 text-[15px] leading-7 text-[#33413e]">{detail.text}</p>
               <ul className="mt-5 flex flex-col gap-2">
                 {detail.facts.map((f) => (
@@ -543,6 +697,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
                   ))}
                 </div>
               )}
+              <WikiIntro entry={detailMedia} />
               <button type="button" onClick={() => select({ kind: "country" })} className="mt-6 text-sm font-semibold text-[#2f6fb0] hover:underline">
                 ← მთელი საქართველო
               </button>
@@ -608,7 +763,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               {tab === "cities" &&
                 CITIES.map((c) => (
                   <ListItem key={c.id} active={activeKey === `city:${c.id}`} onClick={() => select({ kind: "city", city: c })}>
-                    <MapPin className={cn("size-3.5 shrink-0", c.capital ? "text-[#b8232b]" : "text-[#66736f]")} />
+                    {media.city?.[c.id]?.image ? <Thumb entry={media.city[c.id]} /> : <MapPin className={cn("size-3.5 shrink-0", c.capital ? "text-[#b8232b]" : "text-[#66736f]")} />}
                     {c.name}
                     <span className="ms-auto text-xs font-normal text-[#97a29e]">{REGION_BY_ID[c.region].name}</span>
                   </ListItem>
@@ -616,7 +771,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               {tab === "rivers" &&
                 RIVERS.map((r) => (
                   <ListItem key={r.id} active={activeKey === `river:${r.id}`} onClick={() => select({ kind: "river", river: r })}>
-                    <Waves className="size-3.5 shrink-0 text-[#2f6fb0]" />
+                    {media.river?.[r.id]?.image ? <Thumb entry={media.river[r.id]} /> : <Waves className="size-3.5 shrink-0 text-[#2f6fb0]" />}
                     {r.name}
                     <span className="ms-auto text-xs font-normal text-[#97a29e]">{r.basin === "black" ? "შავი ზღვა" : "კასპიის ზღვა"}</span>
                   </ListItem>
@@ -624,7 +779,11 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               {tab === "relief" &&
                 LANDFORMS.map((f) => (
                   <ListItem key={f.id} active={activeKey === `landform:${f.id}`} onClick={() => select({ kind: "landform", landform: f })}>
-                    <span className={cn("size-2.5 shrink-0 rounded-sm", f.kind === "range" ? "bg-[#a07c5c]" : f.kind === "lowland" ? "bg-[#86b46f]" : "bg-[#cfc785]")} />
+                    {media.landform?.[f.id]?.image ? (
+                      <Thumb entry={media.landform[f.id]} />
+                    ) : (
+                      <span className={cn("size-2.5 shrink-0 rounded-sm", f.kind === "range" ? "bg-[#a07c5c]" : f.kind === "lowland" ? "bg-[#86b46f]" : "bg-[#cfc785]")} />
+                    )}
                     {f.name}
                     <span className="ms-auto text-xs font-normal text-[#97a29e]">{LANDFORM_KINDS[f.kind]}</span>
                   </ListItem>
@@ -632,7 +791,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               {tab === "relief" &&
                 PEAKS.map((k) => (
                   <ListItem key={k.id} active={activeKey === `peak:${k.id}`} onClick={() => select({ kind: "peak", peak: k })}>
-                    <Mountain className="size-3.5 shrink-0 text-[#7b6a58]" />
+                    {media.peak?.[k.id]?.image ? <Thumb entry={media.peak[k.id]} /> : <Mountain className="size-3.5 shrink-0 text-[#7b6a58]" />}
                     {k.name}
                     <span className="ms-auto text-xs font-normal text-[#97a29e] tabular-nums">{fmt(k.height)} მ</span>
                   </ListItem>
@@ -640,7 +799,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
               {tab === "lakes" &&
                 LAKES.map((l) => (
                   <ListItem key={l.id} active={activeKey === `lake:${l.id}`} onClick={() => select({ kind: "lake", lake: l })}>
-                    <Droplets className="size-3.5 shrink-0 text-[#2f6fb0]" />
+                    {media.lake?.[l.id]?.image ? <Thumb entry={media.lake[l.id]} /> : <Droplets className="size-3.5 shrink-0 text-[#2f6fb0]" />}
                     {l.name}
                     <span className="ms-auto text-xs font-normal text-[#97a29e]">{l.kind === "lake" ? "ტბა" : "წყალსაცავი"}</span>
                   </ListItem>
@@ -649,7 +808,7 @@ export function GeorgiaMap({ initialLayer = "physical" }: { initialLayer?: MapLa
           </section>
 
           <p className="mt-8 text-[11px] leading-5 text-[#97a29e]">
-            რელიეფი: AWS Terrain Tiles (Mapzen); საზღვრები: geoBoundaries (CC BY 3.0); მდინარეების კალაპოტები გამოთვლილია რელიეფიდან; სიმაღლეები 6-ჯერ გაზრდილია; ბუნებრივი ზონებისა და ჰავის რუკები განზოგადებულია. აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.
+            სატელიტური სურათი: EOxCloudless https://cloudless.eox.at, EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024), CC BY-NC-SA 4.0; ტბები და მდინარეები: © OpenStreetMap contributors (ODbL); ფოტოები: Wikimedia Commons (ავტორები მითითებულია ფოტოსთან); რელიეფი: AWS Terrain Tiles (Mapzen); საზღვრები: geoBoundaries (CC BY 3.0); სიმაღლეები 6-ჯერ გაზრდილია; ბუნებრივი ზონებისა და ჰავის რუკები განზოგადებულია. აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.
           </p>
         </article>
       </div>

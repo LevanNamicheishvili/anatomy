@@ -1,0 +1,2096 @@
+{
+ "region": {
+  "tbilisi": {
+   "wiki": {
+    "title": "თბილისი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%91%E1%83%98%E1%83%9A%E1%83%98%E1%83%A1%E1%83%98",
+    "lang": "ka",
+    "intro": "თბილისი — საქართველოს დედაქალაქი და უდიდესი ქალაქი, მუნიციპალიტეტის სტატუსით. მდინარე მტკვრის ორივე სანაპიროზე გაშენებული ქალაქი, რომელშიც 1,2 მილიონ ადამიანზე მეტი ცხოვრობს, საუკუნეების განმავლობაში იყო ქართველ მეფეთა რეზიდენცია, სხვადასხვა პერიოდში სრულიად კავკასიის ადმინისტრაციული, პოლიტიკური და კულტურული ცენტრი და საქართველოს დემოკრატიული რესპუბლიკის დედაქალაქი."
+   },
+   "wikidata": "Q994",
+   "stats": {
+    "population": {
+     "value": 1331485.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 575.0,
+     "year": null
+    },
+    "area": {
+     "value": 720.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-tbilisi.jpg",
+    "width": 960,
+    "height": 211,
+    "author": "Adam Jones",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Panorama%20of%20Tbilisi%20from%20Narikala%20Fortress.jpg"
+   }
+  },
+  "adjara": {
+   "wiki": {
+    "title": "აჭარა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%AD%E1%83%90%E1%83%A0%E1%83%90",
+    "lang": "ka",
+    "intro": "აჭარა — საქართველოს ისტორიულ-გეოგრაფიული მხარე, მდებარე მდინარე აჭარისწყლის ხეობაში."
+   },
+   "wikidata": "Q11651936",
+   "stats": {}
+  },
+  "abkhazia": {
+   "wiki": {
+    "title": "აფხაზეთი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%A4%E1%83%AE%E1%83%90%E1%83%96%E1%83%94%E1%83%97%E1%83%98",
+    "lang": "ka",
+    "intro": "აფხაზეთი — საქართველოს ისტორიულ-გეოგრაფიული მხარე, ქვეყნის ჩრდილო–დასავლეთით, შავი ზღვის აღმოსავლეთ სანაპიროზე, დღეს ავტონომიური რესპუბლიკის სტატუსით, უკავია 8,7 ათ. კვ.კმ. ტერიტორია მდინარეებს ენგურსა და ფსოუს შორის. ოკუპირებულია რუსეთის ფედერაციის შეიარაღებული ძალების მიერ [1993 წლიდან. საქართველოს კანონი ოკუპირებული ტერიტორიების შესახებ ადგენს ტერიტორიაზე განსაკუთრებულ სამართლებრივ რეჟიმს."
+   },
+   "wikidata": "Q23334",
+   "stats": {
+    "population": {
+     "value": 243564.0,
+     "year": 2016
+    },
+    "area": {
+     "value": 8665.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-abkhazia.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Vacheraindeli",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:%E1%83%A0%E1%83%98%E1%83%AC%E1%83%98%E1%83%A1%20%E1%83%A2%E1%83%91%E1%83%90.jpg"
+   }
+  },
+  "samegrelo-zemo-svaneti": {
+   "wiki": {
+    "title": "სამეგრელო-ზემო სვანეთის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%90%E1%83%9B%E1%83%94%E1%83%92%E1%83%A0%E1%83%94%E1%83%9A%E1%83%9D-%E1%83%96%E1%83%94%E1%83%9B%E1%83%9D_%E1%83%A1%E1%83%95%E1%83%90%E1%83%9C%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "სამეგრელო-ზემო სვანეთის მხარე — მხარე დასავლეთ საქართველოში, მოიცავს ისტორიულ–გეოგრაფიული პროვინციების სამეგრელოს და ზემო სვანეთის ტერიტორიებს. რეგიონის საერთაშორისო კოდია: GE-SZ."
+   },
+   "wikidata": "Q200309",
+   "stats": {
+    "population": {
+     "value": 305597.0,
+     "year": 2024
+    },
+    "area": {
+     "value": 7441.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-samegrelo-zemo-svaneti.jpg",
+    "width": 584,
+    "height": 438,
+    "author": "Sintezo",
+    "license": "CC BY-SA 1.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Dadiani%20Palace%2C%20Zugdidi%2C%20Georgia.jpg"
+   }
+  },
+  "guria": {
+   "wiki": {
+    "title": "გურია",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%92%E1%83%A3%E1%83%A0%E1%83%98%E1%83%90",
+    "lang": "ka",
+    "intro": "გურია — საქართველოს ისტორიულ-გეოგრაფიული მხარე, ისტორიული ეგრისის ნაწილი. დასახლებულია, ძირითადად, გურულებით. გურიის ისტორიული ცენტრია ქალაქი ოზურგეთი."
+   },
+   "wikidata": "Q16367739",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/region-guria.jpg",
+    "width": 960,
+    "height": 540,
+    "author": "Gaga.vaa",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Shemokmedi_Village.jpg"
+   }
+  },
+  "imereti": {
+   "wiki": {
+    "title": "იმერეთი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%98%E1%83%9B%E1%83%94%E1%83%A0%E1%83%94%E1%83%97%E1%83%98",
+    "lang": "ka",
+    "intro": "იმერეთი — დასავლეთ საქართველოს ერთ-ერთი ისტორიულ-გეოგრაფიულ მხარე, ამჟამად იმერეთის მხარის ნაწილი. ვრცელი მნიშვნელობით იგი დასავლეთ საქართველოს ისტორიული სახელწოდებაა, ისევე როგორც ძველი კოლხეთი, ეგრისი, აფხაზეთი. საკუთრივ იმერეთი შემოსაზღვრულია აღმოსავლეთით შავი ზღვით დასავლეთით ცხენისწყლით, ჩრდილოეთით კავკასიონის ქედით და სამხრეთით ფერსათის, ანუ მესხეთის მთებით."
+   },
+   "wikidata": "Q6455147",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/region-imereti.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "ლევან ნიორაძე",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Katskhi_Pillar.jpg"
+   }
+  },
+  "racha-lechkhumi": {
+   "wiki": {
+    "title": "რაჭა-ლეჩხუმისა და ქვემო სვანეთის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A0%E1%83%90%E1%83%AD%E1%83%90-%E1%83%9A%E1%83%94%E1%83%A9%E1%83%AE%E1%83%A3%E1%83%9B%E1%83%98%E1%83%A1%E1%83%90_%E1%83%93%E1%83%90_%E1%83%A5%E1%83%95%E1%83%94%E1%83%9B%E1%83%9D_%E1%83%A1%E1%83%95%E1%83%90%E1%83%9C%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "რაჭა-ლეჩხუმისა და ქვემო სვანეთის მხარე — მხარე დასავლეთ საქართველოში, მოიცავს ისტორიულ-გეოგრაფიული პროვინციების რაჭის, ლეჩხუმის და ქვემო სვანეთის ტერიტორიებს. რეგიონის საერთაშორისო კოდია: GE-RL. რაჭა-ლეჩხუმისა და ქვემო სვანეთის მხარეში შედის საქართველოს კანონმდებლობით განსაზღვრული შემდეგი ადმინისტრაციულ-ტერიტორიული ერთეულები:"
+   },
+   "wikidata": "Q38893",
+   "stats": {
+    "population": {
+     "value": 29901.0,
+     "year": 2024
+    },
+    "area": {
+     "value": 4690.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-racha-lechkhumi.jpg",
+    "width": 460,
+    "height": 700,
+    "author": "George Kvizhinadze from Tbilisi, Georgia",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mamisoni%20pass%202.jpg"
+   }
+  },
+  "samtskhe-javakheti": {
+   "wiki": {
+    "title": "სამცხე-ჯავახეთის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%90%E1%83%9B%E1%83%AA%E1%83%AE%E1%83%94-%E1%83%AF%E1%83%90%E1%83%95%E1%83%90%E1%83%AE%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "სამცხე-ჯავახეთის მხარე — მხარე სამხრეთ საქართველოში, მოიცავს ისტორიულ-გეოგრაფიული პროვინციების სამცხის, ჯავახეთისა და თორის ტერიტორიებს. რეგიონის საერთაშორისო კოდია: GE-SJ."
+   },
+   "wikidata": "Q19039",
+   "stats": {
+    "population": {
+     "value": 155282.0,
+     "year": 2024
+    },
+    "area": {
+     "value": 6413.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-samtskhe-javakheti.jpg",
+    "width": 960,
+    "height": 613,
+    "author": "Anri137",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:%E1%B2%A1%E1%83%90%E1%83%9B%E1%83%AA%E1%83%AE%E1%83%94%20%E1%83%AF%E1%83%90%E1%83%95%E1%83%90%E1%83%AE%E1%83%94%E1%83%97%E1%83%98%20%E1%83%96%E1%83%90%E1%83%9B%E1%83%97%E1%83%90%E1%83%A0%E1%83%A8%E1%83%98%205.jpg"
+   }
+  },
+  "shida-kartli": {
+   "wiki": {
+    "title": "შიდა ქართლის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A8%E1%83%98%E1%83%93%E1%83%90_%E1%83%A5%E1%83%90%E1%83%A0%E1%83%97%E1%83%9A%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "შიდა ქართლის მხარე — მხარე აღმოსავლეთ საქართველოში, მოიცავს ისტორიულ–გეოგრაფიული პროვინცია შიდა ქართლის ცენტრალურ ნაწილს. რეგიონის საერთაშორისო კოდია: GE-SK. მხარეს ჩრდილოეთიდან ესაზღვრება სამხრეთ ოსეთის დროებითი ადმინისტრაციულ-ტერიტორიული ერთეული."
+   },
+   "wikidata": "Q200047",
+   "stats": {
+    "population": {
+     "value": 251736.0,
+     "year": 2024
+    },
+    "area": {
+     "value": 4807.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-shida-kartli.jpg",
+    "width": 750,
+    "height": 498,
+    "author": "Участник:Датог.\n\nOriginal uploader was Датог at ru.wikipedia",
+    "license": "CC BY 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Kvemo-Chala.jpg"
+   }
+  },
+  "mtskheta-mtianeti": {
+   "wiki": {
+    "title": "მცხეთა-მთიანეთის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%AA%E1%83%AE%E1%83%94%E1%83%97%E1%83%90-%E1%83%9B%E1%83%97%E1%83%98%E1%83%90%E1%83%9C%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "მცხეთა-მთიანეთის მხარე — მხარე აღმოსავლეთ საქართველოში, მოიცავს ისტორიულ-გეოგრაფიული პროვინციების შიდა ქართლის, ერწო-თიანეთის, ფშავის, ხევსურეთის, მთიულეთის, გუდამაყრის, ქსნისხევის, ხევის ტერიტორიებს. რეგიონის საერთაშორისო კოდია: GE-MM."
+   },
+   "wikidata": "Q203339",
+   "stats": {
+    "population": {
+     "value": 94039.0,
+     "year": 2024
+    },
+    "area": {
+     "value": 6785.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-mtskheta-mtianeti.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "AlexandreIV",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Aragvi-Mtskheta.jpg"
+   }
+  },
+  "kvemo-kartli": {
+   "wiki": {
+    "title": "ქვემო ქართლის მხარე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A5%E1%83%95%E1%83%94%E1%83%9B%E1%83%9D_%E1%83%A5%E1%83%90%E1%83%A0%E1%83%97%E1%83%9A%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%AE%E1%83%90%E1%83%A0%E1%83%94",
+    "lang": "ka",
+    "intro": "ქვემო ქართლის მხარე — მხარე აღმოსავლეთ საქართველოში, მოიცავს ისტორიულ-გეოგრაფიული პროვინციების ქვემო ქართლის და თრიალეთის ტერიტორიებს. რეგიონის საერთაშორისო კოდია: GE-KK. ქვემო ქართლის მხარეში შედის საქართველოს კანონმდებლობით განსაზღვრული შემდეგი ადმინისტრაციულ-ტერიტორიული ერთეულები: ქვემო ქართლის უმეტესი ნაწილი თბილისიდან სამხრეთით მდებარეობს."
+   },
+   "wikidata": "Q200048",
+   "stats": {
+    "population": {
+     "value": 423986.0,
+     "year": 2014
+    },
+    "area": {
+     "value": 6527.6,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/region-kvemo-kartli.jpg",
+    "width": 960,
+    "height": 540,
+    "author": "Yuri Samoylov",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:2024-01-28%20View%20from%20Agarani%20Fortress%20towards%20Kumisi%20Lake.jpg"
+   }
+  },
+  "kakheti": {
+   "wiki": {
+    "title": "კახეთი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%99%E1%83%90%E1%83%AE%E1%83%94%E1%83%97%E1%83%98",
+    "lang": "ka",
+    "intro": "კახეთი — ისტორიულ-გეოგრაფიული რეგიონი აღმოსავლეთ საქართველოში. კახეთი ერთ-ერთი დიდი რეგიონია საქართველოს ფარგლებში. კახეთი ცნობილია კულტურულ ძეგლთა სიმრავლით. არაერთი ეკლესია-მონასტერი თუ ციხესიმაგრე იპყრობს ტურისტებისა და ექსკურსანტების ყურადღებას."
+   },
+   "wikidata": "Q16371011",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/region-kakheti.jpg",
+    "width": 960,
+    "height": 581,
+    "author": "Jon Gudorf Photography",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Gremi_Monastery_on_the_Silk_Road._Kakheti%2C_Georgia.jpg"
+   }
+  }
+ },
+ "city": {
+  "tbilisi": {
+   "wiki": {
+    "title": "თბილისი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%91%E1%83%98%E1%83%9A%E1%83%98%E1%83%A1%E1%83%98",
+    "lang": "ka",
+    "intro": "თბილისი — საქართველოს დედაქალაქი და უდიდესი ქალაქი, მუნიციპალიტეტის სტატუსით. მდინარე მტკვრის ორივე სანაპიროზე გაშენებული ქალაქი, რომელშიც 1,2 მილიონ ადამიანზე მეტი ცხოვრობს, საუკუნეების განმავლობაში იყო ქართველ მეფეთა რეზიდენცია, სხვადასხვა პერიოდში სრულიად კავკასიის ადმინისტრაციული, პოლიტიკური და კულტურული ცენტრი და საქართველოს დემოკრატიული რესპუბლიკის დედაქალაქი."
+   },
+   "wikidata": "Q994",
+   "stats": {
+    "population": {
+     "value": 1331485.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 575.0,
+     "year": null
+    },
+    "area": {
+     "value": 720.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-tbilisi.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Alexey Komarov",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:View%20of%20Tbilisi%20from%20Tabori%20Church%202023-10-08-2.jpg"
+   }
+  },
+  "batumi": {
+   "wiki": {
+    "title": "ბათუმი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%91%E1%83%90%E1%83%97%E1%83%A3%E1%83%9B%E1%83%98",
+    "lang": "ka",
+    "intro": "ბათუმი — ქალაქი და მუნიციპალიტეტი საქართველოში, არის აჭარის ავტონომიური რესპუბლიკის ადმინისტრაციული ცენტრი. ბათუმი არის მოსახლეობის რაოდენობით მეორე ქალაქი საქართველოში და ყველაზე დიდი ქალაქი დასავლეთ საქართველოში, მსხვილი საერთაშორისო ნავსადგური შავი ზღვის სამხრეთ-აღმოსავლეთ სანაპიროზე, მნიშვნელოვანი სამრეწველო, კულტურული და ტურისტული ცენტრი."
+   },
+   "wikidata": "Q25475",
+   "stats": {
+    "population": {
+     "value": 235668.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 3.0,
+     "year": null
+    },
+    "area": {
+     "value": 64.9,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-batumi.jpg",
+    "width": 552,
+    "height": 551,
+    "author": "Jason Rosenberg",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Batumi%20Georgia%202012.jpg"
+   }
+  },
+  "kutaisi": {
+   "wiki": {
+    "title": "ქუთაისი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A5%E1%83%A3%E1%83%97%E1%83%90%E1%83%98%E1%83%A1%E1%83%98",
+    "lang": "ka",
+    "intro": "ქუთაისი — ქალაქი და მუნიციპალიტეტი საქართველოში, იმერეთის მხარის ადმინისტრაციული ცენტრი, მოსახლეობით მეოთხე და ფართობით მესამე ქალაქი საქართველოში, საქართველოს სამეფოს ისტორიული დედაქალაქი, ქუთაისის საეპისკოპოსოს ისტორიული ცენტრი. მდებარეობს მდინარე რიონზე. მოსახლეობა 123 700 ადამიანი . ქუთაისის დოკუმენტური ისტორია იწყება ძვ. წ. III საუკუნიდან, თუმცა ანტიკური ავტორები მას თვლიან ძველი კოლხეთის სამეფოს დედაქალაქად."
+   },
+   "wikidata": "Q172415",
+   "stats": {
+    "population": {
+     "value": 160971.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 120.0,
+     "year": null
+    },
+    "area": {
+     "value": 67.7,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-kutaisi.jpg",
+    "width": 960,
+    "height": 697,
+    "author": "Kober",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Downtown%20Kutaisi%20%26%20White%20Bridge%20as%20seen%20from%20Mt%20Gora%20%28August%202011%29-cropped.jpg"
+   }
+  },
+  "rustavi": {
+   "wiki": {
+    "title": "რუსთავი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A0%E1%83%A3%E1%83%A1%E1%83%97%E1%83%90%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "რუსთავი — ქალაქი და მუნიციპალიტეტი საქართველოში, ქვემო ქართლის მხარის ადმინისტრაციული ცენტრი. ქალაქი 1948 წლის 19 იანვრიდან. მდებარეობს ქვემო ქართლის ვაკის აღმოსავლეთ ნაწილში, მდინარე მტკვრის ორივე ნაპირას, ზღვის დონიდან 350 მ სიმაღლეზე. რუსთავი თბილისის აგლომერაციაში მყოფი ქალაქებიდან უდიდესია. თბილისსა და რუსთავს შორის უმოკლესი მანძილია 7,66 კილომეტრი. ქალაქის ტერიტორია 60 კვ."
+   },
+   "wikidata": "Q182521",
+   "stats": {
+    "population": {
+     "value": 132047.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 350.0,
+     "year": null
+    },
+    "area": {
+     "value": 60.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-rustavi.jpg",
+    "width": 960,
+    "height": 643,
+    "author": "Zviad Avaliani",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:Rustavi%20Square.JPG"
+   }
+  },
+  "zugdidi": {
+   "wiki": {
+    "title": "ზუგდიდი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%96%E1%83%A3%E1%83%92%E1%83%93%E1%83%98%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "ზუგდიდი — ქალაქი დასავლეთ საქართველოში, ზუგდიდის მუნიციპალიტეტის და სამეგრელო-ზემო სვანეთის მხარის ადმინისტრაციული ცენტრი, სამეგრელოს ისტორიული მთავარი ქალაქი. მოსახლეობა: 42 998 ."
+   },
+   "wikidata": "Q185336",
+   "stats": {
+    "population": {
+     "value": 41494.0,
+     "year": 2020
+    },
+    "elevation": {
+     "value": 100.0,
+     "year": null
+    },
+    "area": {
+     "value": 21.8,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-zugdidi.jpg",
+    "width": 584,
+    "height": 438,
+    "author": "Sintezo",
+    "license": "CC BY-SA 1.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Dadiani%20Palace%2C%20Zugdidi%2C%20Georgia.jpg"
+   }
+  },
+  "gori": {
+   "wiki": {
+    "title": "გორი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%92%E1%83%9D%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "გორი — ქალაქი საქართველოში, შიდა ქართლის მხარეში, გორის მუნიციპალიტეტისა და შიდა ქართლის მხარის ადმინისტრაციული ცენტრი. მდებარეობს მდინარეების მტკვრისა და ლიახვის შესართავთან, ძირითად სატრანსპორტო გზების გზასაყარზე, თბილისიდან 76-ე კილომეტრში . ქალაქში არის მსუბუქი და კვების მრეწველობის საწარმოები, ჯანდაცვის, განათლებისა და კულტურის დაწესებულებები. გორში არის სამთავისისა და გორის ეპარქიის კათედრა და რეზიდენცია."
+   },
+   "wikidata": "Q19583",
+   "stats": {
+    "population": {
+     "value": 44524.0,
+     "year": 2022
+    },
+    "elevation": {
+     "value": 588.0,
+     "year": null
+    },
+    "area": {
+     "value": 16.85,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-gori.jpg",
+    "width": 960,
+    "height": 367,
+    "author": "Tiia Monto",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Gori%20-%20river%202.jpg"
+   }
+  },
+  "poti": {
+   "wiki": {
+    "title": "ფოთი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A4%E1%83%9D%E1%83%97%E1%83%98",
+    "lang": "ka",
+    "intro": "ფოთი — ქალაქი და მუნიციპალიტეტი საქართველოში, სამეგრელო-ზემო სვანეთის მხარეში. მდებარეობს შავ ზღვის ნაპირზე, მდინარე რიონის შესართავთან. არის საპორტო ქალაქი, ფოთისა და ხობის ეპარქიის ცენტრი."
+   },
+   "wikidata": "Q185345",
+   "stats": {
+    "population": {
+     "value": 38845.0,
+     "year": 2024
+    },
+    "elevation": {
+     "value": 0.0,
+     "year": null
+    },
+    "area": {
+     "value": 65.8,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-poti.jpg",
+    "width": 778,
+    "height": 358,
+    "author": "Brian Dell",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Poti%20market.jpg"
+   }
+  },
+  "telavi": {
+   "wiki": {
+    "title": "თელავი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%94%E1%83%9A%E1%83%90%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "თელავი — ქალაქი საქართველოში, კახეთის მხარისა და თელავის მუნიციპალიტეტის ადმინისტრაციული ცენტრი. 2024 წლის მონაცემებით ქალაქის მოსახლეობა შეადგენს 20 532 ადამიანს."
+   },
+   "wikidata": "Q209009",
+   "stats": {
+    "population": {
+     "value": 19509.0,
+     "year": 2022
+    },
+    "elevation": {
+     "value": 722.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-telavi.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "G.N.",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Telavi%20%28G.N.%202014%29.jpg"
+   }
+  },
+  "mtskheta": {
+   "wiki": {
+    "title": "მცხეთა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%AA%E1%83%AE%E1%83%94%E1%83%97%E1%83%90",
+    "lang": "ka",
+    "intro": "მცხეთა — ქალაქი საქართველოში, მცხეთის მუნიციპალიტეტისა და მცხეთა-მთიანეთის მხარის ადმინისტრაციული ცენტრი. მცხეთის ისტორიული ძეგლები იუნესკოს მსოფლიო კულტურული მემკვიდრეობის ნუსხაშია შეტანილი. მოსახლეობა 7940 კაცი . არის რკინიგზის სადგური, კვების და მსუბუქი მრეწველობის საწარმოები, ზემო ავჭალის ჰესი. ქალაქში კულტურისა და არქიტექტურის მრავალი ძეგლია."
+   },
+   "wikidata": "Q180810",
+   "stats": {
+    "population": {
+     "value": 7606.0,
+     "year": 2021
+    },
+    "elevation": {
+     "value": 460.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-mtskheta.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Gerd Eichmann",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mtskheta-10-von%20Jvari-Kirche-Araqvi-Mtkvari-2019-gje.jpg"
+   }
+  },
+  "akhaltsikhe": {
+   "wiki": {
+    "title": "ახალციხე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%AE%E1%83%90%E1%83%9A%E1%83%AA%E1%83%98%E1%83%AE%E1%83%94",
+    "lang": "ka",
+    "intro": "ახალციხე, ძველად ლომსია — ქალაქი საქართველოში, სამცხე-ჯავახეთის მხარის და ახალციხის მუნიციპალიტეტის ადმინისტრაციული ცენტრი, ისტორიული სამცხის ცენტრი."
+   },
+   "wikidata": "Q212546",
+   "stats": {
+    "population": {
+     "value": 16955.0,
+     "year": 2022
+    },
+    "elevation": {
+     "value": 1029.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-akhaltsikhe.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Kober",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Rabati%2C%20Akhaltsikhe%20Fortress%20Museum%2013.JPG"
+   }
+  },
+  "ozurgeti": {
+   "wiki": {
+    "title": "ოზურგეთი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9D%E1%83%96%E1%83%A3%E1%83%A0%E1%83%92%E1%83%94%E1%83%97%E1%83%98",
+    "lang": "ka",
+    "intro": "ოზურგეთი — ქალაქი საქართველოში, ოზურგეთის მუნიციპალიტეტში, გურიის მხარის ადმინისტრაციული ცენტრი, შემოქმედის ეპარქიის ცენტრი, გურიის ისტორიული ცენტრი. წყაროებში პირველად იხსენიება 1578 წელს. ქალაქში არის სამრეწველო საწარმოები, განათლებისა და ჯანდაცვის დაწესებულებები. საავტომობილო გზებით უკავშირდება ურეკს, ჩოხატაურს, ლანჩხუთს, ქობულეთს. სარკინიგზო ხაზით უკავშირდება სადგურ ნატანებს."
+   },
+   "wikidata": "Q317145",
+   "stats": {
+    "population": {
+     "value": 14211.0,
+     "year": 2023
+    },
+    "elevation": {
+     "value": 80.0,
+     "year": null
+    },
+    "area": {
+     "value": 22.11,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-ozurgeti.jpg",
+    "width": 960,
+    "height": 474,
+    "author": "G.N.",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Ozurgeti%20%28G.N.%202012%29.jpg"
+   }
+  },
+  "ambrolauri": {
+   "wiki": {
+    "title": "ამბროლაური",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%9B%E1%83%91%E1%83%A0%E1%83%9D%E1%83%9A%E1%83%90%E1%83%A3%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "ამბროლაური — ქალაქი საქართველოში, რაჭა-ლეჩხუმის და ქვემო სვანეთის მხარის და ამბროლაურის მუნიციპალიტეტის ადმინისტრაციული ცენტრი. მოსახლეობა 2047 ადამიანი . ქალაქში არის ღვინის ქარხანა, სასამართლო, სპორტული დარბაზი, საავადმყოფო, თეატრი, მუზეუმი, ნიკორწმინდის ეპარქიის რეზიდენცია."
+   },
+   "wikidata": "Q456842",
+   "stats": {
+    "population": {
+     "value": 2015.0,
+     "year": 2021
+    },
+    "elevation": {
+     "value": 550.0,
+     "year": null
+    },
+    "area": {
+     "value": 1.6,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-ambrolauri.jpg",
+    "width": 960,
+    "height": 584,
+    "author": "G.N.",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:View%20to%20Ambrolauri%20-%20panoramio.jpg"
+   }
+  },
+  "sokhumi": {
+   "wiki": {
+    "title": "სოხუმი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%9D%E1%83%AE%E1%83%A3%E1%83%9B%E1%83%98",
+    "lang": "ka",
+    "intro": "სოხუმი — ქალაქი საქართველოში, აფხაზეთის ავტონომიური რესპუბლიკის დედაქალაქი და სოხუმის მუნიციპალიტეტის ადმინისტრაციული ცენტრი, შავიზღვისპირა კურორტი. აფხაზეთის ომამდე იყო საქართველოს ერთ-ერთი მნიშვნელოვანი სამრეწველო, სატრანსპორტო კულტურული და საკურორტო-ტურისტული ცენტრი, მოქმედებდა ნავსადგური, რკინიგზის ორი სადგური და აეროპორტი. ომის შემდეგ ქალაქმა დაკარგა თავისი წინანდელი მნიშვნელობა."
+   },
+   "wikidata": "Q40811",
+   "stats": {
+    "population": {
+     "value": 65146.0,
+     "year": 2022
+    },
+    "elevation": {
+     "value": 20.0,
+     "year": null
+    },
+    "area": {
+     "value": 27.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-sokhumi.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Interlaker",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Sukhumi%20waterfront%20in%20January.jpg"
+   }
+  },
+  "mestia": {
+   "wiki": {
+    "title": "მესტია",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%94%E1%83%A1%E1%83%A2%E1%83%98%E1%83%90",
+    "lang": "ka",
+    "intro": "მესტია — დაბა საქართველოში, სამეგრელო-ზემო სვანეთის მხარის მესტიის მუნიციპალიტეტის ადმინისტრაციული ცენტრი."
+   },
+   "wikidata": "Q1011051",
+   "stats": {
+    "population": {
+     "value": 1798.0,
+     "year": 2023
+    },
+    "elevation": {
+     "value": 1500.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-mestia.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Alexey Komarov",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mestia%2C%20June%2C%202018-2.jpg"
+   }
+  },
+  "borjomi": {
+   "wiki": {
+    "title": "ბორჯომი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%91%E1%83%9D%E1%83%A0%E1%83%AF%E1%83%9D%E1%83%9B%E1%83%98",
+    "lang": "ka",
+    "intro": "ბორჯომი — ქალაქი და კურორტი აღმოსავლეთ საქართველოში, ბორჯომის მუნიციპალიტეტის ადმინისტრაციულ ცენტრი. მოსახლეობა 10 804 ადამიანი . ბორჯომში არის ბორჯომისა და ბაკურიანის ეპარქიის კათედრა და რეზიდენცია, განათლების და კულტურის დაწესებულებები."
+   },
+   "wikidata": "Q208352",
+   "stats": {
+    "population": {
+     "value": 11194.0,
+     "year": 2023
+    },
+    "elevation": {
+     "value": 820.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-borjomi.jpg",
+    "width": 584,
+    "height": 438,
+    "author": "Nika, EXOTOUR",
+    "license": "CC BY-SA 1.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Bordschomi.jpg"
+   }
+  },
+  "sighnaghi": {
+   "wiki": {
+    "title": "სიღნაღი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%98%E1%83%A6%E1%83%9C%E1%83%90%E1%83%A6%E1%83%98",
+    "lang": "ka",
+    "intro": "სიღნაღი — ქალაქი საქართველოში, სიღნაღის მუნიციპალიტეტის ადმინისტრაციული ცენტრი. ქალაქად გამოცხადდა 1801 წელს. სიღნაღი ამჟამად საქართველოს ერთ-ერთი პოპულარული ტურისტული ქალაქია, რომლის მიმზიდველობას განაპირობებს, როგორც მისი ისტორიულად ჩამოყალიბებული არქიტექტურული სახე, ისევე ბუნებრივი მდებარეობა: ქალაქი განლაგებულია მაღალბორცვიან ადგილას და გადაჰყურებს ალაზნის ველის გაშლილ სივრცესა და კავკასიონის ქედებს."
+   },
+   "wikidata": "Q946143",
+   "stats": {
+    "population": {
+     "value": 1485.0,
+     "year": 2014
+    },
+    "elevation": {
+     "value": 836.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-sighnaghi.jpg",
+    "width": 960,
+    "height": 619,
+    "author": "George Nikoladze",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Sighnagi%202009.jpg"
+   }
+  },
+  "stepantsminda": {
+   "wiki": {
+    "title": "სტეფანწმინდა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%A2%E1%83%94%E1%83%A4%E1%83%90%E1%83%9C%E1%83%AC%E1%83%9B%E1%83%98%E1%83%9C%E1%83%93%E1%83%90",
+    "lang": "ka",
+    "intro": "სტეფანწმინდა — დაბა საქართველოში, ყაზბეგის მუნიციპალიტეტის ადმინისტრაციული ცენტრი. დაბაში არის ადმინისტრაციული, კულტურის, განათლების და ჯანდაცვის დაწესებულებები, მცირე საწარმოები, სასტუმროები."
+   },
+   "wikidata": "Q1025823",
+   "stats": {
+    "population": {
+     "value": 1326.0,
+     "year": 2014
+    },
+    "elevation": {
+     "value": 1740.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/city-stepantsminda.jpg",
+    "width": 957,
+    "height": 720,
+    "author": "MaxBenidze",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Stepantsminda%2C%20view%20from%20Gergeti.jpg"
+   }
+  }
+ },
+ "peak": {
+  "shkhara": {
+   "wiki": {
+    "title": "შხარა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A8%E1%83%AE%E1%83%90%E1%83%A0%E1%83%90",
+    "lang": "ka",
+    "intro": "შხარა — საქართველოს უმაღლესი მწვერვალი. ზემო სვანეთში, საქართველოსა და რუსეთის საზღვარზე. სვანურ ენაზე შხარა „ცხრას“ ნიშნავს და მის ქედზე არსებულ მრავალ მწვერვალზე მიუთითებს. იგი წარმოადგენს კავკასიონის მთავარი წყალგამყოფი ქედის უმაღლეს წერტილს და კავკასიონის მთათა სისტემაში სიმაღლით მეორე ადგილს იყოფს მწვერვალ დიხთაუსთან, იალბუზის შემდეგ."
+   },
+   "wikidata": "Q217457",
+   "stats": {
+    "elevation": {
+     "value": 5193.2,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-shkhara.jpg",
+    "width": 800,
+    "height": 536,
+    "author": "ilan molcho from israel",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Shahara%20peak%20near%20Ushguli%201870.jpg"
+   }
+  },
+  "kazbek": {
+   "wiki": {
+    "title": "მყინვარწვერი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%A7%E1%83%98%E1%83%9C%E1%83%95%E1%83%90%E1%83%A0%E1%83%AC%E1%83%95%E1%83%94%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "მყინვარწვერი, იგივე მწვერვალი ყაზბეგი — მწვერვალი საქართველო რუსეთის საზღვარზე, მცხეთა-მთიანეთის მხარეში, ყაზბეგის მუნიციპალიტეტში. მდებარეობს ხოხის ქედზე. სიმაღლე ზღვის დონიდან 5054 მ, წარმოშობა ვულკანური, აღმართულია საქართველოს სამხედრო გზის გვერდით. მის ფერდობებზე სუბალპური მდელოებია, ზემოთ – მარადიული თოვლი. აქედან ეშვება მყინვარები: სუათისი, მნა, გერგეთი, დევდარაკი და სხვა, რომელთა საერთო ფართობია 135 კმ²."
+   },
+   "wikidata": "Q207680",
+   "stats": {
+    "elevation": {
+     "value": 5033.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-kazbek.jpg",
+    "width": 640,
+    "height": 411,
+    "author": "Jaba1977",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Mkinvarcveri.jpg"
+   }
+  },
+  "tetnuldi": {
+   "wiki": {
+    "title": "თეთნულდი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%94%E1%83%97%E1%83%9C%E1%83%A3%E1%83%9A%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "თეთნულდი — მწვერვალი საქართველოში, სამეგრელო-ზემო სვანეთის მხარეში, მესტიის მუნიციპალიტეტში. მდებარეობს სვანეთის კავკასიონის მთავარ წყალგამყოფ ქედზე, მდ. ადიშჭალის სათავეებში. სიმაღლე ზღვის დონიდან 4858 მ. აგებულია ძირითადად პალეოზოური ასაკის კრისტალური ფიქლებითა და გრანიტოიდებით. 3000 მ-ს ზემოთ დაფარულია მუდმივი თოვლით. თეთნულდი გამყინვარების დიდი ცენტრია. მის ფერდობზე ეშვება წანერის მყინვარი, ადიშის მყინვარი და სხვ."
+   },
+   "wikidata": "Q2388278",
+   "stats": {
+    "elevation": {
+     "value": 4858.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-tetnuldi.jpg",
+    "width": 960,
+    "height": 638,
+    "author": "Sarah Murray from South Bend, IN, USA",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Tetnuldi%20%2814511481627%29.jpg"
+   }
+  },
+  "ushba": {
+   "wiki": {
+    "title": "უშბა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A3%E1%83%A8%E1%83%91%E1%83%90",
+    "lang": "ka",
+    "intro": "უშბა — ორთავიანი მწვერვალი საქართველოში, სამეგრელო-ზემო სვანეთის მხარეში, მესტიის მუნიციპალიტეტში. მდებარეობს სვანეთის კავკასიონზე, მწვერვალ იალბუზის სამხრეთ-აღმოსავლეთით, კავკასიონის მთავარი წყალგამყოფი ქედის პატარა შტოზე. აქვს სამხრეთი და ჩრდილოეთი მწვერვალები. სამხრეთი უშბის სიმაღლეა 4710 მ, ხოლო ჩრდილოეთი უშბისა 4690 მ. აგებულია პალეოზოური გრანიტებითა და კრისტალური ფიქლებით. დამახასიათებელია ნივალური ლანდშაფტი."
+   },
+   "wikidata": "Q1285832",
+   "stats": {
+    "elevation": {
+     "value": 4737.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-ushba.jpg",
+    "width": 960,
+    "height": 521,
+    "author": "User:Stardancer",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Ushba.jpg"
+   }
+  },
+  "tebulosmta": {
+   "wiki": {
+    "title": "თებულოსმთა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%94%E1%83%91%E1%83%A3%E1%83%9A%E1%83%9D%E1%83%A1%E1%83%9B%E1%83%97%E1%83%90",
+    "lang": "ka",
+    "intro": "თებულოსმთა, დაქუეხი — მწვერვალი საქართველოში, კახეთის მხარეში, ახმეტის მუნიციპალიტეტში. წარმოადგენს აღმოსავლეთ კავკასიონის უმაღლეს წერტილს. მდებარეობს თუშეთ-ხევსურეთის კავკასიონზე, მდინარეების ანდის ყოისუსა და ხომისწყლის სათავეებს შორის, საქართველოსა და რუსეთის ჩეჩნეთის საზღვარზე. სიმაღლე ზღვის დონიდან 4498 მ. აგებულია იურული თიხაფიქლებითა და ქვიშაქვებით. მის ფერდობზე ეშვება მყინვარები 3 კმ² საერთო ფართობით."
+   },
+   "wikidata": "Q768463",
+   "stats": {
+    "elevation": {
+     "value": 4493.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-tebulosmta.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Karel61",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Tebulosmta%20viewed%20from%20main%20ridge%20near%20%E1%83%93%E1%83%90%E1%83%97%E1%83%95%E1%83%98%E1%83%A1%E1%83%AF%E1%83%95%E1%83%90%E1%83%A0%E1%83%98%20%E1%83%A3%E1%83%A6.JPG"
+   }
+  },
+  "abuli": {
+   "wiki": {
+    "title": "დიდი აბული",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%93%E1%83%98%E1%83%93%E1%83%98_%E1%83%90%E1%83%91%E1%83%A3%E1%83%9A%E1%83%98",
+    "lang": "ka",
+    "intro": "დიდი აბული — მთა საქართველოში, სამცხე-ჯავახეთის მხარეში, ახალქალაქის მუნიციპალიტეტში. მდებარეობს სამსრის ქედზე. სიმაღლე ზღვის დონიდან 3301 მ. აგებულია ძირითადად ნეოგენური ჰიალოდაციტებით. ჩამქრალი ვულკანია. ვულკანურ კონუსს სიძველისა და დიდი სიმაღლის გამო დაკარგული აქვს წესიერი ფორმა. დიდი აბულის კალთებზე გამომუშავებულია ძველმყინვარული ცირკები, მორენული ზვინულებითა და პატარა ტბებით."
+   },
+   "wikidata": "Q3026890",
+   "stats": {
+    "elevation": {
+     "value": 3301.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/peak-abuli.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Yasuhiro Kojima",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mt%20Didi%20Abuli%20%28view%20from%20south%29.jpg"
+   }
+  }
+ },
+ "river": {
+  "mtkvari": {
+   "wiki": {
+    "title": "მტკვარი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%A2%E1%83%99%E1%83%95%E1%83%90%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "მტკვარი — ამიერკავკასიის უდიდესი მდინარე, სათავე აქვს თურქეთში 2742 მ-ზე, ყიზილ-გიადუკის მთის აღმოსავლეთ კალთაზე. ერთვის კასპიის ზღვას აზერბაიჯანის ტერიტორიაზე. სიგრძე 1515 კმ, აუზის ფართობი 188 ათ. კმ². საქართველოში მოქცეულია მტკვრის შუაწელის დაახლოებით 400 კმ მონაკვეთი. მტკვარი ყველაზე გრძელია აზერბაიჯანში, სადაც მისი სიგრძე 906 კმ-ს უდრის."
+   },
+   "wikidata": "Q156557",
+   "stats": {
+    "elevation": {
+     "value": -29.0,
+     "year": null
+    },
+    "length": {
+     "value": 1360.0,
+     "year": null
+    },
+    "basin": {
+     "value": 188000.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 443.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-mtkvari.jpg",
+    "width": 960,
+    "height": 638,
+    "author": "Vyacheslav Argenberg",
+    "license": "CC BY 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mtskheta%2C%20Mtkvari%20and%20Aragvi%2C%20Georgia.jpg"
+   }
+  },
+  "rioni": {
+   "wiki": {
+    "title": "რიონი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A0%E1%83%98%E1%83%9D%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "რიონი — მდინარე დასავლეთ საქართველოში. სიგრძე 327 კმ, მდინარის აუზის ფართობი 13 400 კმ². სათავე აქვს კავკასიონის სამხრეთ კალთაზე ფასის მთაზე, ზღვის დონიდან 2960 მ. ერთვის შავ ზღვას ფოთთან. სათავიდან სოფელ გლოლამდე მიედინება სამხრეთ-აღმოსავლეთისკენ განიერ, ღრმა ხეობაში, რომელიც მდინარე ზოფხიტურის შეერთებამდე ტროგულია. ივითარებს განიერ ჭალას და იტოტება."
+   },
+   "wikidata": "Q203409",
+   "stats": {
+    "length": {
+     "value": 327.0,
+     "year": null
+    },
+    "basin": {
+     "value": 13400.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 405.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-rioni.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "infinette from San Francisco, USA",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Rioni%20river%20in%20Kutaisi.jpg"
+   }
+  },
+  "alazani": {
+   "wiki": {
+    "title": "ალაზანი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%9A%E1%83%90%E1%83%96%E1%83%90%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "ალაზანი — მდინარე აღმოსავლეთ საქართველოსა და აზერბაიჯანში, ნაწილობრივ მიედინება ამ ქვეყნების საზღვრის გასწვრივ. სიგრძე 390 კმ, აუზის ფართობი — 11 800 კმ², წყლის საშუალო ხარჯი — 98 მ³/წმ. სათავე აქვს კავკასიონზე, მწვერვალ დიდი ბორბალოს აღმოსავლეთ კალთაზე, ზღვის დონიდან 2750 მ სიმაღლეზე. ზემო დინებაში მთის მდინარეა, შემდეგ გამოდის ალაზნის ვაკეზე და იტოტება. ერთვის მინგეჩაურის წყალსაცავს აზერბაიჯანის ფარგლებში."
+   },
+   "wikidata": "Q212795",
+   "stats": {
+    "elevation": {
+     "value": 79.0,
+     "year": null
+    },
+    "length": {
+     "value": 351.0,
+     "year": null
+    },
+    "basin": {
+     "value": 10800.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 98.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-alazani.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Amo Jazzme's Private Collection",
+    "license": "CC BY 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Alazani%20River%202.jpg"
+   }
+  },
+  "iori": {
+   "wiki": {
+    "title": "იორი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%98%E1%83%9D%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "იორი — მდინარე საქართველოსა და აზერბაიჯანში. სათავეს იღებს კავკასიონის სამხრეთ კალთაზე, მწვერვალ ბორბალოსთან, ზღვის დონიდან 2600 მ სიმაღლეზე. ზემოწელში მიედინება ხეობაში, შუაწელზე კვეთს სამგორის ქვაბულს და ერთვის მინგეჩაურის წყალსაცავს. წარსულში იორი უერთდებოდა მდინარე ალაზანს მარჯვენა მხრიდან. ივრის სიგრძეა 320 კმ, აუზის ფართობი — 4650 კმ². საზრდოობს ძირითადად თოვლისა და წვიმის წყლებით."
+   },
+   "wikidata": "Q163384",
+   "stats": {
+    "elevation": {
+     "value": 80.0,
+     "year": null
+    },
+    "length": {
+     "value": 320.0,
+     "year": null
+    },
+    "basin": {
+     "value": 4650.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 116.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-iori.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "jaba1977",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:Riv.%20Iori.jpg"
+   }
+  },
+  "enguri": {
+   "wiki": {
+    "title": "ენგური",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%94%E1%83%9C%E1%83%92%E1%83%A3%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "ენგური — მდინარე დასავლეთ საქართველოში, კავკასიონის მთავარი წყალგამყოფი ქედის სამხრეთ კალთაზე და კოლხეთის ბარში. სათავე აქვს ენგურის მყინვარზე, ზღვის დონიდან 2614 მ-ზე. სოფ. ანაკლიასთან ერთვის შავ ზღვას. სიგრძე 213 კმ, აუზის ფართობი 4060 კმ². მთავარი შენაკადებია - მარჯვენა: ადიშჭალა, ხალდეჭალა, მულხრა, დოლრაჭალა, ნაკრა, ნენსკრა; მარცხენა: თხეიში, ხუმფრერი, ლასილი, მაგანა, ჯუმი და სხვა."
+   },
+   "wikidata": "Q504388",
+   "stats": {
+    "length": {
+     "value": 213.0,
+     "year": null
+    },
+    "basin": {
+     "value": 4060.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 39.5,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-enguri.jpg",
+    "width": 540,
+    "height": 720,
+    "author": "The original uploader was D.Papuashvili at English Wikipedia.",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:InguriRiverGorge.JPG"
+   }
+  },
+  "chorokhi": {
+   "wiki": {
+    "title": "ჭოროხი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AD%E1%83%9D%E1%83%A0%E1%83%9D%E1%83%AE%E1%83%98",
+    "lang": "ka",
+    "intro": "ჭოროხი — მდინარე საქართველოსა და თურქეთში. სათავე აქვს ოქუს-ბადადაღის მთებში. მდინარის სიგრძე 438 კმ-ია, მათ შორის 26 კმ-იან მონაკვეთზე მიედინება აჭარის ავტონომიური რესპუბლიკის ტერიტორიაზე. მდინარის აუზის ფართობი 22 ათასი კმ². ჭოროხი ძირითადად მიედინება ტექტონიკურ ხეობაში ლაზისტანისა და ჭოროხის ქედებს შორის და ქალაქ ბათუმის სამხრეთით ერთვის შავ ზღვას. წყლის საშუალო ხარჯი შესართავთან — 277 მ³/წმ."
+   },
+   "wikidata": "Q70970",
+   "stats": {
+    "length": {
+     "value": 438.0,
+     "year": null
+    },
+    "basin": {
+     "value": 22000.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 285.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-chorokhi.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "EvgenyGenkin",
+    "license": "CC BY 2.5",
+    "page": "https://commons.wikimedia.org/wiki/File:Choruh%2002.jpg"
+   }
+  },
+  "tergi": {
+   "wiki": {
+    "title": "თერგი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%94%E1%83%A0%E1%83%92%E1%83%98",
+    "lang": "ka",
+    "intro": "თერგი — მდინარე საქართველოსა და რუსეთში . სიგრძე 623 კმ, აუზის ფართობი 43,2 ათ. კმ². სათავე აქვს კავკასიონის ზილგახოხის მყინვარში. სათავიდან 30 კმ-ზე მიედინება კავკასიონის მთავარსა და გვერდით ქედებს შორის, სოფ. კობთან მკვეთრად უხვევს ჩრდილოეთისკენ და კვეთს გვერდით ქედს , შემდეგ კლდოვან ქედსა და შავ მთებს. ბარში იტოტება. მდინარე სუნჯის შეერთების შემდეგ მიედინება კასპიისპირა დაბლობზე და ერთვის კასპიის ზღვას."
+   },
+   "wikidata": "Q82776",
+   "stats": {
+    "length": {
+     "value": 623.0,
+     "year": null
+    },
+    "basin": {
+     "value": 43200.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 305.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-tergi.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "shankar s. from Dubai, united arab emirates",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Wayside%20cross%20above%20the%20Terek%20river%20in%20Georgia.jpg"
+   }
+  },
+  "kodori": {
+   "wiki": {
+    "title": "კოდორი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%99%E1%83%9D%E1%83%93%E1%83%9D%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "კოდორი — მდინარე ჩრდილო-დასავლეთ საქართველოში, აფხაზეთის ავტონომიური რესპუბლიკის ტერიტორიაზე. კოდორი იქმნება მდინარეების საკენისა და გვანდრის შეერთებით სოფელ მარცხენა გეწვიშთან, ზღვის დონიდან 740 მ-ზე. ერთვის შავ ზღვას სოფელ აძიუბჟის სამხრეთით. სიგრძე 84 კმ , აუზის ფართობი 2030 კმ². მიედინება ვიწრო ხეობაში, შესართავიდან 25 კმ-ზე გადის დაბლობზე, წყლის საშუალო ხარჯი — 123 მ³/წმ."
+   },
+   "wikidata": "Q1048890",
+   "stats": {
+    "length": {
+     "value": 84.0,
+     "year": null
+    },
+    "basin": {
+     "value": 2051.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 144.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-kodori.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Alex Alex Lep",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:%D0%A0%D0%B5%D0%BA%D0%B0%20%D0%9A%D0%BE%D0%B4%D0%BE%D1%80%20%287%29.jpg"
+   }
+  },
+  "bzipi": {
+   "wiki": {
+    "title": "ბზიფი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%91%E1%83%96%E1%83%98%E1%83%A4%E1%83%98",
+    "lang": "ka",
+    "intro": "ბზიფი — მდინარე დასავლეთ საქართველოში, აფხაზეთის ავტონომიური რესპუბლიკის ტერიტორიაზე. სათავე აქვს კავკასიონის მთავარი წყალგამყოფი ქედის სამხრეთ კალთაზე, უღელტეხილ უღელტეხილ ადანგესთან. სიგრძე 110 კმ, აუზის ფართობი 1510 კმ². ზემო დინებაში ხეობა ვიწრო და ღრმაა. გამომუშავებულია ტექტონიკური რღვევის ხაზის გასწვრივ ქვედა იურულ თიხაფიქლებისა და ქვიშაქვებში, აგრეთვე ბაიოსის პორფირიტულ წყებაში."
+   },
+   "wikidata": "Q1972264",
+   "stats": {
+    "length": {
+     "value": 110.0,
+     "year": null
+    },
+    "basin": {
+     "value": 1510.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 97.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-bzipi.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "ᴀɴᴅʏ ᴏɴᴇ",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:%D0%92%D0%B8%D0%B4%20%D1%80%D0%B5%D0%BA%D0%B8%20%D0%91%D0%B7%D1%8B%D0%B1%D1%8C%20%D1%81%20%D0%BF%D0%BE%D0%B4%D0%B2%D0%B5%D1%81%D0%BD%D0%BE%D0%B3%D0%BE%20%D0%BC%D0%BE%D1%81%D1%82%D0%B0%202021-06-04.jpg"
+   }
+  },
+  "khrami": {
+   "wiki": {
+    "title": "ხრამი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AE%E1%83%A0%E1%83%90%E1%83%9B%E1%83%98",
+    "lang": "ka",
+    "intro": "ხრამი — მდინარე აღმოსავლეთ საქართველოში, სათავეს იღებს ბორჯომის მუნიციპალიტეტში , თრიალეთის ქედის კალთებზე, მიედინება ღრმა ხეობაში, მტკვარს მარჯვენა მხრიდან უერთდება აზერბაიჯანის ტერიტორიაზე, ყაზახის რაიონში. მდინარის სიგრძე 201 კმ-ია, აუზის ფართობი - 8340 კვ.კმ, წყლის საშუალო ხარჯი - 51 კუბ.მ/წმ, მაქსიმალური - 448 კუბ.მ/წმ. საზრდოობს უპირატესად თოვლით, არ იყინება, ქვემოწელში გამოიყენება სარწყავად."
+   },
+   "wikidata": "Q1076875",
+   "stats": {
+    "elevation": {
+     "value": 256.0,
+     "year": null
+    },
+    "length": {
+     "value": 201.0,
+     "year": null
+    },
+    "basin": {
+     "value": 8340.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 51.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-khrami.jpg",
+    "width": 960,
+    "height": 609,
+    "author": "SibFreak",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Khrami%20River%20Kirach%20Muganlo.jpg"
+   }
+  },
+  "aragvi": {
+   "wiki": {
+    "title": "არაგვი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%A0%E1%83%90%E1%83%92%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "არაგვი — მდინარე აღმოსავლეთ საქართველოში, ყაზბეგის, დუშეთისა და მცხეთის მუნიციპალიტეტებში. სიგრძე 112 კმ, აუზის ფართობი 2740 კმ². არაგვის სისტემას ქმნის მდინარეები მთიულეთის არაგვი, გუდამაყრის არაგვი, ხევსურეთის არაგვი და ფშავის არაგვი. მთავარია არაგვი, რომელიც იწყება ყელის ვულკანური მთიანეთის ჩრდილო-აღმოსავლეთ ნაწილში. არაგვი ზემო და შუა დინებაში მთის მდინარეა, ქვემო დინებით მუხრან-საგურამოს ვაკეზე იშლება."
+   },
+   "wikidata": "Q596630",
+   "stats": {
+    "elevation": {
+     "value": 449.0,
+     "year": null
+    },
+    "length": {
+     "value": 112.0,
+     "year": null
+    },
+    "basin": {
+     "value": 2740.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-aragvi.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Kober",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Aragvi%20at%20Mtskheta.JPG"
+   }
+  },
+  "tskhenistskali": {
+   "wiki": {
+    "title": "ცხენისწყალი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AA%E1%83%AE%E1%83%94%E1%83%9C%E1%83%98%E1%83%A1%E1%83%AC%E1%83%A7%E1%83%90%E1%83%9A%E1%83%98",
+    "lang": "ka",
+    "intro": "ცხენისწყალი — მდინარე დასავლეთ საქართველოში. სათავე აქვს სვანეთის კავკასიონის სამხრეთ კალთაზე, მწვერვალ ფასისმთის დასავლეთით, ზღვის დონიდან 2710 მ სიმაღლეზე, ერთვის რიონს მარჯვენა მხრიდან სოფელ საჯავახოსთან. სიგრძე 176 კმ, აუზის ფართობი 2120 კმ². ცხენისწყლის შუა და ზემო დინება კავკასიონის სამხრეთ კალთაზე მოედინება, ქვემო — კოლხეთის დაბლობზე. საზრდოობს თოვლის, წვიმის, მიწისქვეშა და მყინვარული წყლით."
+   },
+   "wikidata": "Q2040044",
+   "stats": {
+    "length": {
+     "value": 184.0,
+     "year": null
+    },
+    "basin": {
+     "value": 2120.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 90.4,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-tskhenistskali.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Markussep",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Tskhenistsqali%20valley%20near%20Mami.JPG"
+   }
+  },
+  "kvirila": {
+   "wiki": {
+    "title": "ყვირილა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A7%E1%83%95%E1%83%98%E1%83%A0%E1%83%98%E1%83%9A%E1%83%90",
+    "lang": "ka",
+    "intro": "ყვირილა — მდინარე დასავლეთ საქართველოში, რიონის მარცხენა შენაკადი. სათავეს იღებს რაჭის ქედზე, ძირულას შესართავამდე ხეობაში მიედინება, შემდეგ — დაბლობზე. მდინარის სიგრძე 140 კმ-ია, აუზის ფართობი 3630 კმ², წყლის საშუალო ხარჯი — 61 მ³/წმ ზესტაფონთან, 90 მ³/წმ — შესართავთან. ძირითადად საზრდოობს წვიმის წყლებით. ყვირილის აუზში მდებარეობს ჭიათურის მანგანუმის საბადოები."
+   },
+   "wikidata": "Q2604915",
+   "stats": {
+    "length": {
+     "value": 140.0,
+     "year": null
+    },
+    "basin": {
+     "value": 3630.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 90.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-kvirila.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Jaba1977",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:River%20kvirila%20at%20sachkhere.jpg"
+   }
+  },
+  "liakhvi": {
+   "wiki": {
+    "title": "ლიახვი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9A%E1%83%98%E1%83%90%E1%83%AE%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "ლიახვი, დიდი ლიახვი — მდინარე საქართველოში, კავკასიონის მთავარი წყალგამყოფი ქედის სამხრეთ კალთაზე. სათავე აქვს ყელის ვულკანურ მთიანეთში. წარმოიქმნება მდინარეების ყადლასანისწყლისა და დესკოხირდონის შეერთებით ზღვის დონიდან 2338 მ-ზე. ერთვის მდინარე მტკვარს მარცხნიდან ქალაქ გორთან. სიგრძე მდინარე ყადლასანისწყლის სათავიდან 115 კმ, აუზის ფართობი 2440 კმ²."
+   },
+   "wikidata": "Q174885",
+   "stats": {
+    "elevation": {
+     "value": 589.0,
+     "year": null
+    },
+    "length": {
+     "value": 98.0,
+     "year": null
+    },
+    "basin": {
+     "value": 2440.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-liakhvi.jpg",
+    "width": 960,
+    "height": 639,
+    "author": "NASA",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Gori%20ISS.jpg"
+   }
+  },
+  "ksani": {
+   "wiki": {
+    "title": "ქსანი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A5%E1%83%A1%E1%83%90%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "ქსანი — მდინარე საქართველოში. მიედინება ახალგორის, კასპისა და მცხეთის მუნიციპალიტეტების ტერიტორიებზე. ქსანი მდინარე მტკვრის მარცხენა შენაკადია. სიგრძე 84 კილომეტრი, აუზის ფართობი 885 კმ². სათავე აქვს ყელის ვულკანურ ზეგანზე, ყელის ტბიდან, ზღვის დონიდან 2914 მ სიმაღლეზე, ზემო და შუა დინებაში ვიწრო ხეობა აქვს, მუხრანის ვაკეზე — ფართო. შესართავთან კვეთს სხალტბის სერს და ისევ ვიწრო ხეობას აჩენს."
+   },
+   "wikidata": "Q1789505",
+   "stats": {
+    "length": {
+     "value": 84.0,
+     "year": null
+    },
+    "basin": {
+     "value": 885.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 15.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-ksani.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "user:jaba1977",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:Ravine%20of%20Ksani.jpg"
+   }
+  },
+  "supsa": {
+   "wiki": {
+    "title": "სუფსა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A1%E1%83%A3%E1%83%A4%E1%83%A1%E1%83%90",
+    "lang": "ka",
+    "intro": "სუფსა — მდინარე დასავლეთ საქართველოში, ყველაზე გრძელი და წყალუხვი მდინარე გურიაში. სუფსა ერთადერთი მდინარეა, რომელიც გურიის მხარის სამივე მუნიციპალიტეტის ტერიტორიაზე მიედინება. გურიის ქედით გამოყოფილია მდინარე რიონის ხეობისაგან, ხოლო ნასაკირალის სერით მდინარე ნატანების ხეობისაგან. სუფსის ნაპირზე მდებარეობს დაბა ჩოხატაური."
+   },
+   "wikidata": "Q2862423",
+   "stats": {
+    "length": {
+     "value": 117.0,
+     "year": null
+    },
+    "basin": {
+     "value": 1100.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-supsa.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "The original uploader was M. at Georgian Wikipedia.",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:View%20Chokhatauri.jpg"
+   }
+  },
+  "adjaristskali": {
+   "wiki": {
+    "title": "აჭარისწყალი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%AD%E1%83%90%E1%83%A0%E1%83%98%E1%83%A1%E1%83%AC%E1%83%A7%E1%83%90%E1%83%9A%E1%83%98",
+    "lang": "ka",
+    "intro": "აჭარისწყალი — მდინარე საქართველოში, აჭარის ავტონომიური რესპუბლიკის ტერიტორიაზე, ჭოროხის მარჯვენა შენაკადი. იგი სათავეს იღებს არსიანის ქედზე, მიედინება ვიწრო, ღრმა ხეობაში, შესართავთან ფართოვდება. აჭარისწყლის სიგრძე 90 კმ-ია, მდინარის აუზის ფართობი — 1540 კმ². მდინარე საზრდოობს სხვადასხვა წყაროებით, ძირითადად წვიმის წყლებით. ახასიათებს ადიდება მთელი წლის განმავლობაში."
+   },
+   "wikidata": "Q2053267",
+   "stats": {
+    "elevation": {
+     "value": 36.0,
+     "year": null
+    },
+    "length": {
+     "value": 90.0,
+     "year": null
+    },
+    "basin": {
+     "value": 1540.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-adjaristskali.jpg",
+    "width": 955,
+    "height": 720,
+    "author": "Aleksey Muhranoff",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Ajaris-Tskali%20river%20north%20of%20Shuakhevi.jpg"
+   }
+  },
+  "paravani": {
+   "wiki": {
+    "title": "ფარავანი (მდინარე)",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A4%E1%83%90%E1%83%A0%E1%83%90%E1%83%95%E1%83%90%E1%83%9C%E1%83%98_(%E1%83%9B%E1%83%93%E1%83%98%E1%83%9C%E1%83%90%E1%83%A0%E1%83%94)",
+    "lang": "ka",
+    "intro": "ფარავანი, ახალქალაქისწყალი, ჯავახეთის მტკვარი — მდინარე საქართველოს სამხრეთ მთიანეთში, ნინოწმინდის, ახალქალაქისა და ასპინძის მუნიციპალიტეტებში. იწყება ფარავნის ტბის სამხრეთ ნაპირიდან, ზღვის დონიდან 2073 მეტრზე, ერთვის მდინარე მტკვარს მარჯვნიდან, სოფელ ხერთვისთან. სიგრძე 74 კმ, აუზის ფართობი 2352 კმ². საზრდოობს თოვლის, წვიმისა და მიწისქვეშა წყლით."
+   },
+   "wikidata": "Q12869866",
+   "stats": {
+    "length": {
+     "value": 81.0,
+     "year": null
+    },
+    "basin": {
+     "value": 2352.0,
+     "year": null
+    },
+    "discharge": {
+     "value": 28.9,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/river-paravani.jpg",
+    "width": 540,
+    "height": 720,
+    "author": "jaba1977",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:Riv.%20Faravani.jpg"
+   }
+  }
+ },
+ "lake": {
+  "paravani": {
+   "wiki": {
+    "title": "ფარავანი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A4%E1%83%90%E1%83%A0%E1%83%90%E1%83%95%E1%83%90%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "ფარავანი — ვულკანურ-ტექტონიკური ტბა სამხრეთ საქართველოში, ნინოწმინდის მუნიციპალიტეტში. წარმოადგენს ზედაპირის ფართობით საქართველოს უდიდეს ტბას. გაწოლილია ჯავახეთის ვულკანური მთიანეთის ჩრდილო-აღმოსავლეთ ნაწილში, სამსრისა და ჯავახეთის ქედებს შორის მდებარე ქვაბულში, ზღვის დონიდან 2073 მ სიმაღლეზე. სარკის ფართობი 37,5 კმ², აუზის ფართობი 234 კმ²."
+   },
+   "wikidata": "Q120352",
+   "stats": {
+    "elevation": {
+     "value": 2074.0,
+     "year": null
+    },
+    "area": {
+     "value": 37.5,
+     "year": null
+    },
+    "depth": {
+     "value": 3.3,
+     "year": null
+    },
+    "basin": {
+     "value": 234.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-paravani.jpg",
+    "width": 960,
+    "height": 623,
+    "author": "Paata Vardanashvili (Photograph edited by Vassil)",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:ParavaniLake-1-%20C.jpg"
+   }
+  },
+  "kartsakhi": {
+   "wiki": {
+    "title": "Kartsakhi Lake",
+    "url": "https://en.wikipedia.org/wiki/Kartsakhi_Lake",
+    "lang": "en"
+   },
+   "wikidata": "Q421825",
+   "stats": {
+    "elevation": {
+     "value": 1799.0,
+     "year": null
+    },
+    "area": {
+     "value": 26.3,
+     "year": null
+    },
+    "length": {
+     "value": 8.5,
+     "year": null
+    },
+    "depth": {
+     "value": 1.0,
+     "year": null
+    },
+    "basin": {
+     "value": 158.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-kartsakhi.jpg",
+    "width": 960,
+    "height": 342,
+    "author": "Stratovara",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:%E1%83%99%E1%83%90%E1%83%A0%E1%83%AC%E1%83%90%E1%83%AE%E1%83%98.jpg"
+   }
+  },
+  "tabatskuri": {
+   "wiki": {
+    "title": "ტაბაწყური",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A2%E1%83%90%E1%83%91%E1%83%90%E1%83%AC%E1%83%A7%E1%83%A3%E1%83%A0%E1%83%98",
+    "lang": "ka",
+    "intro": "ტაბაწყური, ტაბისყური — ტბა საქართველოში, ბორჯომისა და ახალქალაქის მუნიციპალიტეტების საზღვარზე. მდებარეობს სამსრის ქედის ჩრდილოეთ ნაწილში, ქცია-ხრამის აუზში, ზღვის დონიდან 1991 მ სიმაღლეზე. სარკის ფართობი 14,2 კმ², წყალშემკრები აუზის ფართობი 83,1 კმ², საშუალო სიღრმე 15,5 მ, მაქსიმალური სიღრმე 40,2 მ, წყლის მოცულობა 221 მლნ. მ³. ტაბაწყური საქართველოში ზედაპირის ფართობით მე-4, ხოლო წყლის მოცულობით უდიდესი ტბაა."
+   },
+   "wikidata": "Q24682277",
+   "stats": {
+    "elevation": {
+     "value": 1991.0,
+     "year": null
+    },
+    "area": {
+     "value": 14.2,
+     "year": null
+    },
+    "length": {
+     "value": 6.5,
+     "year": null
+    },
+    "depth": {
+     "value": 40.2,
+     "year": null
+    },
+    "basin": {
+     "value": 83.1,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-tabatskuri.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "G.N",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Tabatskuri%20lake.jpg"
+   }
+  },
+  "paliastomi": {
+   "wiki": {
+    "title": "პალიასტომი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9E%E1%83%90%E1%83%9A%E1%83%98%E1%83%90%E1%83%A1%E1%83%A2%E1%83%9D%E1%83%9B%E1%83%98",
+    "lang": "ka",
+    "intro": "პალიასტომი — გამდინარე ტბა ოდიშ-გურიის დაბლობზე, ქალაქ ფოთთან. ადმინისტრაციულად მოქცეულია ნაწილობრივ სამეგრელო-ზემო სვანეთის მხარეში , ნაწილობრივ — გურიის მხარეში . ზედაპირის ფართობი 18,2 კმ². აუზის ფართობი 547 კმ², მაქსიმალური სიღრმე 3,2, საშუალო სიღრმე 2,6 მ. წყლის მოცულობა 52 მლნ. მ³. მდებარეობს ზღვის დონიდან — 0.3 მ-ზე დაბლა. საზრდოობს წვიმის წყლითა და შენაკადებით."
+   },
+   "wikidata": "Q1906201",
+   "stats": {
+    "elevation": {
+     "value": 0.0,
+     "year": null
+    },
+    "area": {
+     "value": 17.3,
+     "year": null
+    },
+    "depth": {
+     "value": 2.6,
+     "year": null
+    },
+    "basin": {
+     "value": 547.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-paliastomi.jpg",
+    "width": 550,
+    "height": 285,
+    "author": "http://www.knp777.narod.ru",
+    "license": "CC BY 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Paliastomi.jpg"
+   }
+  },
+  "ritsa": {
+   "wiki": {
+    "title": "რიწა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A0%E1%83%98%E1%83%AC%E1%83%90",
+    "lang": "ka",
+    "intro": "რიწა, დიდი რიწა — ტბა საქართველოში, აფხაზეთის ავტონომიური რესპუბლიკის გუდაუთის მუნიციპალიტეტში. მდებარეობს მდინარე ბზიფის აუზში, ზღვის დონიდან 884 მ სიმაღლეზე. სარკის ფართობი 1,49 კმ², აუზის ფართობი 154 კმ², მოცულობა 94 მლნ. მ³, მაქსიმალური სიღრმე 101 მ. ქვაბული წარმოიქმნა გაგრის ქედის სამხრეთ-აღმოსავლეთ კალთიდან ჩამოქცეული კლდეზვავით, მდინარე ლაშიფსეს დაგუბების შედეგად."
+   },
+   "wikidata": "Q946194",
+   "stats": {
+    "elevation": {
+     "value": 884.0,
+     "year": null
+    },
+    "area": {
+     "value": 1.5,
+     "year": null
+    },
+    "depth": {
+     "value": 116.0,
+     "year": null
+    },
+    "basin": {
+     "value": 154.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-ritsa.jpg",
+    "width": 800,
+    "height": 533,
+    "author": "f-design",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Lake%20rica.jpg"
+   }
+  },
+  "tsalka": {
+   "wiki": {
+    "title": "წალკის წყალსაცავი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AC%E1%83%90%E1%83%9A%E1%83%99%E1%83%98%E1%83%A1_%E1%83%AC%E1%83%A7%E1%83%90%E1%83%9A%E1%83%A1%E1%83%90%E1%83%AA%E1%83%90%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "წალკის წყალსაცავი — სარკის ფართობით საქართველოს უდიდესი წყალსაცავი, წალკის მუნიციპალიტეტში, ზღვის დონიდან 1506 მ სიმაღლეზე, მდინარე ხრამის ხეობაში. სარკის ფართობი 33,7 კმ², წყალშემკრები აუზის ფართობი 1060 კმ². წყლის მოცულობა 312 მლნ. მ³. მაქსიმალური სიღრმე 25 მ, საშუალო სიღრმე 9,3 მ. წაგრძელებულია დასავლეთიდან აღმოსავლეთისაკენ."
+   },
+   "wikidata": "Q3495441",
+   "stats": {
+    "elevation": {
+     "value": 1506.0,
+     "year": null
+    },
+    "area": {
+     "value": 33.7,
+     "year": null
+    },
+    "depth": {
+     "value": 25.0,
+     "year": null
+    },
+    "basin": {
+     "value": 1060.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-tsalka.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Jaba1977",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Tsalka%20reservoir.jpg"
+   }
+  },
+  "zhinvali": {
+   "wiki": {
+    "title": "ჟინვალის წყალსაცავი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9F%E1%83%98%E1%83%9C%E1%83%95%E1%83%90%E1%83%9A%E1%83%98%E1%83%A1_%E1%83%AC%E1%83%A7%E1%83%90%E1%83%9A%E1%83%A1%E1%83%90%E1%83%AA%E1%83%90%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "ჟინვალის წყალსაცავი — კომპლექსური დანიშნულების წყალსაცავი აღმოსავლეთ საქართველოში, დუშეთის მუნიციპალიტეტში, დაბა ჟინვალის ჩრდილოეთით, თბილისიდან 70 კმ-ში. მდებარეობს მდინარე არაგვის შუა წელში. მოქცეულია ალევის, გუდამაყრისა და ქართლის ქედებს შორის. ფართობი 11,5 კმ². წყლის მოცულობა 520 მლნ. მ³, სასარგებლო მოცულობა 370 მლნ. მ³. მაქსიმალური სიღრმე 75 მ."
+   },
+   "wikidata": "Q24687340",
+   "stats": {
+    "elevation": {
+     "value": 810.0,
+     "year": null
+    },
+    "area": {
+     "value": 11.5,
+     "year": null
+    },
+    "depth": {
+     "value": 75.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-zhinvali.jpg",
+    "width": 960,
+    "height": 540,
+    "author": "Misharim",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Zhinvalis%20Tsqalsats%27avi.jpg"
+   }
+  },
+  "enguri": {
+   "wiki": {
+    "title": "ჯვრის წყალსაცავი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AF%E1%83%95%E1%83%A0%E1%83%98%E1%83%A1_%E1%83%AC%E1%83%A7%E1%83%90%E1%83%9A%E1%83%A1%E1%83%90%E1%83%AA%E1%83%90%E1%83%95%E1%83%98",
+    "lang": "ka",
+    "intro": "ჯვრის წყალსაცავი — წყალსაცავი დასავლეთ საქართველოში, მდებარეობს წალენჯიხის მუნიციპალიტეტში, ქალაქ ჯვართან. ზედაპირის ფართობი 13,5 კმ². წყლის მოცულობა 1100 მლნ. მ³. სიგრძე 30 კმ. შეიქმნა მდინარე ენგურის ჩამონადენის რეგულირებისა და ენერგეტიკული მიზნებისათვის. ჯვრის წყალსაცავი საქართველოს ყველაზე ღრმა წყალსაცავია . შედის გალი-ჯვრის წყალსაცავების კასკადის შემადგენლობაში."
+   },
+   "wikidata": "Q24687357",
+   "stats": {
+    "area": {
+     "value": 13.5,
+     "year": null
+    },
+    "length": {
+     "value": 30.0,
+     "year": null
+    },
+    "depth": {
+     "value": 226.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-enguri.jpg",
+    "width": 960,
+    "height": 540,
+    "author": "P1rvela at Georgian Wikipedia",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Jvari%20Lake.jpg"
+   }
+  },
+  "tbilisi-sea": {
+   "wiki": {
+    "title": "თბილისის ზღვა",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%91%E1%83%98%E1%83%9A%E1%83%98%E1%83%A1%E1%83%98%E1%83%A1_%E1%83%96%E1%83%A6%E1%83%95%E1%83%90",
+    "lang": "ka",
+    "intro": "„თბილისის ზღვა“, თბილისის წყალსაცავი, სამგორის წყალსაცავი — წყალსაცავი აღმოსავლეთ საქართველოში, ივრის ზეგანზე, ქალაქ თბილისის ჩრდილო-აღმოსავლეთით."
+   },
+   "wikidata": "Q1899389",
+   "stats": {
+    "elevation": {
+     "value": 540.0,
+     "year": 2022
+    },
+    "area": {
+     "value": 11.6,
+     "year": null
+    },
+    "length": {
+     "value": 8.75,
+     "year": null
+    },
+    "depth": {
+     "value": 45.0,
+     "year": null
+    },
+    "basin": {
+     "value": 38.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/lake-tbilisi-sea.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Alexkom000",
+    "license": "CC BY 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:2023-12-26%20Tbilisi%20Sea%20seen%20from%20The%20Chronicle%20of%20Georgia%201.jpg"
+   }
+  }
+ },
+ "landform": {
+  "greater-caucasus": {
+   "wiki": {
+    "title": "კავკასიონი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%99%E1%83%90%E1%83%95%E1%83%99%E1%83%90%E1%83%A1%E1%83%98%E1%83%9D%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "კავკასიონი — ვრცელი მთათა სისტემა კავკასიაში, ევროპისა და აზიის მიჯნაზე. განფენილია რუსეთის, საქართველოსა და აზერბაიჯანის ტერიტორიაზე."
+   },
+   "wikidata": "Q5477",
+   "stats": {
+    "elevation": {
+     "value": 5642.0,
+     "year": null
+    },
+    "area": {
+     "value": 477165.0,
+     "year": null
+    },
+    "length": {
+     "value": 1200.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-greater-caucasus.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "User:პაატა შ",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Kavkasioni.JPG"
+   }
+  },
+  "lesser-caucasus": {
+   "wiki": {
+    "title": "მცირე კავკასიონი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%AA%E1%83%98%E1%83%A0%E1%83%94_%E1%83%99%E1%83%90%E1%83%95%E1%83%99%E1%83%90%E1%83%A1%E1%83%98%E1%83%9D%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "მცირე კავკასიონი — მთათა სისტემა სამხრეთ კავკასიაში, გადაჭიმულია კავკასიონის თითქმის პარალელურად და გამოყოფილია მისგან ამიერკავკასიის ბარით . ჩრდილოეთ და ჩრდილო-აღმოსავლეთიდან შემოფარგლავს სამხრეთ კავკასიის ვულკანურ მთიანეთს. სიგრძე დაახლოებით 600 კმ-მდე. სიმაღლე 3724 მ აღწევს . მცირე კავკასიონის სისტემაში შედის მესხეთის ქედი, თრიალეთის ქედი, ლოქის ქედი, ბაზუმის ქედი, შაჰდაღის ქედი, მუროვდაღის ქედი, ყარაბაღის ქედი."
+   },
+   "wikidata": "Q216593",
+   "stats": {
+    "elevation": {
+     "value": 4090.0,
+     "year": null
+    },
+    "length": {
+     "value": 600.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-lesser-caucasus.jpg",
+    "width": 960,
+    "height": 600,
+    "author": "Bouarf",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Arakatz001.jpg"
+   }
+  },
+  "likhi": {
+   "wiki": {
+    "title": "ლიხის ქედი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9A%E1%83%98%E1%83%AE%E1%83%98%E1%83%A1_%E1%83%A5%E1%83%94%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "ლიხის ქედი, სურამის ქედი — ქედი საქართველოში, შიდა ქართლის მხარესა და იმერეთის მხარეს შორის ადმინისტრაციულ საზღვარზე. მდებარეობს კავკასიონისა და მცირე კავკასიონის მთათა სისტემების დამაკავშირებელ სუბმერიდიანულ ქედზე, რომელიც საქართველოს ყოფს აღმოსავლეთ და დასავლეთ ნაწილებად . ლიხის ქედი კასპიისა და შავი ზღვების წყალგამყოფია."
+   },
+   "wikidata": "Q1779495",
+   "stats": {
+    "elevation": {
+     "value": 2470.0,
+     "year": null
+    },
+    "length": {
+     "value": 102.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-likhi.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Kober",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Likhi%20range%20%281%29.jpg"
+   }
+  },
+  "trialeti": {
+   "wiki": {
+    "title": "თრიალეთის ქედი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%97%E1%83%A0%E1%83%98%E1%83%90%E1%83%9A%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%A5%E1%83%94%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "თრიალეთის ქედი — ქედი საქართველოში, მცირე კავკასიონის დასავლეთ ნაწილში. გაწოლილია დასავლეთით — ახალციხის და აღმოსავლეთით — თბილისის ქვაბულებს შორის. იწყება საბადურის და მთავრდება თბილისთან, თელეთის ქედით. მდებარეობს მტკვრის მარჯვენა ნაპირზე. სიგრძე დაახლოებით 150 კმ, მაქსიმალური სიგანე 30 კმ."
+   },
+   "wikidata": "Q549560",
+   "stats": {
+    "length": {
+     "value": 150.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-trialeti.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Jaba1977",
+    "license": "Attribution",
+    "page": "https://commons.wikimedia.org/wiki/File:Trialeti%20Range%20at%20khashuri%20district.jpg"
+   }
+  },
+  "meskheti": {
+   "wiki": {
+    "title": "მესხეთის ქედი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%9B%E1%83%94%E1%83%A1%E1%83%AE%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%A5%E1%83%94%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "მესხეთის ქედი, აჭარა-იმერეთის ქედი, ახალციხის ქედი — მცირე კავკასიონის შემადგენელი ქედი საქართველოს უკიდურეს დასავლეთ ნაწილში, აჭარის ავტონომიურ რესპუბლიკაში, სამცხე-ჯავახეთისა და იმერეთის მხარეებში. წყალგამყოფია, ერთი მხრივ, მდინარეების კინტრიშის, ნატანების, სუფსისა და რიონის მარცხენა შენაკადებისა, მეორე მხრივ აჭარისწყლის, ქვაბლიანისა და მტკვრის მარცხენა შენაკადთა აუზებისა."
+   },
+   "wikidata": "Q2503011",
+   "stats": {
+    "elevation": {
+     "value": 2850.0,
+     "year": null
+    },
+    "length": {
+     "value": 140.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-meskheti.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "Karel61",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Mountain%20road%20from%20Zekari%20Pass%20to%20Abastumani%20%28southern%20slope%29%202014.jpg"
+   }
+  },
+  "gombori": {
+   "wiki": {
+    "title": "გომბორის ქედი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%92%E1%83%9D%E1%83%9B%E1%83%91%E1%83%9D%E1%83%A0%E1%83%98%E1%83%A1_%E1%83%A5%E1%83%94%E1%83%93%E1%83%98",
+    "lang": "ka",
+    "intro": "გომბორის ქედი, ცივ-გომბორის ქედი, ჰერეთის მთა — ქედი საქართველოში, კახეთის მხარეში. კავკასიონის მთათა სისტემასთან დაკავშირებული ქედი; შახვეტილას მთასთან ებმის მთავარი წყალგამყოფი ქედის სამხრეთ ტოტს — კახეთის ქედს. მიმართულია ჩრდილოეთიდან სამხრეთ-აღმოსავლეთისაკენ. სიგრძე 107 კმ. უმაღლესი მწვერვალი ცივი . აგებულია ძირითადად ცარცული და მესამეული ასაკის დანალექი წყებებით."
+   },
+   "wikidata": "Q7849797",
+   "stats": {
+    "elevation": {
+     "value": 1991.0,
+     "year": null
+    },
+    "length": {
+     "value": 107.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-gombori.jpg",
+    "width": 960,
+    "height": 720,
+    "author": "The original uploader was Nêçîrvan at Georgian Wikipedia.",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Gombori%20in%20khirsa.JPG"
+   }
+  },
+  "kolkheti": {
+   "wiki": {
+    "title": "კოლხეთის დაბლობი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%99%E1%83%9D%E1%83%9A%E1%83%AE%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%93%E1%83%90%E1%83%91%E1%83%9A%E1%83%9D%E1%83%91%E1%83%98",
+    "lang": "ka",
+    "intro": "კოლხეთის დაბლობი — დაბლობი საქართველოში. წარმოადგენს კოლხეთის ბარის დაბალ ნაწილს; მოიცავს აკუმულაციურ ვაკე-დაბლობსა და მიმდებარე სტრუქტურულ-ეროზიულ გორაკ-ბორცვებს ზღვის დონიდან 200 მ-მდე. პირველი აგებულია პლეისტოცენური და ჰოლოცენური თიხნარებით, ქვიშებითა და რიყნარით, მეორე — დისლოცირებული კაინოზოური ასაკის ნალექებით. კოლხეთის დაბლობი ოდნავ დახრილია შავი ზღვისაკენ და გადაკვეთილია მცირე სიღრმის ხეობებით."
+   },
+   "wikidata": "Q2997644",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/landform-kolkheti.jpg",
+    "width": 960,
+    "height": 540,
+    "author": "Paata vardanashvili",
+    "license": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Kolkheti.jpg"
+   }
+  },
+  "shida-kartli-plain": {
+   "wiki": {
+    "title": "შიდა ქართლის ვაკე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A8%E1%83%98%E1%83%93%E1%83%90_%E1%83%A5%E1%83%90%E1%83%A0%E1%83%97%E1%83%9A%E1%83%98%E1%83%A1_%E1%83%95%E1%83%90%E1%83%99%E1%83%94",
+    "lang": "ka",
+    "intro": "შიდა ქართლის ვაკე — სამხრეთ კავკასიის მთათაშორისი ბარის შუა ნაწილი. შემოსაზღვრულია კავკასიონის, ლიხის, თრიალეთისა და ქართლის ქედებით. მოიცავს ტირიფონ-მუხრანის ვაკესა და შუა მტკვრის ხეობას , რომლებიც ერთმანეთისაგან გამოყოფილია კვერნაქებით. ტირიფონ-მუხრანის ვაკეს უკავია ნეოგენური წყებების სინკლინი და წარმოქმნილია კავკასიონის მდინარეთა აკუმულაციური მოქმედებით. აბსოლუტური სიმაღლე 500-800 მეტრი."
+   },
+   "wikidata": "Q16377890",
+   "stats": {}
+  },
+  "kvemo-kartli-plain": {
+   "wiki": {
+    "title": "ქვემო ქართლის ვაკე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%A5%E1%83%95%E1%83%94%E1%83%9B%E1%83%9D_%E1%83%A5%E1%83%90%E1%83%A0%E1%83%97%E1%83%9A%E1%83%98%E1%83%A1_%E1%83%95%E1%83%90%E1%83%99%E1%83%94",
+    "lang": "ka",
+    "intro": "ქვემო ქართლის ვაკე — ალუვიური ვაკე მდინარე მტკვრის ორივე სანაპიროზე. მტკვარ-არაქსის ვრცელი დაბლობის უკიდურესი ჩრდილოეთ-დასავლეთ ნაწილი. შემოზღუდულია თრიალეთისა და ლოქის ქედების, შუა ხრამის მთათა ჯგუფისა და ივრის ზეგნის კალთებით. სიგრძე მტკვრის გასწვრივ 40 კმ. მტკვარი ყოფს ორ ნაწილად — მარნეულისა და გარდაბნის ვაკეებად. ვრცელდება ზღვის დონიდან 260-იდან 500-600 მ-მდე ."
+   },
+   "wikidata": "Q778864",
+   "stats": {}
+  },
+  "alazani-valley": {
+   "wiki": {
+    "title": "ალაზნის ვაკე",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%90%E1%83%9A%E1%83%90%E1%83%96%E1%83%9C%E1%83%98%E1%83%A1_%E1%83%95%E1%83%90%E1%83%99%E1%83%94",
+    "lang": "ka",
+    "intro": "ალაზნის ვაკე, ალაზნის ველი — მთათაშუა აკუმულაციური ვაკე აღმოსავლეთ საქართველოში, კახეთის კავკასიონსა, გომბორის ქედსა და ივრის ზეგანს შორის. ზღვის დონიდან 200–470 მ. აგებულია ახალგაზრდა მეოთხეული ნალექებით. ვაკე დახრილია სამხრეთ-აღმოსავლეთისაკენ. მას მთელ სიგრძეზე კვეთს მდინარე ალაზანი. ალაზნის ვაკის სიგრძეა 160 კმ, მაქსიმალური სიგანე 35–37 კმ, მინიმალური — 5 კმ."
+   },
+   "wikidata": "Q1971152",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/landform-alazani-valley.jpg",
+    "width": 900,
+    "height": 600,
+    "author": "Andrei Kalamkarov (www.andreikalamkarov.com)",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Alazani_Valley_%282%29.jpg"
+   }
+  },
+  "iori-plateau": {
+   "wiki": {
+    "title": "ივრის ზეგანი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%98%E1%83%95%E1%83%A0%E1%83%98%E1%83%A1_%E1%83%96%E1%83%94%E1%83%92%E1%83%90%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "ივრის ზეგანი — ზეგანი აღმოსავლეთ საქართველოში, მტკვარ-ალაზნის შუამდინარეთში. გადაჭიმულია ჩრდილო-დასავლეთიდან სამხრეთ-აღმოსავლეთისაკენ 170 კმ-ზე, მაქსიმალური სიგანე 50-60 კმ. იგი შეადგენს აღმოსავლეთ ამიერკავკასიის იმ ეგრეთ წოდებული „მესამეული ზეგნის“ ნაწილს, რომლის მნიშვნელოვანი სხვა ნაწილები აზერბაიჯანში შედის."
+   },
+   "wikidata": "Q16370466",
+   "stats": {},
+   "image": {
+    "src": "/images/geo/landform-iori-plateau.jpg",
+    "width": 960,
+    "height": 640,
+    "author": "Kristen Jarvis Johnson",
+    "license": "CC BY-SA 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Georgia%20from%20Davit%20Garedja%20%282%29.jpg"
+   }
+  },
+  "javakheti": {
+   "wiki": {
+    "title": "ჯავახეთის ზეგანი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%AF%E1%83%90%E1%83%95%E1%83%90%E1%83%AE%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%96%E1%83%94%E1%83%92%E1%83%90%E1%83%9C%E1%83%98",
+    "lang": "ka",
+    "intro": "ჯავახეთის ზეგანი — ვულკანური ზეგანი სამხრეთ საქართველოში. ჯავახეთის ვულკანური ზეგანი ძირითადად აგებულია ეფუზიური ქანებით. მის ზედაპირზე ფართოდაა გავრცელებული ზედა პლიოცენური დოლერიტული განფენები, რომლის საგებშიც განლაგებულია ნეოგენური ასაკის გოდერძის ვულკანოგენური წყება. ალაგ-ალაგ გავრცელებულია ტბიური ნალექებიც."
+   },
+   "wikidata": "Q2639900",
+   "stats": {
+    "elevation": {
+     "value": 1800.0,
+     "year": null
+    },
+    "length": {
+     "value": 65.0,
+     "year": null
+    }
+   },
+   "image": {
+    "src": "/images/geo/landform-javakheti.jpg",
+    "width": 640,
+    "height": 394,
+    "author": "The original uploader was Serafita at Georgian Wikipedia.",
+    "license": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Javakhetian%20plateau%20%282%29.jpg"
+   }
+  },
+  "imereti-upland": {
+   "wiki": {
+    "title": "იმერეთის მაღლობი",
+    "url": "https://ka.wikipedia.org/wiki/%E1%83%98%E1%83%9B%E1%83%94%E1%83%A0%E1%83%94%E1%83%97%E1%83%98%E1%83%A1_%E1%83%9B%E1%83%90%E1%83%A6%E1%83%9A%E1%83%9D%E1%83%91%E1%83%98",
+    "lang": "ka",
+    "intro": "იმერეთის მაღლობი, ზემო იმერეთის მაღლობი — საქართველოს მთათაშორისო ბარის ამაღლებული ნაწილი ზესტაფონის, ხარაგაულის, საჩხერის, ჭიათურის, ხაშურის ტერიტორიებზე და ყოფილ ზნაურის რაიონზე."
+   },
+   "wikidata": "Q12865302",
+   "stats": {}
+  }
+ }
+}

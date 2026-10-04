@@ -57,6 +57,25 @@ interface Meta {
   regions: string[];
 }
 
+/** Real lake outlines and river courses from OpenStreetMap (scripts/build-georgia-water.py). */
+interface Water {
+  lakes: Record<string, number[][][]>;
+  rivers: Record<string, number[][][]>;
+}
+
+/** Drawn width of each named river (world units): the big rivers a little wider. */
+const RIVER_WIDTH: Record<string, number> = { mtkvari: 0.0046, rioni: 0.0044, alazani: 0.004, enguri: 0.004, iori: 0.0036, chorokhi: 0.0042, khrami: 0.0034, tergi: 0.0034 };
+
+const inRing = (ring: number[][], x: number, y: number) => {
+  let c = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[j];
+    if (y1 > y !== y2 > y && x < ((x2 - x1) * (y - y1)) / (y2 - y1) + x1) c = !c;
+  }
+  return c;
+};
+
 interface Lines {
   borders: Record<string, number[][][]>;
   named: Record<string, number[][]>;
@@ -65,9 +84,9 @@ interface Lines {
 
 const BASE = "/geo";
 /** Bump when the files in public/geo are rebuilt, so browsers drop their cached copies. */
-const GEO_VERSION = "2026-10-03";
+const GEO_VERSION = "2026-10-04";
 const BG = "#eef1ef";
-const LAYER_INDEX: Record<MapLayer, number> = { physical: 0, political: 1, zones: 2, climate: 3 };
+const LAYER_INDEX: Record<MapLayer, number> = { physical: 0, political: 1, zones: 2, climate: 3, satellite: 4 };
 
 /** Elevation tint: lowland green → foothills → brown mountains → grey rock → snow. */
 const STOPS: [number, string][] = [
@@ -120,6 +139,7 @@ uniform sampler2D uHeight;
 uniform sampler2D uRegion;
 uniform sampler2D uFactor;
 uniform sampler2D uRamp;
+uniform sampler2D uSat;
 uniform vec2 uTexel;
 uniform vec2 uCellM;
 uniform vec2 uLon;
@@ -161,7 +181,11 @@ const TERRAIN_COLOR = /* glsl */ `
   float plateau = jav * band(h, 1450.0) * (1.0 - band(h, 2450.0));
 
   vec3 col;
-  if (uLayer < 0.5) {
+  if (uLayer > 3.5) {
+    // Satellite picture: it already holds the real light and shade, so our own shading is softened.
+    col = pow(texture2D(uSat, vTUv).rgb, vec3(0.88)) * 1.6;
+    terrainN = normalize(mix(terrainN, vec3(0.0, 1.0, 0.0), 0.5));
+  } else if (uLayer < 0.5) {
     col = texture2D(uRamp, vec2((h - ${RAMP_MIN.toFixed(1)}) / ${(RAMP_MAX - RAMP_MIN).toFixed(1)}, 0.5)).rgb;
     if (inside) {
       col = mix(col, vec3(0.50, 0.46, 0.43), smoothstep(0.45, 1.0, tanSlope) * band(h, 1300.0) * 0.8);
@@ -190,7 +214,12 @@ const TERRAIN_COLOR = /* glsl */ `
   }
   if (!inside) {
     // Neighbouring countries stay pale, so Georgia stands out; the sea floor is hidden by the water.
-    col = h > 0.0 ? mix(col, vec3(0.89, 0.9, 0.89), uLayer < 0.5 ? 0.72 : 0.9) : vec3(0.85, 0.82, 0.7);
+    if (uLayer > 3.5) {
+      float g = dot(col, vec3(0.3, 0.59, 0.11));
+      col = mix(col, vec3(g) * 1.1 + 0.07, 0.6);
+    } else {
+      col = h > 0.0 ? mix(col, vec3(0.89, 0.9, 0.89), uLayer < 0.5 ? 0.72 : 0.9) : vec3(0.85, 0.82, 0.7);
+    }
   }
   col *= vAO;
   float idx = reg - 1.0;
@@ -222,11 +251,13 @@ export class GeorgiaScene {
     uSelected: { value: -1 },
     uLayer: { value: 0 },
     uSelRiver: { value: -1 },
+    /** Lines get thinner as the camera comes closer, so they stay about the same width on screen. */
+    uZoom: { value: 1 },
   };
   private pins = new Map<string, THREE.Group>();
-  private lakes = new Map<string, { mesh: THREE.Mesh; lon: number; lat: number; r: number }>();
+  private lakes = new Map<string, { mesh: THREE.Mesh; lon: number; lat: number; r: number; rings: number[][][] }>();
   private riverIds: string[] = [];
-  private riverPaths = new Map<string, number[][]>();
+  private riverParts = new Map<string, number[][][]>();
   private riverGroup = new THREE.Group();
   private selectedBorder: THREE.Group | null = null;
   private frame = 0;
@@ -240,6 +271,8 @@ export class GeorgiaScene {
   private selectedPin: string | null = null;
   private overlays: Overlays = { rivers: true, lakes: true, cities: true, peaks: true };
   private textures: THREE.Texture[] = [];
+  private satellite: THREE.Texture | null = null;
+  private water: Water = { lakes: {}, rivers: {} };
   /** Peaks moved onto the highest point near their listed coordinates. */
   private snappedPeaks = new Map<string, { lon: number; lat: number }>();
   /** Called every frame with screen positions, so React can place labels. */
@@ -358,11 +391,21 @@ export class GeorgiaScene {
   // ---- Loading ------------------------------------------------------------------------------------
 
   private async load() {
-    const [meta, buf, lines] = await Promise.all([
+    const satellite = new THREE.TextureLoader().loadAsync(`${BASE}/georgia-satellite.jpg?v=${GEO_VERSION}`);
+    const [meta, buf, lines, water, sat] = await Promise.all([
       fetch(`${BASE}/georgia-terrain.json?v=${GEO_VERSION}`).then((r) => r.json() as Promise<Meta>),
       fetch(`${BASE}/georgia-terrain.bin.gz?v=${GEO_VERSION}`).then(async (r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
       fetch(`${BASE}/georgia-lines.json?v=${GEO_VERSION}`).then((r) => r.json() as Promise<Lines>),
+      fetch(`${BASE}/georgia-water.json?v=${GEO_VERSION}`).then((r) => r.json() as Promise<Water>),
+      satellite,
     ]);
+    sat.colorSpace = THREE.SRGBColorSpace;
+    sat.flipY = false;
+    sat.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    sat.needsUpdate = true;
+    this.satellite = sat;
+    this.textures.push(sat);
+    this.water = water;
     if (this.disposed) return;
     this.meta = meta;
     const [DW, DH] = meta.detail;
@@ -405,7 +448,7 @@ export class GeorgiaScene {
     this.buildTerrain(detail);
     this.buildSea();
     this.buildBorders(lines.borders);
-    this.buildRivers(lines.named, lines.rivers);
+    this.buildRivers(lines.named, lines.rivers, water.rivers);
     this.ready = true;
     this.applyOverlays();
     this.intro();
@@ -492,6 +535,7 @@ export class GeorgiaScene {
         uRegion: { value: regionTex },
         uFactor: { value: factorTex },
         uRamp: { value: ramp },
+        uSat: { value: this.satellite },
         uTexel: { value: new THREE.Vector2(1 / DW, 1 / DH) },
         uCellM: { value: cellM },
         uLon: { value: new THREE.Vector2(l0, l1) },
@@ -650,18 +694,18 @@ export class GeorgiaScene {
   }
 
   /** Rivers with water visibly flowing downstream; the selected named river widens and brightens. */
-  private buildRivers(named: Record<string, number[][]>, minor: number[][][]) {
+  private buildRivers(named: Record<string, number[][]>, minor: number[][][], real: Record<string, number[][][]>) {
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uTime: this.uniforms.uTime, uSel: this.uniforms.uSelRiver },
+      uniforms: { uTime: this.uniforms.uTime, uSel: this.uniforms.uSelRiver, uZoom: this.uniforms.uZoom },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-      vertexShader: `attribute vec3 aSide; attribute float aRiver; uniform float uSel; varying vec2 vUv; varying float vSel; varying float vMinor;
+      vertexShader: `attribute vec3 aSide; attribute float aRiver; uniform float uSel; uniform float uZoom; varying vec2 vUv; varying float vSel; varying float vMinor;
         void main(){
           vUv = uv;
           vSel = (aRiver > -0.5 && abs(aRiver - uSel) < 0.5) ? 1.0 : 0.0;
           vMinor = aRiver < -0.5 ? 1.0 : 0.0;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position + aSide * (1.0 + vSel * 1.6), 1.0);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position + aSide * (1.0 + vSel * 1.6) * uZoom, 1.0);
         }`,
       fragmentShader: `uniform float uTime; uniform float uSel; varying vec2 vUv; varying float vSel; varying float vMinor;
         void main(){
@@ -676,9 +720,12 @@ export class GeorgiaScene {
     const geos: THREE.BufferGeometry[] = [];
     this.riverIds = Object.keys(named);
     this.riverIds.forEach((id, n) => {
-      const parts = this.clip(named[id]);
-      this.riverPaths.set(id, parts.flat());
-      for (const line of parts) geos.push(this.ribbon(line, (i) => Math.min(0.0062, 0.0024 + 0.0012 * Math.log2(Math.max(1, line[i][2] / 700))), 0.0026, n));
+      // The real course from OpenStreetMap; the one traced from the terrain where OSM has none.
+      const osm = real[id]?.length ? real[id] : null;
+      const parts = osm ? osm.flatMap((l) => this.clip(l)) : this.clip(named[id]);
+      this.riverParts.set(id, parts);
+      const w = RIVER_WIDTH[id] ?? 0.003;
+      for (const line of parts) geos.push(this.ribbon(line, () => w, 0.0026, n));
     });
     for (const line of minor) for (const part of this.clip(line)) geos.push(this.ribbon(part, () => 0.0015, 0.0024));
     const mesh = new THREE.Mesh(mergeGeometries(geos), mat);
@@ -688,8 +735,9 @@ export class GeorgiaScene {
 
   /** A river's middle point (for its label) and the area it covers (for the camera). */
   riverInfo(id: string) {
-    const pts = this.riverPaths.get(id);
-    if (!pts?.length) return null;
+    const parts = this.riverParts.get(id);
+    if (!parts?.length) return null;
+    const pts = parts.flat();
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [x, y] of pts) {
       minX = Math.min(minX, x);
@@ -697,7 +745,8 @@ export class GeorgiaScene {
       minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
     }
-    const mid = pts[Math.floor(pts.length * 0.45)];
+    const longest = parts.reduce((a, b) => (b.length > a.length ? b : a));
+    const mid = longest[Math.floor(longest.length * 0.5)];
     return {
       label: { lon: mid[0], lat: mid[1] },
       focus: { lon: (minX + maxX) / 2, lat: (minY + maxY) / 2, span: Math.max(0.6, (maxX - minX) * K * 1.15), depth: Math.max(0.5, (maxY - minY) * 1.2) },
@@ -711,16 +760,40 @@ export class GeorgiaScene {
       this.pendingLakes = lakes;
       return;
     }
-    const mat = new THREE.MeshStandardMaterial({ color: "#3d86c2", roughness: 0.15, metalness: 0.05, polygonOffset: true, polygonOffsetFactor: -2 });
+    const mat = new THREE.MeshStandardMaterial({
+      color: "#2a6ea6",
+      roughness: 0.35,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
     for (const l of lakes) {
-      // Area-true circle: world units are degrees of latitude (111 km).
-      const r = Math.sqrt(l.area / Math.PI) / 111;
-      const mesh = new THREE.Mesh(new THREE.CircleGeometry(Math.max(r, 0.006), 40), mat);
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.position.copy(this.ground(l.lon, l.lat, 0.0018));
+      const rings = this.water.lakes[l.id] ?? [];
+      let geometry: THREE.BufferGeometry;
+      let lift: number;
+      if (rings.length) {
+        // The real shoreline, laid flat at the water level (the lower part of the shore's heights).
+        const shapes = rings.map((ring) => new THREE.Shape(ring.map(([lon, lat]) => new THREE.Vector2(...this.toXZ(lon, lat)))));
+        geometry = new THREE.ShapeGeometry(shapes, 4).rotateX(Math.PI / 2);
+        const hs = rings.flat().map(([lon, lat]) => this.heightAt(lon, lat)).sort((x, y) => x - y);
+        lift = hs[Math.floor(hs.length * 0.3)] * M + 0.0016;
+      } else {
+        const r = Math.sqrt(l.area / Math.PI) / 111;
+        const [x, z] = this.toXZ(l.lon, l.lat);
+        geometry = new THREE.CircleGeometry(Math.max(r, 0.006), 40).rotateX(-Math.PI / 2).translate(x, 0, z);
+        lift = this.heightAt(l.lon, l.lat) * M + 0.0018;
+      }
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.position.y = lift;
       mesh.renderOrder = 1;
       this.scene.add(mesh);
-      this.lakes.set(l.id, { mesh, lon: l.lon, lat: l.lat, r });
+      // Centre and size for picking and labels.
+      geometry.computeBoundingSphere();
+      const c = geometry.boundingSphere!.center;
+      mesh.userData.centre = new THREE.Vector3(c.x, lift, c.z);
+      this.lakes.set(l.id, { mesh, lon: l.lon, lat: l.lat, r: geometry.boundingSphere!.radius, rings });
     }
     this.applyOverlays();
   }
@@ -787,8 +860,9 @@ export class GeorgiaScene {
   setLayer(layer: MapLayer) {
     this.uniforms.uLayer.value = LAYER_INDEX[layer];
     // On coloured layers the white borders would vanish: draw them darker.
-    this.borderMat.uniforms.uColor.value.set(layer === "physical" ? "#ffffff" : "#33413e");
-    this.borderMat.uniforms.uOpacity.value = layer === "physical" ? 0.75 : 0.55;
+    const light = layer === "physical" || layer === "satellite";
+    this.borderMat.uniforms.uColor.value.set(light ? "#ffffff" : "#33413e");
+    this.borderMat.uniforms.uOpacity.value = light ? 0.7 : 0.55;
   }
 
   setOverlays(o: Overlays) {
@@ -908,24 +982,29 @@ export class GeorgiaScene {
       }
     }
     if (best) return best;
-    if (this.overlays.lakes)
+    if (this.overlays.lakes) {
+      // A tap inside a lake's real outline selects it; small lakes also answer to a tap near them.
+      const hit = this.pickGround(clientX, clientY);
+      for (const [id, l] of this.lakes) if (hit && l.rings.some((r) => inRing(r, hit.lon, hit.lat))) return { kind: "lake", id };
       for (const [id, l] of this.lakes) {
-        const c = this.screen(v.copy(l.mesh.position), rect);
-        const e = this.screen(v.copy(l.mesh.position).add(new THREE.Vector3(l.r, 0, 0)), rect);
+        const c = this.screen(v.copy(l.mesh.userData.centre), rect);
+        const e = this.screen(v.copy(l.mesh.userData.centre).add(new THREE.Vector3(l.r, 0, 0)), rect);
         const d = Math.hypot(c.x - clientX, c.y - clientY);
-        if (c.z < 1 && d < Math.max(14, Math.hypot(e.x - c.x, e.y - c.y))) return { kind: "lake", id };
+        if (c.z < 1 && d < 14 + Math.hypot(e.x - c.x, e.y - c.y) * 0.3) return { kind: "lake", id };
       }
+    }
     if (this.overlays.rivers) {
       let rd = 9;
-      for (const [id, pts] of this.riverPaths)
-        for (let i = 0; i < pts.length; i += 2) {
+      for (const [id, parts] of this.riverParts)
+        for (const pts of parts)
+          for (let i = 0; i < pts.length; i += 2) {
           const s = this.screen(this.ground(pts[i][0], pts[i][1]), rect);
           const d = Math.hypot(s.x - clientX, s.y - clientY);
           if (s.z < 1 && d < rd) {
-            rd = d;
-            best = { kind: "river", id };
+              rd = d;
+              best = { kind: "river", id };
+            }
           }
-        }
     }
     return best;
   }
@@ -1011,6 +1090,8 @@ export class GeorgiaScene {
     }
     // Markers shrink as the camera comes closer, so they never cover the valleys; the selected one bobs.
     const zoom = Math.min(1, Math.max(0.3, this.camera.position.distanceTo(this.controls.target) / 4.5));
+    this.uniforms.uZoom.value = Math.min(1, Math.max(0.18, this.camera.position.distanceTo(this.controls.target) / 4.5));
+    this.borderMat.uniforms.uWide.value = this.uniforms.uZoom.value;
     for (const [key, g] of this.pins) {
       const sel = key === this.selectedPin;
       g.position.y = g.userData.baseY + (sel && !this.reduceMotion ? (0.012 + 0.012 * Math.sin(t * 4)) * zoom : 0);
