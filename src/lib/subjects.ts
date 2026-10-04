@@ -71,7 +71,14 @@ export const SUBJECTS: Subject[] = [
         grades: "X–XII",
         href: "/biology/dna",
       },
-      { slug: "cell", name: "უჯრედი", description: "ორგანოიდები, მემბრანა, უჯრედის გაყოფა — მიტოზი და მეიოზი.", icon: "cell", grades: "VII–XII" },
+      {
+        slug: "cell",
+        name: "უჯრედი",
+        description: "ჭრილში ნაჩვენები 3D უჯრედები: მემბრანა, ორგანოიდები, მცენარეული და ბაქტერიული უჯრედი, მიტოზი და მეიოზი.",
+        icon: "cell",
+        grades: "VII–XII",
+        href: "/biology/cell",
+      },
       {
         slug: "qr",
         name: "QR კოდები სახელმძღვანელოსთვის",

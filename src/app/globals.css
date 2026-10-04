@@ -347,3 +347,8 @@ body {
   color: #fff;
   will-change: transform;
 }
+.cell-label-active .blood-label-text {
+  border-color: #111a18;
+  background: #111a18;
+  color: #fff;
+}
