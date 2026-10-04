@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Droplets, Layers, Loader2, MapPin, Mountain, RotateCcw, ShieldAlert, Waves } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Droplets, Layers, Loader2, MapPin, Minus, Mountain, Navigation2, Plus, RotateCcw, RotateCw, ShieldAlert, Undo2, Waves } from "lucide-react";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { cn } from "@/lib/utils";
 import {
@@ -229,6 +229,7 @@ function ListItem({
 export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapLayer }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
+  const compassRef = useRef<SVGSVGElement>(null);
   const sceneRef = useRef<GeorgiaScene | null>(null);
   const [ready, setReady] = useState(false);
   const [selection, setSelection] = useState<Selection>({ kind: "country" });
@@ -258,7 +259,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
     } else if (s.kind === "region") {
       scene.select({ kind: "region", id: s.region.id }, scene.regionCentre(s.region.id) ?? undefined);
     } else if (s.kind === "city") {
-      scene.select({ kind: "city", id: s.city.id }, { lon: s.city.lon, lat: s.city.lat, span: 1.4 });
+      scene.select({ kind: "city", id: s.city.id }, { lon: s.city.lon, lat: s.city.lat, span: s.city.capital ? 0.32 : 0.2 });
     } else if (s.kind === "peak") {
       const p = scene.peakPosition(s.peak.id) ?? s.peak;
       scene.select({ kind: "peak", id: s.peak.id }, { lon: p.lon, lat: p.lat, span: 1.6 });
@@ -300,12 +301,19 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
       },
     });
     sceneRef.current = scene;
+    // Labels sit above the canvas: pass the wheel on, so zooming works with the cursor over a label too.
+    const forwardWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      canvas.dispatchEvent(new WheelEvent("wheel", e));
+    };
+    layerEl.addEventListener("wheel", forwardWheel, { passive: false });
     scene.setLayer(initialLayer);
     scene.setPins([
       ...CITIES.map((c) => ({ id: c.id, lon: c.lon, lat: c.lat, kind: "city" as const, capital: c.capital })),
       ...PEAKS.map((p) => ({ id: p.id, lon: p.lon, lat: p.lat, kind: "peak" as const })),
     ]);
     scene.setLakes(LAKES);
+    scene.setCities(CITIES);
 
     // Labels follow the 3D view; they are moved directly, not re-rendered.
     const els = new Map<string, HTMLElement>();
@@ -327,6 +335,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
       return { peak: 4, river: 5, lake: 6, landform: 7, region: 8 }[kind] ?? 9;
     };
     scene.onFrame = (project, distance) => {
+      if (compassRef.current) compassRef.current.style.transform = `rotate(${-scene.heading()}deg)`;
       const on = labelsState.current;
       const shown: { el: HTMLElement; x: number; y: number; w: number; h: number; prio: number }[] = [];
       for (const [key, el] of els) {
@@ -381,6 +390,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
       }
     };
     return () => {
+      layerEl.removeEventListener("wheel", forwardWheel);
       scene.dispose();
       sceneRef.current = null;
     };
@@ -409,6 +419,14 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
             : selection.kind === "landform"
               ? `landform:${selection.landform.id}`
               : null;
+  const navigate = (act: string) => {
+    const sc = sceneRef.current;
+    if (!sc) return;
+    if (act === "in") sc.zoomIn();
+    else if (act === "out") sc.zoomOut();
+    else if (act === "left" || act === "right") sc.turn(act === "left" ? -1 : 1);
+    else sc.tilt(act === "up" ? -1 : 1);
+  };
   const layerInfo = LAYERS.find((l) => l.id === layer)!;
   const mediaKey: [MediaKind, string] | null =
     selection.kind === "country"
@@ -633,15 +651,49 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
             )}
           </div>
 
-          <button
-            type="button"
-            aria-label="საწყისი ხედი"
-            title="მთელი საქართველო"
-            onClick={() => select({ kind: "country" })}
-            className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
-          >
-            <RotateCcw className="size-4" />
-          </button>
+          {/* Navigation: large buttons for smart boards, as well as drag, pinch and wheel. */}
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
+            <button
+              type="button"
+              aria-label="საწყისი ხედი"
+              title="მთელი საქართველო"
+              onClick={() => select({ kind: "country" })}
+              className="flex size-11 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
+            >
+              <Undo2 className="size-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="ჩრდილოეთი ზემოთ"
+              title="ჩრდილოეთი ზემოთ"
+              onClick={() => sceneRef.current?.north()}
+              className="flex size-11 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
+            >
+              <Navigation2 ref={compassRef} className="size-5 fill-[#b8232b] text-[#b8232b]" />
+            </button>
+            <div className="flex flex-col overflow-hidden rounded-lg border border-[#d5dcd9] bg-white shadow-sm">
+              {[
+                { label: "მიახლოება", icon: Plus, act: "in" },
+                { label: "დაშორება", icon: Minus, act: "out" },
+              ].map((b) => (
+                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex size-11 items-center justify-center border-b border-[#e2e7e5] last:border-b-0 hover:bg-[#f5f7f6]">
+                  <b.icon className="size-5" />
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#d5dcd9] bg-white shadow-sm max-sm:hidden">
+              {[
+                { label: "მარცხნივ შებრუნება", icon: RotateCcw, act: "left" },
+                { label: "მარჯვნივ შებრუნება", icon: RotateCw, act: "right" },
+                { label: "ზემოდან ხედი", icon: ChevronUp, act: "up" },
+                { label: "გვერდიდან ხედი", icon: ChevronDown, act: "down" },
+              ].map((b) => (
+                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex h-10 w-11 items-center justify-center hover:bg-[#f5f7f6]">
+                  <b.icon className="size-4" />
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Legend of the active layer */}
           <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 shadow-sm">

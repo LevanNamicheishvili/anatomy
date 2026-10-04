@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { MapControls } from "three/addons/controls/MapControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { CLIMATES, REGION_COLORS, ZONES, type MapLayer } from "./georgia-data";
 
@@ -140,6 +140,9 @@ uniform sampler2D uRegion;
 uniform sampler2D uFactor;
 uniform sampler2D uRamp;
 uniform sampler2D uSat;
+uniform sampler2D uPatch;
+uniform vec4 uPatchRect;
+uniform float uPatchMix;
 uniform vec2 uTexel;
 uniform vec2 uCellM;
 uniform vec2 uLon;
@@ -156,6 +159,15 @@ varying float vAO;
 varying float vFade;
 
 float band(float h, float t) { return smoothstep(t - 70.0, t + 70.0, h); }
+
+/** Satellite colour: the sharp patch loaded around the camera where there is one, the whole-country picture elsewhere. */
+vec3 satColor(vec2 uv, float lon, float lat) {
+  vec3 base = texture2D(uSat, uv).rgb;
+  vec2 p = vec2((lon - uPatchRect.x) / (uPatchRect.z - uPatchRect.x), (uPatchRect.y - lat) / (uPatchRect.y - uPatchRect.w));
+  if (uPatchMix <= 0.0 || p.x < 0.0 || p.y < 0.0 || p.x > 1.0 || p.y > 1.0) return base;
+  float edge = smoothstep(0.0, 0.06, min(min(p.x, 1.0 - p.x), min(p.y, 1.0 - p.y)));
+  return mix(base, texture2D(uPatch, p).rgb, edge * uPatchMix);
+}
 `;
 
 const TERRAIN_COLOR = /* glsl */ `
@@ -183,7 +195,7 @@ const TERRAIN_COLOR = /* glsl */ `
   vec3 col;
   if (uLayer > 3.5) {
     // Satellite picture: it already holds the real light and shade, so our own shading is softened.
-    col = pow(texture2D(uSat, vTUv).rgb, vec3(0.88)) * 1.6;
+    col = pow(satColor(vTUv, lon, lat), vec3(0.88)) * 1.6;
     terrainN = normalize(mix(terrainN, vec3(0.0, 1.0, 0.0), 0.5));
   } else if (uLayer < 0.5) {
     col = texture2D(uRamp, vec2((h - ${RAMP_MIN.toFixed(1)}) / ${(RAMP_MAX - RAMP_MIN).toFixed(1)}, 0.5)).rgb;
@@ -238,7 +250,7 @@ export class GeorgiaScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(32, 1, 0.01, 100);
-  private controls: OrbitControls;
+  private controls: MapControls;
   private meta!: Meta;
   /** Mesh-grid heights (metres) and region per cell. */
   private heights!: Int16Array;
@@ -276,6 +288,11 @@ export class GeorgiaScene {
   private regionTex: THREE.DataTexture | null = null;
   private factorTex: THREE.DataTexture | null = null;
   private water: Water = { lakes: {}, rivers: {} };
+  private patchUniforms = {
+    uPatch: { value: null as THREE.Texture | null },
+    uPatchRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uPatchMix: { value: 0 },
+  };
   /** Peaks moved onto the highest point near their listed coordinates. */
   private snappedPeaks = new Map<string, { lon: number; lat: number }>();
   /** Called every frame with screen positions, so React can place labels. */
@@ -295,16 +312,22 @@ export class GeorgiaScene {
     // Low sun from the north-west: the classic relief-map light.
     const sun = new THREE.DirectionalLight("#fff6e8", 2.1);
     sun.position.set(-4, 5, -3);
-    this.scene.add(sun, new THREE.HemisphereLight("#eef5ff", "#8c7b68", 1.45), this.riverGroup);
+    this.scene.add(sun, new THREE.HemisphereLight("#eef5ff", "#8c7b68", 1.45), this.riverGroup, this.buildingGroup);
 
-    this.controls = new OrbitControls(this.camera, canvas);
+    // Map-style controls, as in Google Maps: drag moves the map (one finger on a board), right drag or two
+    // fingers turn and tilt it, the wheel or a pinch zooms towards the point under the cursor.
+    this.controls = new MapControls(this.camera, canvas);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.screenSpacePanning = false;
-    this.controls.minDistance = 0.35;
+    this.controls.dampingFactor = 0.1;
+    this.controls.zoomToCursor = true;
+    this.controls.zoomSpeed = 1.2;
+    this.controls.panSpeed = 1;
+    this.controls.rotateSpeed = 0.6;
+    this.controls.minDistance = 0.025;
     this.controls.maxDistance = 14;
-    this.controls.minPolarAngle = THREE.MathUtils.degToRad(12);
-    this.controls.maxPolarAngle = THREE.MathUtils.degToRad(72);
+    this.controls.minPolarAngle = THREE.MathUtils.degToRad(5);
+    this.controls.maxPolarAngle = THREE.MathUtils.degToRad(76);
+    this.controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
     this.controls.addEventListener("start", () => (this.tween = null));
 
     canvas.addEventListener("pointerdown", this.onPointerDown);
@@ -540,6 +563,9 @@ export class GeorgiaScene {
         uFactor: { value: factorTex },
         uRamp: { value: ramp },
         uSat: { value: this.satellite },
+        uPatch: this.patchUniforms.uPatch,
+        uPatchRect: this.patchUniforms.uPatchRect,
+        uPatchMix: this.patchUniforms.uPatchMix,
         uTexel: { value: new THREE.Vector2(1 / DW, 1 / DH) },
         uCellM: { value: cellM },
         uLon: { value: new THREE.Vector2(l0, l1) },
@@ -677,14 +703,29 @@ export class GeorgiaScene {
   }
 
   private borderGeometries = new Map<string, THREE.BufferGeometry>();
-  private borderMat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color("#ffffff") }, uOpacity: { value: 0.75 }, uWide: { value: 1 } },
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    vertexShader: "attribute vec3 aSide; uniform float uWide; void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position + aSide * uWide, 1.0); }",
-    fragmentShader: "uniform vec3 uColor; uniform float uOpacity; void main(){ gl_FragColor = vec4(uColor, uOpacity); }",
-  });
+  /**
+   * Lines draped on the ground keep about the same width on screen at any zoom, and their small lift above
+   * the ground (needed from far away) shrinks as the camera comes close.
+   */
+  private lineMat(color: string, opacity: number, lift: number) {
+    return new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity }, uZoom: this.uniforms.uZoom, uLift: { value: lift } },
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -4,
+      vertexShader: `attribute vec3 aSide; uniform float uZoom; uniform float uLift;
+        void main(){
+          vec3 p = position + aSide * max(uZoom, 0.02);
+          p.y -= uLift * (1.0 - uZoom);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }`,
+      fragmentShader: "uniform vec3 uColor; uniform float uOpacity; void main(){ gl_FragColor = vec4(uColor, uOpacity); }",
+    });
+  }
+  private borderMat = this.lineMat("#ffffff", 0.75, 0.0035);
 
   private buildBorders(borders: Record<string, number[][][]>) {
     for (const [id, rings] of Object.entries(borders)) {
@@ -719,12 +760,17 @@ export class GeorgiaScene {
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -4,
       vertexShader: `attribute vec3 aSide; attribute float aRiver; uniform float uSel; uniform float uZoom; varying vec2 vUv; varying float vSel; varying float vMinor;
         void main(){
           vUv = uv;
           vSel = (aRiver > -0.5 && abs(aRiver - uSel) < 0.5) ? 1.0 : 0.0;
           vMinor = aRiver < -0.5 ? 1.0 : 0.0;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position + aSide * (1.0 + vSel * 1.6) * uZoom, 1.0);
+          vec3 p = position + aSide * (1.0 + vSel * 1.6) * max(uZoom, 0.03);
+          p.y -= 0.0024 * (1.0 - uZoom);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }`,
       fragmentShader: `uniform float uTime; uniform float uSel; varying vec2 vUv; varying float vSel; varying float vMinor;
         void main(){
@@ -806,6 +852,7 @@ export class GeorgiaScene {
       }
       const mesh = new THREE.Mesh(geometry, mat);
       mesh.position.y = lift;
+      mesh.userData.water = lift - 0.0017;
       mesh.renderOrder = 1;
       this.scene.add(mesh);
       // Centre and size for picking and labels.
@@ -908,8 +955,7 @@ export class GeorgiaScene {
     if (sel?.kind === "region") {
       const g = this.borderGeometries.get(sel.id);
       if (g) {
-        const hi = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: "#1d4f84", depthWrite: false, side: THREE.DoubleSide }));
-        hi.position.y = 0.0008;
+        const hi = new THREE.Mesh(g, this.lineMat("#1d4f84", 1, 0.0035));
         hi.renderOrder = 3;
         this.selectedBorder = new THREE.Group().add(hi);
         this.scene.add(this.selectedBorder);
@@ -929,7 +975,7 @@ export class GeorgiaScene {
   flyTo(lon: number, lat: number, span: number, depth = span) {
     if (!this.ready) return;
     const target = this.ground(lon, lat);
-    const dist = Math.min(14, Math.max(0.6, this.fit(span, depth)));
+    const dist = Math.min(14, Math.max(0.35, this.fit(span, depth)));
     const dir = new THREE.Vector3(0, 0.78, 0.62).normalize();
     this.startTween(target, target.clone().addScaledVector(dir, dist), this.reduceMotion ? 1 : 1400);
   }
@@ -993,7 +1039,7 @@ export class GeorgiaScene {
     let bestD = 18;
     for (const g of this.pins.values()) {
       if (!g.visible) continue;
-      const s = this.screen(v.copy(g.position).add(new THREE.Vector3(0, 0.075, 0)), rect);
+      const s = this.screen(v.copy(g.position).add(new THREE.Vector3(0, 0.075 * this.zoomScale, 0)), rect);
       const d = Math.hypot(s.x - clientX, s.y - clientY);
       if (s.z < 1 && d < bestD) {
         bestD = d;
@@ -1063,6 +1109,197 @@ export class GeorgiaScene {
     if (this.meta) this.uniforms.uHover.value = id ? this.meta.regions.indexOf(id) : -1;
   }
 
+  // ---- Navigation buttons -------------------------------------------------------------------------
+
+  private orbit(dTheta: number, dPhi: number, zoom: number) {
+    if (!this.ready) return;
+    const t = this.controls.target.clone();
+    const off = this.camera.position.clone().sub(t);
+    const sph = new THREE.Spherical().setFromVector3(off);
+    sph.theta += dTheta;
+    sph.phi = THREE.MathUtils.clamp(sph.phi + dPhi, this.controls.minPolarAngle, this.controls.maxPolarAngle);
+    sph.radius = THREE.MathUtils.clamp(sph.radius * zoom, this.controls.minDistance, this.controls.maxDistance);
+    this.startTween(t, t.clone().add(new THREE.Vector3().setFromSpherical(sph)), this.reduceMotion ? 1 : 450);
+  }
+  zoomIn() {
+    this.orbit(0, 0, 0.55);
+  }
+  zoomOut() {
+    this.orbit(0, 0, 1.8);
+  }
+  turn(dir: 1 | -1) {
+    this.orbit((dir * Math.PI) / 8, 0, 1);
+  }
+  tilt(dir: 1 | -1) {
+    this.orbit(0, (dir * Math.PI) / 14, 1);
+  }
+  /** Turn so north is up again (keeps distance and tilt). */
+  north() {
+    const off = this.camera.position.clone().sub(this.controls.target);
+    const sph = new THREE.Spherical().setFromVector3(off);
+    this.orbit(-sph.theta, 0, 1);
+  }
+  /** Compass heading of the view in degrees (0 = looking north). */
+  heading() {
+    const off = this.camera.position.clone().sub(this.controls.target);
+    return THREE.MathUtils.radToDeg(Math.atan2(off.x, off.z));
+  }
+
+  // ---- Sharp imagery around the camera -----------------------------------------------------------
+
+  private tiles = new Map<string, Promise<HTMLImageElement | null>>();
+  private patchKey = "";
+  private patchTimer = 0;
+  private patchFade = 0;
+
+  private tile(z: number, row: number, col: number) {
+    const key = `${z}/${row}/${col}`;
+    let t = this.tiles.get(key);
+    if (!t) {
+      t = new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024/default/WGS84/${z}/${row}/${col}.jpg`;
+      });
+      this.tiles.set(key, t);
+      if (this.tiles.size > 400) this.tiles.delete(this.tiles.keys().next().value!);
+    }
+    return t;
+  }
+
+  /** When the camera comes close and stops, load Sentinel-2 tiles (down to ~10 m per pixel) for the area in view. */
+  private updatePatch() {
+    const dist = this.camera.position.distanceTo(this.controls.target);
+    if (dist > 1.6 || this.uniforms.uLayer.value !== 4) {
+      this.patchFade = 0;
+      return;
+    }
+    const t = this.controls.target;
+    const lon = t.x / K + this.centreLon;
+    const lat = this.centreLat - t.z;
+    // Area in view (degrees of latitude), widened for tilted views.
+    const span = THREE.MathUtils.clamp(dist * 1.5, 0.05, 2);
+    const z = THREE.MathUtils.clamp(Math.floor(Math.log2((180 * 5) / (span / K))), 9, 13);
+    const ts = 180 / 2 ** z;
+    const c0 = Math.floor((lon - span / K + 180) / ts);
+    const c1 = Math.floor((lon + span / K + 180) / ts);
+    const r0 = Math.floor((90 - (lat + span)) / ts);
+    const r1 = Math.floor((90 - (lat - span)) / ts);
+    const key = `${z}:${c0}:${c1}:${r0}:${r1}`;
+    if (key === this.patchKey) return;
+    this.patchKey = key;
+    const jobs: Promise<void>[] = [];
+    const canvas = document.createElement("canvas");
+    canvas.width = (c1 - c0 + 1) * 256;
+    canvas.height = (r1 - r0 + 1) * 256;
+    const ctx = canvas.getContext("2d")!;
+    for (let r = r0; r <= r1; r++)
+      for (let c = c0; c <= c1; c++)
+        jobs.push(
+          this.tile(z, r, c).then((img) => {
+            if (img) ctx.drawImage(img, (c - c0) * 256, (r - r0) * 256);
+          }),
+        );
+    void Promise.all(jobs).then(() => {
+      if (this.disposed || this.patchKey !== key) return;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.flipY = false;
+      tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+      this.patchUniforms.uPatch.value?.dispose();
+      this.patchUniforms.uPatch.value = tex;
+      this.patchUniforms.uPatchRect.value.set(c0 * ts - 180, 90 - r0 * ts, (c1 + 1) * ts - 180, 90 - (r1 + 1) * ts);
+      this.patchUniforms.uPatchMix.value = 0;
+      this.patchFade = 1;
+    });
+  }
+
+  // ---- 3D buildings ------------------------------------------------------------------------------
+
+  private cityList: MapPoint[] = [];
+  private buildings = new Map<string, THREE.Mesh | null>();
+  private buildingGroup = new THREE.Group();
+
+  setCities(cities: MapPoint[]) {
+    this.cityList = cities;
+  }
+
+  /** Buildings of the nearest city appear when the camera comes close to it (loaded once, on demand). */
+  private updateBuildings() {
+    const dist = this.camera.position.distanceTo(this.controls.target);
+    if (dist > 0.8) return;
+    const t = this.controls.target;
+    const lon = t.x / K + this.centreLon;
+    const lat = this.centreLat - t.z;
+    for (const c of this.cityList) {
+      if (this.buildings.has(c.id) || Math.hypot((c.lon - lon) * K, c.lat - lat) > 0.25) continue;
+      this.buildings.set(c.id, null);
+      void fetch(`${BASE}/buildings/${c.id}.json?v=${GEO_VERSION}`)
+        .then((r) => (r.ok ? (r.json() as Promise<{ c: [number, number]; b: number[][] }>) : null))
+        .then((d) => {
+          if (!d || this.disposed) return;
+          const mesh = this.buildingMesh(d.c[0], d.c[1], d.b);
+          this.buildings.set(c.id, mesh);
+          this.buildingGroup.add(mesh);
+        })
+        .catch(() => {});
+    }
+  }
+
+  /** Extruded footprints: walls in light plaster tones, roofs a little darker; heights ×2 so they read. */
+  private buildingMesh(lon0: number, lat0: number, list: number[][]) {
+    const kx = K / (111_320 * Math.cos((lat0 * Math.PI) / 180));
+    const kz = 1 / 110_540;
+    const [cx, cz] = this.toXZ(lon0, lat0);
+    const BH = 2 / 111_000;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const c = new THREE.Color();
+    const roof = new THREE.Color();
+    const WALLS = ["#e9e3d6", "#ddd6c8", "#f1ece2", "#d8d2c8", "#e6dccb", "#cfc9c1"];
+    const ROOFS = ["#9b5b45", "#8a8580", "#a86a4e", "#77736e", "#b0a89c"];
+    for (const b of list) {
+      const h = b[0];
+      const n = (b.length - 1) / 2;
+      if (n < 3) continue;
+      const pts: THREE.Vector2[] = [];
+      let minY = Infinity;
+      for (let i = 0; i < n; i++) {
+        const x = cx + b[1 + i * 2] * kx;
+        const z = cz - b[2 + i * 2] * kz;
+        pts.push(new THREE.Vector2(x, z));
+        const gy = this.heightAt(x / K + this.centreLon, this.centreLat - z) * M;
+        if (gy < minY) minY = gy;
+      }
+      const base = minY - 0.00015;
+      const top = minY + h * BH;
+      const seed = Math.abs(Math.sin(b[1] * 12.9898 + b[2] * 78.233) * 43758.5453) % 1;
+      c.set(WALLS[Math.floor(seed * WALLS.length)]);
+      roof.set(h < 12 ? ROOFS[Math.floor(seed * 7) % ROOFS.length] : "#a7a29a");
+      for (let i = 0; i < n; i++) {
+        const a = pts[i];
+        const d = pts[(i + 1) % n];
+        pos.push(a.x, base, a.y, d.x, base, d.y, d.x, top, d.y, a.x, base, a.y, d.x, top, d.y, a.x, top, a.y);
+        for (let k = 0; k < 6; k++) col.push(c.r, c.g, c.b);
+      }
+      for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(pts, [])) {
+        for (const q of [pts[i], pts[k], pts[j]]) {
+          pos.push(q.x, top, q.y);
+          col.push(roof.r, roof.g, roof.b);
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide }));
+    mesh.frustumCulled = true;
+    return mesh;
+  }
+
   // ---- Loop ---------------------------------------------------------------------------------------
 
   private resize() {
@@ -1077,13 +1314,47 @@ export class GeorgiaScene {
   private v = new THREE.Vector3();
   private projectPoint = (lon: number, lat: number, lift = 0) => {
     if (!this.ready) return { x: 0, y: 0, visible: false };
-    this.v.copy(this.ground(lon, lat, lift)).project(this.camera);
+    this.v.copy(this.ground(lon, lat, lift * this.zoomScale)).project(this.camera);
     return {
       x: ((this.v.x + 1) / 2) * this.canvas.clientWidth,
       y: ((1 - this.v.y) / 2) * this.canvas.clientHeight,
       visible: this.v.z < 1 && Math.abs(this.v.x) < 1.1 && Math.abs(this.v.y) < 1.1,
     };
   };
+
+  private lastCam = new THREE.Vector3();
+  /** 1 from far away, smaller when close: markers, lines and label offsets keep their size on screen. */
+  private zoomScale = 1;
+
+  /**
+   * The point the camera turns around stays on the ground (so turning and zooming feel natural after
+   * moving the map) and inside the map; the near and far planes follow the zoom so close views stay sharp.
+   */
+  private keepOnGround() {
+    const t = this.controls.target;
+    const minX = (this.meta.lon[0] + 0.3 - this.centreLon) * K;
+    const maxX = (this.meta.lon[1] - 0.3 - this.centreLon) * K;
+    const minZ = this.centreLat - (this.meta.lat[0] - 0.2);
+    const maxZ = this.centreLat - (this.meta.lat[1] + 0.2);
+    const shift = new THREE.Vector3(THREE.MathUtils.clamp(t.x, minX, maxX) - t.x, 0, THREE.MathUtils.clamp(t.z, minZ, maxZ) - t.z);
+    const groundY = this.heightAt(t.x / K + this.centreLon, this.centreLat - t.z) * M;
+    shift.y = (groundY - t.y) * (this.tween ? 0 : 0.25);
+    if (shift.lengthSq() > 0) {
+      t.add(shift);
+      this.camera.position.add(shift);
+    }
+    // Never below the ground.
+    const cp = this.camera.position;
+    const under = this.heightAt(cp.x / K + this.centreLon, this.centreLat - cp.z) * M + 0.004;
+    if (cp.y < under) cp.y = under;
+    const dist = cp.distanceTo(t);
+    const near = THREE.MathUtils.clamp(dist * 0.02, 0.0005, 0.05);
+    if (Math.abs(near - this.camera.near) > near * 0.1) {
+      this.camera.near = near;
+      this.camera.far = Math.max(40, dist * 10);
+      this.camera.updateProjectionMatrix();
+    }
+  }
 
   private loop = () => {
     if (this.disposed) return;
@@ -1108,15 +1379,29 @@ export class GeorgiaScene {
       if (k >= 1) this.tween = null;
     }
     // Markers shrink as the camera comes closer, so they never cover the valleys; the selected one bobs.
-    const zoom = Math.min(1, Math.max(0.3, this.camera.position.distanceTo(this.controls.target) / 4.5));
-    this.uniforms.uZoom.value = Math.min(1, Math.max(0.18, this.camera.position.distanceTo(this.controls.target) / 4.5));
-    this.borderMat.uniforms.uWide.value = this.uniforms.uZoom.value;
+    const zoom = (this.zoomScale = THREE.MathUtils.clamp(this.camera.position.distanceTo(this.controls.target) / 4.5, 0.004, 1));
+    this.uniforms.uZoom.value = zoom;
+    this.buildingGroup.visible = this.overlays.cities && this.camera.position.distanceTo(this.controls.target) < 0.9;
+    for (const l of this.lakes.values()) l.mesh.position.y = l.mesh.userData.water + 0.0017 * zoom;
     for (const [key, g] of this.pins) {
       const sel = key === this.selectedPin;
       g.position.y = g.userData.baseY + (sel && !this.reduceMotion ? (0.012 + 0.012 * Math.sin(t * 4)) * zoom : 0);
       g.scale.setScalar((sel ? 1.5 : 1) * zoom);
     }
     this.controls.update();
+    if (this.ready) this.keepOnGround();
+    // Sharp imagery: fade it in when loaded; look for a new patch once the camera has been still for a moment.
+    const pm = this.patchUniforms.uPatchMix;
+    pm.value += ((this.patchFade ? 1 : 0) - pm.value) * 0.12;
+    const moving = this.camera.position.distanceToSquared(this.lastCam) > 1e-10;
+    this.lastCam.copy(this.camera.position);
+    if (moving) {
+      clearTimeout(this.patchTimer);
+      this.patchTimer = window.setTimeout(() => {
+        this.updatePatch();
+        this.updateBuildings();
+      }, 300);
+    }
     this.renderer.render(this.scene, this.camera);
     this.onFrame?.(this.projectPoint, this.camera.position.distanceTo(this.controls.target));
   };
@@ -1137,6 +1422,8 @@ export class GeorgiaScene {
       else mat?.dispose();
     });
     for (const t of this.textures) t.dispose();
+    clearTimeout(this.patchTimer);
+    this.patchUniforms.uPatch.value?.dispose();
     this.controls.dispose();
     this.renderer.dispose();
   }
