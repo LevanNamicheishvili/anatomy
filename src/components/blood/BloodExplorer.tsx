@@ -80,11 +80,12 @@ function Compatibility() {
   );
 }
 
-export function BloodExplorer() {
+/** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
+export function BloodExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BloodScene | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
   const [wbc, setWbc] = useState<WbcKind>("neutrophil");
   const [group, setGroup] = useState<BloodGroup>("A");
   const [rh, setRh] = useState(true);

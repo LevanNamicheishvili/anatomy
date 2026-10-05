@@ -49,11 +49,12 @@ const MEMBRANES: Record<string, string> = {
   cytoskeleton: "უმემბრანო",
 };
 
-export function CellExplorer() {
+/** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
+export function CellExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CellScene | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
   const [picked, setPicked] = useState<OrganelleId | null>(null);
   const [labels, setLabels] = useState(true);
   const [phase, setPhase] = useState(0);

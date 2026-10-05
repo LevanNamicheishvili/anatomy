@@ -40,11 +40,12 @@ const CIRCUITS: { id: Circuit; name: string }[] = [
   { id: "systemic", name: "დიდი წრე" },
 ];
 
-export function HeartExplorer() {
+/** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
+export function HeartExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HeartScene | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
   const [picked, setPicked] = useState<HeartPart | null>(null);
   const [phase, setPhase] = useState(0);
   const [loading, setLoading] = useState(false);

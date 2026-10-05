@@ -4,7 +4,8 @@ import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "უჯრედი — ბიოლოგია 3D" };
 
-export default async function CellPage() {
+export default async function CellPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
   await requireUser("/biology/cell");
-  return <CellExplorer />;
+  const { s } = await searchParams;
+  return <CellExplorer initial={s} />;
 }

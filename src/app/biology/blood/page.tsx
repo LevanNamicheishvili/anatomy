@@ -4,7 +4,8 @@ import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "სისხლი — ბიოლოგია 3D" };
 
-export default async function BloodPage() {
+export default async function BloodPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
   await requireUser("/biology/blood");
-  return <BloodExplorer />;
+  const { s } = await searchParams;
+  return <BloodExplorer initial={s} />;
 }

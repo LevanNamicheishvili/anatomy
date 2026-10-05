@@ -124,12 +124,13 @@ function CodonTable() {
   );
 }
 
-export function DnaExplorer() {
+/** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
+export function DnaExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<DnaScene | null>(null);
   const [ready, setReady] = useState(false);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
   const [opts, setOpts] = useState<DnaOptions>({ mode: "atoms", base: "A", step: "nucleosome", mutant: false });
   const section = SECTIONS[index];
   const set = (patch: Partial<DnaOptions>) => setOpts((o) => ({ ...o, ...patch }));
