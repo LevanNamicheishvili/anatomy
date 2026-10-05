@@ -256,6 +256,34 @@ onSection.wallLV = r3(wallCells.reduce((b, c) => (c.v < b.v ? c : b)).p);
 const cavityCells = Object.fromEntries(Object.keys(cavs).map((k) => [k, grid.filter((c) => c.cavity === k).length]));
 console.log("cavity cells on plane", cavityCells);
 
+// ---- Smooth tubes for vessels whose atlas mesh is too coarse after trimming ----------------------------
+// Slice the vertices along the vertical axis; each slice's centre and mean radius give the tube.
+const tubes = {};
+for (const [id, key] of [["FJ3427", "aortaDesc"], ["FJ3441", "ivc"]]) {
+  const m = meshes.find((x) => x.id === id);
+  const pts = [];
+  // Only down to a little below the heart (the same cut as before, in output units).
+  const floor = (TRIM_BELOW[id] - centre[1]) * SCALE;
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 1] >= floor) pts.push([m.pos[i], m.pos[i + 1], m.pos[i + 2]]);
+  const ys = pts.map((q) => q[1]);
+  const lo = Math.min(...ys);
+  const hi = Math.max(...ys);
+  const N = 5;
+  const line = [];
+  for (let k = 0; k < N; k++) {
+    const a = lo + ((hi - lo) * k) / N;
+    const b = lo + ((hi - lo) * (k + 1)) / N;
+    const sl = pts.filter((q) => q[1] >= a && q[1] <= b);
+    if (sl.length < 3) continue;
+    const c = mul(sl.reduce(add, [0, 0, 0]), 1 / sl.length);
+    const r = sl.reduce((t, q) => t + Math.hypot(q[0] - c[0], q[2] - c[2]), 0) / sl.length;
+    line.push([...r3(c), Math.round(r * 1000) / 1000]);
+  }
+  tubes[key] = line;
+  m.idx = []; // drawn as a tube instead
+}
+console.log("tubes", Object.fromEntries(Object.entries(tubes).map(([k, v]) => [k, v.length])));
+
 // ---- Output ---------------------------------------------------------------------------------------
 const parts = [];
 const blobs = [];
@@ -287,6 +315,7 @@ writeFileSync(
     centres: Object.fromEntries(Object.entries(C).map(([k, v]) => [k, r3(v)])),
     conduction: { sa: saNode, av: avNode, septum },
     onSection,
+    tubes,
   }),
 );
 console.log(`parts ${parts.length}, ${(offset / 1024).toFixed(0)} KB raw`);

@@ -69,9 +69,11 @@ interface HeartData {
   centres: Record<string, N3>;
   conduction: { sa: N3 | null; av: N3 | null; septum: N3[] };
   onSection: Record<string, N3>;
+  /** Vessels drawn as smooth tubes: points [x, y, z, radius] along the centreline. */
+  tubes: Record<string, [number, number, number, number][]>;
 }
 /** Bump when public/heart is rebuilt. */
-const HEART_VERSION = "2026-10-05";
+const HEART_VERSION = "2026-10-05b";
 let heartPromise: Promise<{ meta: HeartData; buf: ArrayBuffer }> | null = null;
 const loadHeart = () =>
   (heartPromise ??= Promise.all([
@@ -87,6 +89,10 @@ interface Look {
   clip: boolean;
   opacity?: number;
   beat: number;
+  /** Great vessels: cut a little in front of the heart's section, so they stay joined to the chambers. */
+  vessel?: boolean;
+  /** Open-ended vessels: their inside wall colour (they get no solid cut surface). */
+  inside?: string;
 }
 const LOOK: Record<string, Look> = {
   wall: { color: "#9e3b36", cap: "#c4675c", clip: true, beat: 1 },
@@ -94,10 +100,10 @@ const LOOK: Record<string, Look> = {
   leaflet: { color: "#e8d6b6", cap: "#f4e8d0", clip: true, beat: 0 },
   cusp: { color: "#e8d6b6", cap: "#f4e8d0", clip: true, beat: 0 },
   papillary: { color: "#a5423b", cap: "#c96257", clip: true, beat: 1 },
-  artery: { color: "#c62f36", cap: "#e0575c", clip: true, beat: 0.3 },
-  venousArtery: { color: "#4a5fc1", cap: "#7183dc", clip: true, beat: 0.3 },
-  arterialVein: { color: "#c62f36", cap: "#e0575c", clip: true, beat: 0.3 },
-  vein: { color: "#4a5fc1", cap: "#7183dc", clip: true, beat: 0.3 },
+  artery: { color: "#c62f36", clip: true, vessel: true, beat: 0.3, inside: "#8f1f25" },
+  venousArtery: { color: "#4a5fc1", clip: true, vessel: true, beat: 0.3, inside: "#2f3f8f" },
+  arterialVein: { color: "#c62f36", clip: true, vessel: true, beat: 0.3, inside: "#8f1f25" },
+  vein: { color: "#4a5fc1", clip: true, vessel: true, beat: 0.3, inside: "#2f3f8f" },
   coronaryArtery: { color: "#d8343a", clip: true, beat: 1 },
   coronaryVein: { color: "#3f55b8", clip: true, beat: 1 },
   lung: { color: "#f0a7b0", clip: false, opacity: 0.2, beat: 0 },
@@ -177,6 +183,7 @@ export class HeartScene {
   private pending: { view: HeartView; opts: HeartOptions } | null = null;
   private clipPlane: THREE.Plane | null = null;
   private heartInner: THREE.Group | null = null;
+  private vesselPlane: THREE.Plane | null = null;
   private capOrder = 10;
   private capGeo = new THREE.PlaneGeometry(60, 60);
   /** Heart beats elapsed (fraction = position in the cycle). */
@@ -271,8 +278,8 @@ export class HeartScene {
     this.controls.minDistance = distance * 0.4;
     this.controls.maxDistance = distance * 1.8;
     // The heart is cut open at the front: keep the camera in front of it.
-    this.controls.minAzimuthAngle = view === "structure" || view === "cycle" ? -1.2 : -Infinity;
-    this.controls.maxAzimuthAngle = view === "structure" || view === "cycle" ? 1.2 : Infinity;
+    this.controls.minAzimuthAngle = view === "structure" || view === "cycle" ? -1.0 : -Infinity;
+    this.controls.maxAzimuthAngle = view === "structure" || view === "cycle" ? 1.0 : Infinity;
     this.controls.update();
     this.applySelection();
     this.applyCircuit();
@@ -457,55 +464,48 @@ export class HeartScene {
   }
 
   /**
-   * Solid cut surface for a closed mesh (stencil capping): back faces add, front faces subtract; where the
-   * count stays non-zero the plane lies inside the solid, and a cap in the solid's cut colour is drawn there.
+   * Solid cut surface: the inside (back faces) of a clipped mesh, seen through the cut, is drawn flat in the
+   * tissue's cut colour and lit as if it faced the viewer. Unlike stencil capping, this also works for the
+   * open-ended vessels, so nothing leaks out from side views.
    */
   private capped(geo: THREE.BufferGeometry, parent: THREE.Object3D, color: string, weight: number, part?: HeartPart) {
     if (!this.clipPlane) return;
-    const pass = (side: THREE.Side, op: THREE.StencilOp) =>
-      this.beatMaterial(
-        new THREE.MeshBasicMaterial({
-          side,
-          depthWrite: false,
-          depthTest: false,
-          colorWrite: false,
-          stencilWrite: true,
-          stencilFunc: THREE.AlwaysStencilFunc,
-          stencilFail: op,
-          stencilZFail: op,
-          stencilZPass: op,
-          clippingPlanes: [this.clipPlane!],
-        }),
-        weight,
-      );
-    const order = this.capOrder;
-    this.capOrder += 3;
-    const back = new THREE.Mesh(geo, pass(THREE.BackSide, THREE.IncrementWrapStencilOp));
-    const front = new THREE.Mesh(geo, pass(THREE.FrontSide, THREE.DecrementWrapStencilOp));
-    this.disposables.push(back.material as THREE.Material, front.material as THREE.Material);
-    back.renderOrder = order;
-    front.renderOrder = order + 1;
-    back.userData.noPick = front.userData.noPick = true;
-    parent.add(back, front);
-    const capMat = this.material(
-      {
-        color,
-        roughness: 0.75,
-        clearcoat: 0.1,
-        stencilWrite: true,
-        stencilRef: 0,
-        stencilFunc: THREE.NotEqualStencilFunc,
-        stencilFail: THREE.ReplaceStencilOp,
-        stencilZFail: THREE.ReplaceStencilOp,
-        stencilZPass: THREE.ReplaceStencilOp,
-      },
-      part,
-    );
-    const cap = new THREE.Mesh(this.capGeo, capMat);
-    cap.renderOrder = order + 2;
-    cap.userData.noPick = true;
-    cap.onAfterRender = (r) => r.clearStencil();
-    this.content.add(cap);
+    const m = this.material({ color, roughness: 0.8, clearcoat: 0, side: THREE.BackSide, clippingPlanes: [this.clipPlane] }, part);
+    const n = this.clipPlane.normal.clone().negate(); // the cut faces the viewer (+z)
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, this.uniforms, { uCutN: { value: n } });
+      if (weight)
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>", "#include <common>\nuniform float uVent;\nuniform float uAtr;\nuniform vec3 uBase;\nuniform vec3 uAxis;\nuniform float uLen;")
+          .replace("#include <begin_vertex>", `#include <begin_vertex>\n${BEAT.replace(/WEIGHT/g, weight.toFixed(2))}`);
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nuniform vec3 uCutN;")
+        .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\nnormal = normalize((viewMatrix * vec4(uCutN, 0.0)).xyz);");
+    };
+    m.customProgramCacheKey = () => `cap-${weight}`;
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.userData.noPick = true;
+    parent.add(mesh);
+  }
+
+  /**
+   * Vessels are not cut (cut tubes look like blades from the side): the part in front of the section is
+   * drawn faint instead, so the vessels stay joined to the chambers and the chambers stay visible.
+   */
+  private ghostInFront(m: THREE.MeshPhysicalMaterial) {
+    m.transparent = true;
+    const before = m.onBeforeCompile.bind(m);
+    m.onBeforeCompile = (shader, r) => {
+      before(shader, r);
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vWorldG;")
+        .replace("#include <project_vertex>", "#include <project_vertex>\nvWorldG = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vWorldG;")
+        .replace("#include <opaque_fragment>", "#include <opaque_fragment>\ngl_FragColor.a *= mix(1.0, 0.16, smoothstep(0.02, 0.12, vWorldG.z));");
+    };
+    const key = m.customProgramCacheKey.bind(m);
+    m.customProgramCacheKey = () => `${key()}-ghost`;
   }
 
   /** Where a valve leaflet or cusp is attached, and which way it swings open. */
@@ -564,12 +564,15 @@ export class HeartScene {
     this.uniforms.uLen.value = axis.length();
     this.uniforms.uAxis.value.copy(axis.normalize());
     this.clipPlane = o.cut ? new THREE.Plane(new THREE.Vector3(0, 0, -1), 0) : null;
+    this.vesselPlane = o.cut ? new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.32) : null;
     this.capOrder = 10;
 
     const leaves: { group: THREE.Group; axis: V3; sign: number; av: boolean }[] = [];
     const box = new THREE.Box3();
     for (const p of meta.parts) {
       if (p.role === "lung" && !o.lungs) continue;
+      // Branches leading off to the neck and arms end abruptly and look like floating stubs.
+      if (p.key === "aortaBranch" || p.key === "cavaBranch") continue;
       if (p.role === "cavity" && !o.blood) continue;
       const look = LOOK[p.role];
       const geo = new THREE.BufferGeometry();
@@ -577,7 +580,24 @@ export class HeartScene {
       geo.setAttribute("normal", new THREE.BufferAttribute(new Int16Array(buf.slice(p.normals, p.normals + p.vertexCount * 6)), 3, true));
       geo.setIndex(new THREE.BufferAttribute(new Uint16Array(buf.slice(p.indices, p.indices + p.indexCount * 2)), 1));
       const part = PICK[p.key];
-      const clip = look.clip && this.clipPlane ? [this.clipPlane] : [];
+      const clip = look.clip && this.clipPlane && !look.vessel ? [this.clipPlane] : [];
+      if (p.role === "venousArtery" || p.role === "arterialVein") {
+        // Branches running off towards the lungs end in jagged stubs: keep only the part near the heart.
+        const P = geo.attributes.position as THREE.BufferAttribute;
+        const idx = geo.index!;
+        const keep: number[] = [];
+        const q = new THREE.Vector3();
+        for (let t = 0; t < idx.count; t += 3) {
+          let ok = true;
+          for (let k = 0; k < 3; k++) {
+            q.fromBufferAttribute(P, idx.getX(t + k));
+            const d = q.sub(pc);
+            if (Math.hypot(d.dot(right), d.dot(n)) > (p.role === "arterialVein" ? 1.25 : 1.75)) ok = false;
+          }
+          if (ok) keep.push(idx.getX(t), idx.getX(t + 1), idx.getX(t + 2));
+        }
+        geo.setIndex(keep);
+      }
       const mat = this.beatMaterial(
         this.material(
           {
@@ -594,6 +614,7 @@ export class HeartScene {
         ),
         look.beat,
       );
+      if (look.vessel && this.clipPlane) this.ghostInFront(mat);
       let parent: THREE.Object3D = inner;
       if (p.role === "leaflet" || p.role === "cusp") {
         const h = this.hinge(geo, p.role === "leaflet", vec(meta.centres[p.key]));
@@ -613,6 +634,27 @@ export class HeartScene {
         box.expandByObject(mesh);
       }
       if (look.cap) this.capped(geo, parent, look.cap, look.beat, part);
+      if (look.inside) {
+        const inner = this.beatMaterial(this.material({ color: look.inside, roughness: 0.6, side: THREE.BackSide, clippingPlanes: clip }, part), look.beat);
+        if (look.vessel && this.clipPlane) this.ghostInFront(inner);
+        const im = new THREE.Mesh(geo, inner);
+        im.userData.partKey = p.key;
+        parent.add(im);
+      }
+    }
+
+    // Descending aorta and inferior vena cava as smooth tubes along their real centrelines.
+    for (const [key, line] of Object.entries(meta.tubes ?? {})) {
+      if (line.length < 2) continue;
+      const curve = new THREE.CatmullRomCurve3(line.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+      const r = line.reduce((t, q) => t + q[3], 0) / line.length;
+      const geo = new THREE.TubeGeometry(curve, 32, r, 20);
+      const blue = key === "ivc";
+      const mat = this.beatMaterial(this.material({ color: blue ? "#4a5fc1" : "#c62f36", roughness: 0.42, clearcoat: 0.35 }, blue ? "cava" : "aorta"), 0.3);
+      if (this.clipPlane) this.ghostInFront(mat);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.userData.partKey = key;
+      inner.add(mesh);
     }
 
     // Conduction system, drawn just in front of the cut surface.
