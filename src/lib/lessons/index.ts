@@ -1,11 +1,12 @@
 import type { Chapter, Grade, Lesson } from "@/lib/curriculum";
 import { GRADE_8 } from "./grade-8";
+import { GRADE_9 } from "./grade-9";
 import type { LessonContent } from "./types";
 
 export type { LessonContent } from "./types";
 
 /** Written lesson pages, by grade and textbook number. */
-const LESSONS: Record<number, Record<string, LessonContent>> = { 8: GRADE_8 };
+const LESSONS: Record<number, Record<string, LessonContent>> = { 8: GRADE_8, 9: GRADE_9 };
 
 export const lessonContent = (grade: number, n: string) => LESSONS[grade]?.[n] ?? null;
 
