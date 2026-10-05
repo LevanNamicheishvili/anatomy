@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Box, Lightbulb } from "lucide-react";
 import type { Chapter, Grade, Lesson } from "@/lib/curriculum";
 import { lessonHref, type LessonContent } from "@/lib/lessons";
 import { LessonQuiz } from "./LessonQuiz";
+import { PunnettSquare } from "./PunnettSquare";
 import { TopicHeader } from "./TopicHeader";
 
 const COLOR = "#0f8a74";
@@ -120,7 +121,9 @@ export function LessonPage({
               </ul>
             </section>
 
-            <LessonQuiz quiz={content.quiz} />
+            {content.widget && <PunnettSquare mode={content.widget === "punnett-di" ? "di" : content.widget === "punnett-x" ? "x" : "mono"} />}
+
+        <LessonQuiz quiz={content.quiz} />
           </>
         )}
 

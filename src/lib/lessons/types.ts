@@ -9,4 +9,6 @@ export interface LessonContent {
   quiz: { q: string; options: string[]; answer: number; why: string }[];
   /** Reproduction topics: like the atlas's sensitive organs, students see them through the teacher. */
   sensitive?: boolean;
+  /** An interactive tool shown after the text. */
+  widget?: "punnett-mono" | "punnett-di" | "punnett-x";
 }

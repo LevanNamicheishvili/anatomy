@@ -32,6 +32,7 @@ export const GRADE_11: Record<string, LessonContent> = {
     ],
   },
   "1.2": {
+    widget: "punnett-mono",
     intro: "მონოჰიბრიდული შეჯვარება ერთი წყვილი ალტერნატიული ნიშნით განსხვავებული მშობლების შეჯვარებაა.",
     sections: [
       {
@@ -59,6 +60,7 @@ export const GRADE_11: Record<string, LessonContent> = {
     ],
   },
   "1.3": {
+    widget: "punnett-mono",
     intro: "მენდელის თანაფარდობები სტატისტიკურია: ისინი მხოლოდ დიდ რიცხვებზე სრულდება, ისევე როგორც მონეტის აგდებისას „საფასური“ და „გერბი“ დიდი რაოდენობით აგდებისას ნახევრად იყოფა.",
     sections: [
       {
@@ -87,6 +89,7 @@ export const GRADE_11: Record<string, LessonContent> = {
     ],
   },
   "1.6": {
+    widget: "punnett-di",
     intro: "დიჰიბრიდული შეჯვარება ორი ნიშნით განსხვავებული მშობლების შეჯვარებაა. მან მენდელის III კანონი გამოავლინა.",
     sections: [
       {
@@ -114,6 +117,7 @@ export const GRADE_11: Record<string, LessonContent> = {
     ],
   },
   "1.7": {
+    widget: "punnett-mono",
     intro: "დომინანტური ფენოტიპის ორგანიზმი შეიძლება იყოს AA ან Aa — გარეგნულად ისინი ერთნაირია. მისი გენოტიპის გასარკვევად გამაანალიზებელ შეჯვარებას აკეთებენ.",
     sections: [
       {
@@ -166,6 +170,7 @@ export const GRADE_11: Record<string, LessonContent> = {
     ],
   },
   "1.10": {
+    widget: "punnett-x",
     intro: "X ქრომოსომაში მდებარე გენების მემკვიდრეობა სქესზეა დამოკიდებული: ეს სქესთან შეჭიდული მემკვიდრეობაა.",
     sections: [
       {
