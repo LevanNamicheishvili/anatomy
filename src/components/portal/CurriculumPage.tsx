@@ -3,6 +3,7 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth";
 import type { Grade } from "@/lib/curriculum";
 import type { Subject } from "@/lib/subjects";
+import { lessonHref } from "@/lib/lessons";
 import { cn } from "@/lib/utils";
 import { PortalShell } from "./Shell";
 import { SUBJECT_ICONS, TOPIC_ICONS } from "./TopicHeader";
@@ -14,7 +15,7 @@ import { SUBJECT_ICONS, TOPIC_ICONS } from "./TopicHeader";
 export function CurriculumPage({ user, subject, grades, grade, ownGrade }: { user: CurrentUser; subject: Subject; grades: Grade[]; grade: Grade; ownGrade: number | null }) {
   const Icon = SUBJECT_ICONS[subject.icon];
   const lessons = grade.chapters.flatMap((c) => c.lessons);
-  const ready = lessons.filter((l) => l.href).length;
+  const ready = lessons.filter((l) => lessonHref(grade.grade, l)).length;
   const tools = subject.topics.filter((t) => t.href && (!t.staffOnly || user.role !== "student"));
 
   return (
@@ -67,7 +68,7 @@ export function CurriculumPage({ user, subject, grades, grade, ownGrade }: { use
           <div className="h-full rounded-full" style={{ width: `${(ready / lessons.length) * 100}%`, backgroundColor: subject.color }} />
         </div>
         <p className="text-sm text-[#66736f]">
-          {ready} / {lessons.length} გაკვეთილს აქვს ინტერაქტიული მასალა
+          {ready} / {lessons.length} გაკვეთილი მზადაა
         </p>
       </div>
 
@@ -78,12 +79,13 @@ export function CurriculumPage({ user, subject, grades, grade, ownGrade }: { use
             <h2 className="border-b border-[#e2e7e5] bg-[#f8faf9] px-5 py-3.5 text-base font-semibold">{chapter.title}</h2>
             <ol>
               {chapter.lessons.map((l, i) => {
+                const href = lessonHref(grade.grade, l);
                 const body = (
                   <>
-                    <span className={cn("w-10 shrink-0 text-sm tabular-nums", l.href ? "font-semibold text-[#33413e]" : "text-[#97a29e]")}>{l.n}</span>
-                    <span className={cn("min-w-0 flex-1 text-[15px] leading-6", !l.href && "text-[#66736f]")}>{l.title}</span>
+                    <span className={cn("w-10 shrink-0 text-sm tabular-nums", href ? "font-semibold text-[#33413e]" : "text-[#97a29e]")}>{l.n}</span>
+                    <span className={cn("min-w-0 flex-1 text-[15px] leading-6", !href && "text-[#66736f]")}>{l.title}</span>
                     {l.page && <span className="hidden shrink-0 text-xs text-[#97a29e] sm:block">გვ. {l.page}</span>}
-                    {l.href ? (
+                    {href ? (
                       <span className="flex shrink-0 items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ backgroundColor: subject.color }}>
                         გახსნა
                         <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -96,8 +98,8 @@ export function CurriculumPage({ user, subject, grades, grade, ownGrade }: { use
                 const cls = cn("flex min-h-14 items-center gap-3 px-5 py-2", i > 0 && "border-t border-[#eef2f0]");
                 return (
                   <li key={`${l.n}-${l.title}`}>
-                    {l.href ? (
-                      <Link href={l.href} className={cn(cls, "group transition-colors hover:bg-[#f5f8f7]")}>
+                    {href ? (
+                      <Link href={href} className={cn(cls, "group transition-colors hover:bg-[#f5f8f7]")}>
                         {body}
                       </Link>
                     ) : (
