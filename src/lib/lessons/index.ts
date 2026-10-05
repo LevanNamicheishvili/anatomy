@@ -3,12 +3,13 @@ import { GRADE_8 } from "./grade-8";
 import { GRADE_9 } from "./grade-9";
 import { GRADE_10 } from "./grade-10";
 import { GRADE_11 } from "./grade-11";
+import { GRADE_12 } from "./grade-12";
 import type { LessonContent } from "./types";
 
 export type { LessonContent } from "./types";
 
 /** Written lesson pages, by grade and textbook number. */
-const LESSONS: Record<number, Record<string, LessonContent>> = { 8: GRADE_8, 9: GRADE_9, 10: GRADE_10, 11: GRADE_11 };
+const LESSONS: Record<number, Record<string, LessonContent>> = { 8: GRADE_8, 9: GRADE_9, 10: GRADE_10, 11: GRADE_11, 12: GRADE_12 };
 
 /** A lesson's key: its textbook number, or its title where the book doesn't number lessons (grade XII). */
 export const lessonKey = (l: Lesson) => l.n || l.title;
