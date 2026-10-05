@@ -24,6 +24,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function Page({ params }: { params: Params }) {
   const r = await resolve(params);
   if (!r) notFound();
-  await requireUser(`/biology/lesson/${r.grade.grade}/${encodeURIComponent(r.lesson.n)}`);
-  return <LessonPage grade={r.grade} chapter={r.chapter} lesson={r.lesson} content={r.content} index={r.index} all={r.all} />;
+  const user = await requireUser(`/biology/lesson/${r.grade.grade}/${encodeURIComponent(r.lesson.n || r.lesson.title)}`);
+  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} grade={r.grade} chapter={r.chapter} lesson={r.lesson} content={r.content} index={r.index} all={r.all} />;
 }

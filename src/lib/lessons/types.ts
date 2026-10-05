@@ -7,4 +7,6 @@ export interface LessonContent {
   /** Places on the portal that show this lesson in 3D. */
   related?: { label: string; href: string }[];
   quiz: { q: string; options: string[]; answer: number; why: string }[];
+  /** Reproduction topics: like the atlas's sensitive organs, students see them through the teacher. */
+  sensitive?: boolean;
 }
