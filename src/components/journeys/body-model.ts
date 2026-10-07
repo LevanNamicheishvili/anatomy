@@ -7,9 +7,9 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
  * that only the nerve-impulse journey asks for. Coordinates are metres; +x is the body's left, +z its front.
  */
 
-const VERSION = "2026-10-07b";
+const VERSION = "2026-10-07c";
 
-export type BodyGroup = "skin" | "skeleton" | "humerus" | "radius" | "ulna" | "femur" | "brain" | "heart" | "lungs" | "arteries" | "veins" | "biceps" | "triceps" | "endocrine" | "gonads" | "urinary" | "digestive" | "airways" | "spleen";
+export type BodyGroup = "skin" | "skeleton" | "humerus" | "radius" | "ulna" | "femur" | "brain" | "heart" | "lungs" | "arteries" | "veins" | "biceps" | "triceps" | "endocrine" | "gonads" | "urinary" | "digestive" | "airways" | "spleen" | "diaphragm" | "discs";
 
 export interface BodyPart {
   id: string;

@@ -19,8 +19,9 @@ function groupOf(p) {
   if (p.id === "FJ2810") return "skin";
   if (["FJ3368", "FJ3349", "FJ3391"].includes(p.id)) return { FJ3368: "humerus", FJ3349: "radius", FJ3391: "ulna" }[p.id];
   if (p.id === "FJ3365") return "femur";
+  if (p.system === "skeletal" && /intervertebral disk/i.test(p.name)) return "discs";
   if (p.system === "skeletal")
-    return /vertebra|^atlas$|^axis$|rib|sternum|manubrium|xiphoid|sacrum|coccyx|hip bone|ilium|ischium|pubis|scapula|clavicle|frontal bone|parietal bone|occipital bone|temporal bone|sphenoid|mandible|maxilla|zygomatic|nasal bone|femur|tibia|fibula|patella/i.test(p.name) && !/disk|cartilage/i.test(p.name) ? "skeleton" : null;
+    return /vertebra|^atlas$|^axis$|rib|sternum|manubrium|xiphoid|sacrum|coccyx|hip bone|ilium|ischium|pubis|scapula|clavicle|frontal bone|parietal bone|occipital bone|temporal bone|sphenoid|mandible|maxilla|zygomatic|nasal bone|femur|tibia|fibula|patella/i.test(p.name) && !/disk|cartilage|fibularis|tibialis|subscapularis|levator/i.test(p.name) ? "skeleton" : null;
   // Brain only: cranial nerves, ganglia and the tentorium would clutter the view.
   if (p.system === "nervous") return /nerve|ganglion|branch|tentorium/i.test(p.name) ? null : "brain";
   if (p.system === "cardiac" && p.bounds[0][1] > 1.2 && p.bounds[1][1] < 1.4) return "heart";
@@ -34,6 +35,7 @@ function groupOf(p) {
   if (p.system === "digestive" && !/duct/i.test(p.name)) return "digestive";
   if (p.id === "FJ2541" || /main bronchus/i.test(p.name)) return "airways";
   if (p.id === "FJ2561") return "spleen";
+  if (p.id === "FJ3131") return "diaphragm";
   if (/right triceps brachii/.test(n)) return "triceps";
   return null;
 }
@@ -50,7 +52,7 @@ const chunk = (i) => {
 const parts = [];
 // Two files: the brain is only needed by one journey, so it loads separately.
 const files = { core: { blobs: [], offset: 0 }, brain: { blobs: [], offset: 0 }, organs: { blobs: [], offset: 0 } };
-const ORGANS = ["endocrine", "gonads", "urinary", "digestive", "airways", "spleen"];
+const ORGANS = ["endocrine", "gonads", "urinary", "digestive", "airways", "spleen", "diaphragm", "discs"];
 const fileOf = (group) => (group === "brain" ? "brain" : ORGANS.includes(group) ? "organs" : "core");
 let file = files.core;
 const push = (typed) => {

@@ -11,6 +11,7 @@ const health = () => import("./v-health");
 const evolution = () => import("./v-evolution");
 const ecology = () => import("./v-ecology");
 const genetics = () => import("./v-genetics");
+const bodyV = () => import("./v-body");
 
 export const VISUAL_BUILDERS: Record<string, Builder> = {
   "endocrine-system": lazy(hormones, (m) => m.endocrineSystem),
@@ -58,4 +59,19 @@ export const VISUAL_BUILDERS: Record<string, Builder> = {
   "human-genetics": lazy(genetics, (m) => m.humanGenetics),
   "medical-biotech": lazy(genetics, (m) => m.medicalBiotech),
   "bacterial-transfer": lazy(genetics, (m) => m.bacterialTransfer),
+  "bone-chemistry": lazy(bodyV, (m) => m.boneChemistry),
+  joints: lazy(bodyV, (m) => m.joints),
+  injuries: lazy(bodyV, (m) => m.injuries),
+  posture: lazy(bodyV, (m) => m.posture),
+  locomotion: lazy(bodyV, (m) => m.locomotion),
+  "breathing-control": lazy(bodyV, (m) => m.breathingControl),
+  "respiratory-disease": lazy(bodyV, (m) => m.respiratoryDisease),
+  nutrients: lazy(bodyV, (m) => m.nutrients),
+  "food-energy": lazy(bodyV, (m) => m.foodEnergy),
+  "gut-disease": lazy(bodyV, (m) => m.gutDisease),
+  "healthy-plate": lazy(bodyV, (m) => m.healthyPlate),
+  "metabolism-exchange": lazy(bodyV, (m) => m.metabolismExchange),
+  nephron: lazy(bodyV, (m) => m.nephron),
+  skin: lazy(bodyV, (m) => m.skinSection),
+  "animal-excretion": lazy(bodyV, (m) => m.animalExcretion),
 };
