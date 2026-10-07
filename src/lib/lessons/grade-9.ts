@@ -119,6 +119,7 @@ export const GRADE_9: Record<string, LessonContent> = {
       "სინაფსში აგზნება ერთი მიმართულებით მიდის",
     ],
     related: [
+      { label: "მოგზაურობა: იმპულსი ტვინიდან კუნთამდე", href: "/biology/journeys?j=impulse" },
       { label: "ნერვული იმპულსი 3D-ში", href: "/biology/nervous?s=impulse" },
       { label: "სინაფსი 3D-ში", href: "/biology/nervous?s=synapse" },
       { label: "რეფლექსური რკალი 3D-ში", href: "/biology/nervous?s=reflex" },
@@ -191,7 +192,7 @@ export const GRADE_9: Record<string, LessonContent> = {
       "სიმპათიკური — „იბრძოლე ან გაიქეცი“",
       "პარასიმპათიკური — „დაისვენე და მოინელე“",
     ],
-    related: [{ label: "ნერვული სისტემა ატლასში", href: "/topic/brain" }],
+    related: [{ label: "მოგზაურობა: იმპულსი ტვინიდან კუნთამდე", href: "/biology/journeys?j=impulse" }, { label: "ნერვული სისტემა ატლასში", href: "/topic/brain" }],
     quiz: [
       {
         q: "რამდენი წყვილი ზურგის ნერვი აქვს ადამიანს?",

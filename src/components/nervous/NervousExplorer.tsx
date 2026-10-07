@@ -44,6 +44,9 @@ export function NervousExplorer({ initial }: { initial?: string }) {
         <Link href="/topic/brain" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           თავის ტვინი ატლასში
         </Link>
+        <Link href="/biology/journeys?j=impulse" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+          იმპულსის გზა კუნთამდე
+        </Link>
       </TopicHeader>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_46dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">

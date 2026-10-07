@@ -3,7 +3,7 @@
  * listing its topics; a topic without `href` is shown as "coming soon".
  */
 export type SubjectIcon = "biology" | "geography" | "history";
-export type TopicIcon = "body" | "heart" | "nerve" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
+export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
 
 export interface Topic {
   slug: string;
@@ -70,6 +70,14 @@ export const SUBJECTS: Subject[] = [
         icon: "nerve",
         grades: "IX, XII",
         href: "/biology/nervous",
+      },
+      {
+        slug: "journeys",
+        name: "მოგზაურობა სხეულში",
+        description: "კამერა პროცესს მიჰყვება: სისხლის წრე, უჯრედში ჩასვლა, ძვლის შიგნით, კუნთის მუშაობა, ნერვული იმპულსის გზა.",
+        icon: "journey",
+        grades: "VIII–XII",
+        href: "/biology/journeys",
       },
       {
         slug: "blood",

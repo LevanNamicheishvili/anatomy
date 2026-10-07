@@ -73,7 +73,7 @@ export const BIOLOGY_GRADES: Grade[] = [
             n: "2.3",
             title: "ძვლების აგებულება და ზრდა",
             page: "34",
-            href: "/topic/skeleton",
+            href: "/biology/journeys?j=bone",
           },
           {
             n: "2.4",
@@ -103,7 +103,7 @@ export const BIOLOGY_GRADES: Grade[] = [
             n: "2.8",
             title: "ჩონჩხის კუნთების მოქმედების მექანიზმი",
             page: "48",
-            href: "/topic/muscles",
+            href: "/biology/journeys?j=muscle",
           },
           {
             n: "2.9",

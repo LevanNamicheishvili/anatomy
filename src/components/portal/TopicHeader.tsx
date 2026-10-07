@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Sun, type LucideIcon } from "lucide-react";
+import { Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
 import type { SubjectIcon, TopicIcon } from "@/lib/subjects";
 import { Logo } from "./ui";
 
@@ -9,6 +9,7 @@ export const TOPIC_ICONS: Record<TopicIcon, LucideIcon> = {
   body: PersonStanding,
   heart: Heart,
   nerve: Brain,
+  journey: Route,
   blood: Droplet,
   dna: Dna,
   cell: Microscope,
