@@ -377,7 +377,8 @@ export class JourneyScene {
     this.scene.background = a.bg ? new THREE.Color(a.bg) : null;
     this.scene.fog = a.bg && a.far ? new THREE.Fog(a.bg, a.near, a.far) : null;
     // Dark scenes get a little more exposure so the tissue stays readable on a projector.
-    this.renderer.toneMappingExposure = a.bg ? 1.3 : 1;
+    const lum = a.bg ? new THREE.Color(a.bg).getHSL({ h: 0, s: 0, l: 0 }).l : 1;
+    this.renderer.toneMappingExposure = !a.bg ? 1 : lum < 0.3 ? 1.3 : 0.85;
     if (cut) this.snap = true;
     this.dirty = true;
     this.cb.onStage(i);
