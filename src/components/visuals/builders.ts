@@ -14,6 +14,7 @@ const genetics = () => import("./v-genetics");
 const bodyV = () => import("./v-body");
 const nerves = () => import("./v-nerves");
 const chem = () => import("./v-chem");
+const growth = () => import("./v-growth");
 
 export const VISUAL_BUILDERS: Record<string, Builder> = {
   "endocrine-system": lazy(hormones, (m) => m.endocrineSystem),
@@ -100,4 +101,18 @@ export const VISUAL_BUILDERS: Record<string, Builder> = {
   levels: lazy(chem, (m) => m.levels),
   symmetry: lazy(chem, (m) => m.symmetry),
   "toxins-cell": lazy(chem, (m) => m.toxinsCell),
+  "plant-minerals": lazy(growth, (m) => m.plantMinerals),
+  "plant-transport": lazy(growth, (m) => m.plantTransport),
+  flower: lazy(growth, (m) => m.flowerVisual),
+  phototropism: lazy(growth, (m) => m.phototropism),
+  "plant-hormones": lazy(growth, (m) => m.plantHormones),
+  gametogenesis: lazy(growth, (m) => m.gametogenesis),
+  embryo: lazy(growth, (m) => m.embryo),
+  puberty: lazy(growth, (m) => m.puberty),
+  "repro-system": lazy(growth, (m) => m.reproSystem),
+  cycle: lazy(growth, (m) => m.cycle),
+  fetus: lazy(growth, (m) => m.fetus),
+  "fetal-factors": lazy(growth, (m) => m.fetalFactors),
+  sti: lazy(growth, (m) => m.sti),
+  "brain-maturity": lazy(growth, (m) => m.brainMaturity),
 };
