@@ -1,56 +1,43 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BookOpen, Box, Lightbulb } from "lucide-react";
-import type { Chapter, Grade, Lesson } from "@/lib/curriculum";
-import { lessonHref, type LessonContent } from "@/lib/lessons";
+import { ArrowLeft, ArrowRight, Box, Lightbulb } from "lucide-react";
+import type { BioLesson, BioTopic } from "@/lib/biology-topics";
+import type { Lesson } from "@/lib/curriculum";
+import type { LessonContent } from "@/lib/lessons";
 import { LessonQuiz } from "./LessonQuiz";
 import { PunnettSquare } from "./PunnettSquare";
 import { TopicHeader } from "./TopicHeader";
 
 const COLOR = "#0f8a74";
 
-/** One textbook lesson: text, key terms, what to remember, 3D links and a self-check. */
+/** One lesson: text, key terms, what to remember, 3D links and a self-check; moves on within its topic. */
 export function LessonPage({
-  grade,
-  chapter,
+  topic,
+  prev,
+  next,
   lesson,
   content,
-  index,
-  all,
   locked = false,
 }: {
-  grade: Grade;
-  chapter: Chapter;
+  topic: BioTopic | null;
+  prev: BioLesson | null;
+  next: BioLesson | null;
   lesson: Lesson;
   content: LessonContent;
-  index: number;
-  all: Lesson[];
   locked?: boolean;
 }) {
-  const prev = all[index - 1];
-  const next = all[index + 1];
-  const prevHref = prev && lessonHref(grade.grade, prev);
-  const nextHref = next && lessonHref(grade.grade, next);
-  const back = `/biology?grade=${grade.grade}`;
+  const back = topic ? `/biology/themes/${topic.slug}` : "/biology";
+  const title = lesson.title.replace(/\s*\(\+.*\)$/, "");
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
-      <TopicHeader
-        subject={{ name: `ბიოლოგია ${grade.roman}`, href: back }}
-        topic={`${lesson.n} ${lesson.title}`}
-        color={COLOR}
-        icon="body"
-      />
+      <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic={topic?.title ?? title} color={COLOR} icon={topic?.icon ?? "body"} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <p className="text-sm text-[#66736f]">{chapter.title}</p>
-        <h1 className="mt-2 text-3xl leading-tight">
-          <span className="text-[#97a29e]">{lesson.n}</span> {lesson.title}
-        </h1>
-        {lesson.page && (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-[#66736f]">
-            <BookOpen className="size-4" />
-            სახელმძღვანელო, გვ. {lesson.page}
-          </p>
+        {topic && (
+          <Link href={back} className="text-sm text-[#66736f] hover:text-[#111a18]">
+            {topic.title}
+          </Link>
         )}
+        <h1 className="mt-2 text-3xl leading-tight">{title}</h1>
 
         {locked ? (
           <p className="mt-6 rounded-xl border border-[#d5dcd9] bg-white p-5 text-[15px] leading-7 text-[#33413e]">
@@ -131,16 +118,16 @@ export function LessonPage({
           className="mt-12 grid gap-3 border-t border-[#e2e7e5] pt-6 sm:grid-cols-2"
           aria-label="გაკვეთილები"
         >
-          {prev && prevHref ? (
+          {prev ? (
             <Link
-              href={prevHref}
+              href={prev.href}
               className="group flex items-center gap-3 rounded-xl border border-[#d5dcd9] bg-white p-4 hover:border-[#97a29e]"
             >
               <ArrowLeft className="size-5 shrink-0 text-[#97a29e]" />
               <span className="min-w-0">
                 <span className="block text-xs text-[#66736f]">წინა</span>
                 <span className="block truncate font-semibold">
-                  {prev.n} {prev.title}
+                  {prev.title}
                 </span>
               </span>
             </Link>
@@ -150,19 +137,19 @@ export function LessonPage({
               className="flex items-center gap-3 rounded-xl border border-[#d5dcd9] bg-white p-4 hover:border-[#97a29e]"
             >
               <ArrowLeft className="size-5 shrink-0 text-[#97a29e]" />
-              <span className="font-semibold">ყველა გაკვეთილი</span>
+              <span className="font-semibold">{topic ? topic.title : "ბიოლოგია"}</span>
             </Link>
           )}
-          {next && nextHref && (
+          {next && (
             <Link
-              href={nextHref}
+              href={next.href}
               className="group flex items-center justify-end gap-3 rounded-xl p-4 text-right text-white"
               style={{ backgroundColor: COLOR }}
             >
               <span className="min-w-0">
                 <span className="block text-xs text-white/80">შემდეგი</span>
                 <span className="block truncate font-semibold">
-                  {next.n} {next.title}
+                  {next.title}
                 </span>
               </span>
               <ArrowRight className="size-5 shrink-0" />

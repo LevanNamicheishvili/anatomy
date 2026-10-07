@@ -37,7 +37,11 @@ export const zoomJourney: Builder = async (k) => {
   const nucleus = buildNucleus(k);
   const dna = buildDNA(k);
   const levels = [bodyGroup, heartGroup, tissue.group, cell.group, nucleus.group, dna.group];
-  const show = (i: number) => levels.forEach((g, j) => (g.visible = i === j));
+  const moods: [string | null, number, number][] = [[null, 0, 0], [null, 0, 0], ["#140a0c", 9, 26], ["#120a0e", 8, 22], ["#0d0a14", 6, 16], ["#060a12", 8, 20]];
+  const show = (i: number) => {
+    levels.forEach((g, j) => (g.visible = i === j));
+    k.mood(...moods[i]);
+  };
   const wall = v(0.05, 1.29, 0.04);
 
   return {
@@ -111,7 +115,7 @@ function buildTissue(k: Kit) {
   k.root.add(group);
   const r = rng(21);
   const stripes = k.stripes(["#d07a73", "#a4433f", "#d98b82", "#a4433f"], [3, 1, 2, 1], [1, 14]);
-  const cellMat = k.material({ color: "#ffffff", map: stripes, roughness: 0.5, transparent: true, opacity: 0.86, sheen: 0.5, sheenColor: new THREE.Color("#ffd6d0") });
+  const cellMat = k.material({ color: "#ffffff", map: stripes, roughness: 0.42, transparent: true, opacity: 0.88, sheen: 0.6, sheenColor: new THREE.Color("#ffd6d0"), normalMap: k.normalMap("fibre", [3, 1]), clearcoat: 0.5 });
   const cellGeo = k.track(new THREE.CapsuleGeometry(0.5, 2.3, 6, 18));
   const discMat = k.material({ color: "#5d1d22", roughness: 0.6 });
   const nucMat = k.material({ color: "#5b3f8c", roughness: 0.5 });
@@ -186,15 +190,15 @@ function buildCell(k: Kit) {
   k.root.add(group);
   const r = rng(31);
   const L = 7;
-  const membrane = new THREE.Mesh(k.track(new THREE.CapsuleGeometry(1.75, L, 8, 32)), k.ghost("#f3a6a6", 0.18, { side: THREE.DoubleSide, sheen: 0.8, sheenColor: new THREE.Color("#ffffff") }));
+  const membrane = new THREE.Mesh(k.track(new THREE.CapsuleGeometry(1.75, L, 8, 32)), k.ghost("#f3a6a6", 0.22, { side: THREE.DoubleSide, sheen: 0.8, sheenColor: new THREE.Color("#ffffff"), normalMap: k.normalMap("organic", [6, 2]), clearcoat: 0.6 }));
   membrane.rotation.z = Math.PI / 2;
   membrane.renderOrder = 3;
   group.add(membrane);
   // Sarcomeres: Z line, light I band, dark A band with a lighter H zone.
   const sarc = k.stripes(["#5a1f26", "#f0c3bd", "#b6555a", "#d98a87", "#b6555a", "#f0c3bd"], [0.4, 2, 2.6, 0.9, 2.6, 2], [1, 9]);
-  const fibMat = k.material({ color: "#ffffff", map: sarc, roughness: 0.5 });
+  const fibMat = k.material({ color: "#ffffff", map: sarc, roughness: 0.45, normalMap: k.normalMap("fibre", [2, 1]), clearcoat: 0.3 });
   const fibGeo = k.track(new THREE.CylinderGeometry(0.27, 0.27, L + 1.4, 18, 1));
-  const mitoMat = k.material({ color: "#e48c3f", roughness: 0.45, clearcoat: 0.4 });
+  const mitoMat = k.material({ color: "#e48c3f", roughness: 0.4, clearcoat: 0.5, normalMap: k.normalMap("organic", [2, 2]) });
   const fibrils: V3[] = [];
   for (let a = 0; a < 6; a++) {
     for (const rad of [0.95, 1.45]) {
@@ -256,7 +260,7 @@ function buildNucleus(k: Kit) {
   // A quarter is cut away so we see inside.
   const shell = (rad: number, color: string) => {
     const g = k.track(new THREE.SphereGeometry(rad, 64, 40, Math.PI * 0.5, Math.PI * 1.5));
-    return new THREE.Mesh(g, k.material({ color, roughness: 0.5, side: THREE.DoubleSide, sheen: 0.4, sheenColor: new THREE.Color("#ffffff") }));
+    return new THREE.Mesh(g, k.material({ color, roughness: 0.45, side: THREE.DoubleSide, sheen: 0.5, sheenColor: new THREE.Color("#ffffff"), normalMap: k.normalMap("organic", [5, 3]), clearcoat: 0.4 }));
   };
   group.add(shell(R, "#9c86c9"), shell(R - 0.12, "#bba8de"));
   const poreGeo = k.track(new THREE.TorusGeometry(0.11, 0.045, 8, 16));

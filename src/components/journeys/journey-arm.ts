@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Body } from "./body-model";
-import { context, layer } from "./common";
+import { context, cylinderUV, layer } from "./common";
 import { ease, v, type Builder, type Kit, type Shot, type V3 } from "./JourneyScene";
 
 /*
@@ -33,9 +33,10 @@ function arrow(k: Kit, color: string) {
 export function armRig(k: Kit, body: Body, parent: THREE.Object3D) {
   const elbow = v(...body.data.elbow);
   const axis = v(...body.data.elbowAxis).normalize();
-  const boneMat = k.material({ color: "#ece2cb", roughness: 0.6, clearcoat: 0.15 });
+  const boneMat = k.material({ color: "#ece2cb", roughness: 0.55, clearcoat: 0.2, normalMap: k.normalMap("bone", [1, 1]), normalScale: new THREE.Vector2(0.6, 0.6) });
   const humerus = layer(k, body, parent, (p) => p.group === "humerus", boneMat);
   const hb = humerus.geometry.boundingBox!;
+  const down = v(0, -1, 0);
   const shoulder = v((hb.min.x + hb.max.x) / 2, hb.max.y - 0.02, (hb.min.z + hb.max.z) / 2);
   const pivot = new THREE.Group();
   pivot.position.copy(elbow);
@@ -44,7 +45,8 @@ export function armRig(k: Kit, body: Body, parent: THREE.Object3D) {
   forearm.position.copy(elbow).negate();
   pivot.add(forearm);
   const radius = layer(k, body, forearm, (p) => p.group === "radius", boneMat);
-  layer(k, body, forearm, (p) => p.group === "ulna", boneMat);
+  const ulna = layer(k, body, forearm, (p) => p.group === "ulna", boneMat);
+  for (const b of [humerus, radius, ulna]) cylinderUV(b.geometry, b.geometry.boundingBox!.getCenter(new THREE.Vector3()), down, 12);
   const rb = radius.geometry.boundingBox!;
   const hand = v((rb.min.x + rb.max.x) / 2 - 0.01, rb.min.y - 0.06, (rb.min.z + rb.max.z) / 2 + 0.01);
   const load = new THREE.Mesh(k.sphere, k.material({ color: "#59636a", metalness: 0.6, roughness: 0.35 }));
@@ -66,7 +68,9 @@ export function armRig(k: Kit, body: Body, parent: THREE.Object3D) {
       colors.set([c.r, c.g, c.b], i);
     }
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const mat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.45, clearcoat: 0.35, sheen: 0.4, sheenColor: new THREE.Color("#ffc4bc"), emissive: "#ff3b2f", emissiveIntensity: 0 });
+    // Fibres run along the arm.
+    cylinderUV(geo, elbow, shoulder.clone().sub(elbow), 6);
+    const mat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.4, clearcoat: 0.55, clearcoatRoughness: 0.3, sheen: 0.5, sheenColor: new THREE.Color("#ffc4bc"), emissive: "#ff3b2f", emissiveIntensity: 0, normalMap: k.normalMap("fibre", [2, 1]), normalScale: new THREE.Vector2(0.8, 0.8) });
     const mesh = new THREE.Mesh(geo, mat);
     parent.add(mesh);
     return { mesh, geo, base, top, mat };

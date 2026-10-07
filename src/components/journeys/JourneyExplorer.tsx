@@ -122,7 +122,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
 
         <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
           <p className="text-xs font-semibold" style={{ color: journey.color }}>
-            {journey.title} · კლასი {journey.grades}
+            {journey.title}
           </p>
           <h2 className="mt-1 text-2xl">{current.title}</h2>
           <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#eef2f0]">

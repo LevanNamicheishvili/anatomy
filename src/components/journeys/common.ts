@@ -55,7 +55,8 @@ export function flow(k: Kit, parent: THREE.Object3D, o: { n: number; geometry?: 
 
 /** Red cells streaming along a curve; `color(u)` gives the colour at each point (oxygen picked up or given off). */
 export function stream(k: Kit, parent: THREE.Object3D, curve: THREE.Curve<V3>, o: { n: number; size: number; spread: number; speed: number; color: (u: number) => THREE.Color; seed?: number }) {
-  const mat = k.material({ color: "#ffffff", roughness: 0.38, clearcoat: 0.5, sheen: 0.4, sheenColor: new THREE.Color("#ff9a9a") });
+  // Wet, slightly translucent-looking red cells.
+  const mat = k.material({ color: "#ffffff", roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.25, sheen: 0.6, sheenColor: new THREE.Color("#ff8a8a"), emissive: "#3a0508", emissiveIntensity: 0.4 });
   const mesh = new THREE.InstancedMesh(k.redCell(), mat, o.n);
   mesh.frustumCulled = false;
   parent.add(mesh);
@@ -89,3 +90,22 @@ export function orbit(target: V3, dist: number, t: number, o: { start?: number; 
 }
 
 export const lerp3 = (a: V3, b: V3, t: number) => a.clone().lerp(b, t);
+
+/**
+ * Give an atlas mesh (which has no UVs) cylindrical UVs round an axis — u round it, v along it in metres
+ * × `perMetre` — so a fibre or bone normal map can run along the muscle or bone.
+ */
+export function cylinderUV(geo: THREE.BufferGeometry, origin: V3, axis: V3, perMetre = 20) {
+  const a = axis.clone().normalize();
+  const e1 = new THREE.Vector3().crossVectors(a, Math.abs(a.z) < 0.9 ? v(0, 0, 1) : v(1, 0, 0)).normalize();
+  const e2 = new THREE.Vector3().crossVectors(a, e1);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const uv = new Float32Array(pos.count * 2);
+  const p = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    p.fromBufferAttribute(pos, i).sub(origin);
+    uv[i * 2] = (Math.atan2(p.dot(e2), p.dot(e1)) / (2 * Math.PI) + 0.5) * 4;
+    uv[i * 2 + 1] = p.dot(a) * perMetre;
+  }
+  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+}

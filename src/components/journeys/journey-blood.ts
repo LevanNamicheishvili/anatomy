@@ -79,6 +79,9 @@ export const bloodJourney: Builder = async (k) => {
     alveolus.group.visible = which === "alv";
     muscle.group.visible = which === "mus";
     streams.forEach((s, i) => (s.mesh.visible = i === streamIdx));
+    // Inside the body it is dark; fog gives depth.
+    if (which === "macro") k.mood(null);
+    else k.mood(which === "alv" ? "#1b0c10" : "#170a0a", 8, 22);
   };
 
   const p = new THREE.Vector3();
@@ -158,7 +161,7 @@ function buildAlveolus(k: Parameters<Builder>[0]) {
   k.root.add(group);
   const r = rng(11);
   // A cluster of air sacs at the end of a small airway.
-  const sac = k.ghost("#f2b3b8", 0.32, { side: THREE.DoubleSide, roughness: 0.5, sheen: 0.6, sheenColor: new THREE.Color("#ffffff") });
+  const sac = k.ghost("#f2b3b8", 0.36, { side: THREE.DoubleSide, roughness: 0.45, sheen: 0.7, sheenColor: new THREE.Color("#ffe4e4"), normalMap: k.normalMap("organic", [3, 2]), emissive: "#5a1a22", emissiveIntensity: 0.3 });
   const main = new THREE.Mesh(k.sphere, sac);
   main.scale.setScalar(1.3);
   group.add(main);
@@ -191,7 +194,7 @@ function buildAlveolus(k: Parameters<Builder>[0]) {
     colors.set([c.r, c.g, c.b], i * 3);
   }
   capGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  group.add(new THREE.Mesh(capGeo, k.ghost("#ffffff", 0.42, { vertexColors: true })));
+  group.add(new THREE.Mesh(capGeo, k.ghost("#ffffff", 0.5, { vertexColors: true, normalMap: k.normalMap("organic", [24, 1]), clearcoat: 0.6, roughness: 0.35 })));
   const oxy = (u: number) => c.copy(VENOUS).lerp(ARTERIAL, THREE.MathUtils.smoothstep(u, 0.25, 0.6));
   const cells = stream(k, group, curve, { n: 16, size: 0.2, spread: 0.02, speed: 0.045, color: oxy, seed: 5 });
   // O₂ from the air into the blood, CO₂ the other way.
@@ -220,7 +223,7 @@ function buildMuscleCapillary(k: Parameters<Builder>[0]) {
   group.visible = false;
   k.root.add(group);
   const stripes = k.stripes(["#b9524a", "#8e3530", "#c76a5f", "#8e3530"], [3, 1, 2, 1], [1, 22]);
-  const fibre = k.material({ color: "#ffffff", map: stripes, roughness: 0.55, sheen: 0.4, sheenColor: new THREE.Color("#ffd0c8") });
+  const fibre = k.material({ color: "#ffffff", map: stripes, roughness: 0.5, sheen: 0.5, sheenColor: new THREE.Color("#ffd0c8"), normalMap: k.normalMap("fibre", [4, 1]), clearcoat: 0.4 });
   const geo = k.track(new THREE.CylinderGeometry(0.62, 0.62, 12, 28, 1));
   // A bed of fibres behind and beside the capillary, open towards the viewer.
   const lanes = [v(0, 0.75, -0.75), v(0, -0.75, -0.75), v(0, 1.75, 0.35), v(0, -1.75, 0.35), v(0, 0, -2.0), v(0, 2.3, -1.6), v(0, -2.3, -1.6)];
@@ -246,7 +249,7 @@ function buildMuscleCapillary(k: Parameters<Builder>[0]) {
     colors.set([c.r, c.g, c.b], i * 3);
   }
   capGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  group.add(new THREE.Mesh(capGeo, k.ghost("#ffffff", 0.45, { vertexColors: true })));
+  group.add(new THREE.Mesh(capGeo, k.ghost("#ffffff", 0.5, { vertexColors: true, normalMap: k.normalMap("organic", [24, 1]), clearcoat: 0.6, roughness: 0.35 })));
   const oxy = (u: number) => c.copy(ARTERIAL).lerp(VENOUS, THREE.MathUtils.smoothstep(u, 0.3, 0.75));
   const cells = stream(k, group, curve, { n: 18, size: 0.22, spread: 0.02, speed: 0.04, color: oxy, seed: 8 });
   const at = (i: number, n: number) => curve.getPointAt(0.3 + (0.45 * i) / n);

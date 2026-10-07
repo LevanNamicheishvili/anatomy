@@ -61,7 +61,72 @@ export class Kit {
   private disposables: { dispose(): void }[] = [];
   labels: Label[] = [];
 
+  /** Background and fog of the stage on screen: dark inside the body, none (page colour) outside. */
+  atmosphere: { bg: string | null; near: number; far: number } = { bg: null, near: 0, far: 0 };
+  private normals = new Map<string, THREE.Texture>();
+
   constructor(private overlay: HTMLElement) {}
+
+  mood(bg: string | null, near = 0, far = 0) {
+    this.atmosphere = { bg, near, far };
+  }
+
+  /**
+   * A tiling normal map for surface detail: "organic" soft bumps (membranes, cells), "fibre" fine ridges
+   * along v (muscle fibres, tendons), "bone" small pits and grain. Built once per kind.
+   */
+  normalMap(kind: "organic" | "fibre" | "bone", repeat: [number, number] = [1, 1]) {
+    let base = this.normals.get(kind);
+    if (!base) {
+      const N = 256;
+      const r = rng(kind.length * 977);
+      const waves = Array.from({ length: kind === "fibre" ? 18 : 26 }, () => {
+        const fx = kind === "fibre" ? 1 + Math.floor(r() * 3) : 1 + Math.floor(r() * 9);
+        const fy = kind === "fibre" ? 4 + Math.floor(r() * 40) : 1 + Math.floor(r() * 9);
+        return { fx: kind === "fibre" ? fy : fx, fy: kind === "fibre" ? fx : fy, ph: r() * 6.283, a: 1 / Math.sqrt(fx * fx + fy * fy) };
+      });
+      const pits = kind === "bone" ? Array.from({ length: 70 }, () => ({ x: r(), y: r(), rad: 0.01 + r() * 0.025 })) : [];
+      const h = new Float32Array(N * N);
+      for (let y = 0; y < N; y++)
+        for (let x = 0; x < N; x++) {
+          const u = x / N;
+          const w = y / N;
+          let sum = 0;
+          for (const k of waves) sum += k.a * Math.sin(6.283 * (k.fx * u + k.fy * w) + k.ph);
+          if (kind === "organic") sum = Math.abs(sum) * 1.4;
+          for (const p of pits) {
+            const dx = Math.min(Math.abs(u - p.x), 1 - Math.abs(u - p.x));
+            const dy = Math.min(Math.abs(w - p.y), 1 - Math.abs(w - p.y));
+            const d = Math.hypot(dx, dy) / p.rad;
+            if (d < 1) sum -= 0.6 * (1 - d * d);
+          }
+          h[y * N + x] = sum;
+        }
+      const strength = kind === "fibre" ? 5 : kind === "bone" ? 7 : 4;
+      base = this.canvasTexture(N, N, (ctx) => {
+        const img = ctx.createImageData(N, N);
+        for (let y = 0; y < N; y++)
+          for (let x = 0; x < N; x++) {
+            const dx = (h[y * N + ((x + 1) % N)] - h[y * N + ((x + N - 1) % N)]) * strength;
+            const dy = (h[((y + 1) % N) * N + x] - h[((y + N - 1) % N) * N + x]) * strength;
+            const len = Math.hypot(dx, dy, 1);
+            const i = (y * N + x) * 4;
+            img.data[i] = ((-dx / len) * 0.5 + 0.5) * 255;
+            img.data[i + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+            img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+            img.data[i + 3] = 255;
+          }
+        ctx.putImageData(img, 0, 0);
+      });
+      base.colorSpace = THREE.NoColorSpace;
+      base.wrapS = base.wrapT = THREE.RepeatWrapping;
+      this.normals.set(kind, base);
+    }
+    const tex = this.track(base.clone());
+    tex.repeat.set(...repeat);
+    tex.needsUpdate = true;
+    return tex;
+  }
 
   track<T extends { dispose(): void }>(x: T) {
     this.disposables.push(x);
@@ -188,6 +253,8 @@ export class Kit {
     });
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
+    this.normals.clear();
+    this.atmosphere = { bg: null, near: 0, far: 0 };
     this.root.clear();
   }
 
@@ -255,7 +322,8 @@ export class JourneyScene {
     this.controls.enabled = false;
     this.controls.rotateSpeed = 0.6;
     this.fade = document.createElement("div");
-    this.fade.className = "absolute inset-0 bg-[#f4f6f5]";
+    // Scene changes dip through near-black, like a cut in a film.
+    this.fade.className = "absolute inset-0 bg-[#0c1110]";
     this.fade.style.opacity = "0";
     overlay.appendChild(this.fade);
     this.observer = new ResizeObserver(() => this.resize());
@@ -306,6 +374,11 @@ export class JourneyScene {
     this.stage = i;
     this.stageTime = 0;
     plan.stages[i].enter?.();
+    const a = this.kit.atmosphere;
+    this.scene.background = a.bg ? new THREE.Color(a.bg) : null;
+    this.scene.fog = a.bg && a.far ? new THREE.Fog(a.bg, a.near, a.far) : null;
+    // Dark scenes get a little more exposure so the tissue stays readable on a projector.
+    this.renderer.toneMappingExposure = a.bg ? 1.3 : 1;
     if (cut) this.snap = true;
     this.dirty = true;
     this.cb.onStage(i);

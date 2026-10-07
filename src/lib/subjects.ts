@@ -3,7 +3,7 @@
  * listing its topics; a topic without `href` is shown as "coming soon".
  */
 export type SubjectIcon = "biology" | "geography" | "history";
-export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
+export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "atom" | "tissue" | "bone" | "lungs" | "digest" | "kidney" | "eye" | "hormone" | "health" | "baby" | "genetics" | "evolution" | "plant" | "eco" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
 
 export interface Topic {
   slug: string;

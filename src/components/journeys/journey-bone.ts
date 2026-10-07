@@ -25,7 +25,11 @@ export const boneJourney: Builder = async (k) => {
   const spongy = buildSpongy(k);
   const marrow = buildMarrow(k);
   const levels = [leg, cut.group, compact.group, spongy.group, marrow.group];
-  const show = (i: number) => levels.forEach((g, j) => (g.visible = i === j));
+  const moods: [string | null, number, number][] = [[null, 0, 0], [null, 0, 0], ["#16110b", 10, 28], ["#1a0b0b", 6, 20], ["#1a0909", 7, 20]];
+  const show = (i: number) => {
+    levels.forEach((g, j) => (g.visible = i === j));
+    k.mood(...moods[i]);
+  };
 
   return {
     stages: [
@@ -233,8 +237,8 @@ function buildOsteons(k: Kit) {
     ctx.fill();
   });
   const side = k.stripes(["#eadcbc", "#dccaa0"], [1, 1], [8, 1]);
-  const capMat = k.material({ map: ringTex, roughness: 0.65 });
-  const sideMat = k.material({ color: "#ffffff", map: side, roughness: 0.65 });
+  const capMat = k.material({ map: ringTex, roughness: 0.6, normalMap: k.normalMap("bone", [1, 1]) });
+  const sideMat = k.material({ color: "#ffffff", map: side, roughness: 0.6, normalMap: k.normalMap("bone", [4, 2]) });
   const H = 5;
   const RO = 1;
   const osteonGeo = k.track(new THREE.CylinderGeometry(RO, RO, H, 40, 1));
@@ -265,7 +269,7 @@ function buildOsteons(k: Kit) {
   radii.forEach((rad, i) => {
     const h = H - 0.2 + i * 0.75;
     const g = k.track(new THREE.CylinderGeometry(rad, rad, h, 40, 1, true));
-    const m = new THREE.Mesh(g, k.material({ color: "#ffffff", map: i % 2 ? lamA : lamB, roughness: 0.6, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(g, k.material({ color: "#ffffff", map: i % 2 ? lamA : lamB, roughness: 0.55, side: THREE.DoubleSide, normalMap: k.normalMap("bone", [3, 2]) }));
     m.position.y = (h - H) / 2;
     out.add(m);
   });
@@ -324,7 +328,7 @@ function buildSpongy(k: Kit) {
       .slice(0, 3);
     for (const n of near) struts.push([p, nodes[n.j]]);
   });
-  const boneMat = k.material({ color: "#efe4c9", roughness: 0.6, clearcoat: 0.15 });
+  const boneMat = k.material({ color: "#efe4c9", roughness: 0.55, clearcoat: 0.15, normalMap: k.normalMap("bone", [1, 2]) });
   const sm = new THREE.InstancedMesh(k.cylinder, boneMat, struts.length);
   const m = new THREE.Matrix4();
   const up = v(0, 1, 0);
@@ -367,7 +371,7 @@ function buildMarrow(k: Kit) {
   group.visible = false;
   k.root.add(group);
   const r = rng(91);
-  const stem = new THREE.Mesh(k.sphere, k.material({ color: "#b49ad6", roughness: 0.45, sheen: 0.6, sheenColor: new THREE.Color("#ffffff") }));
+  const stem = new THREE.Mesh(k.sphere, k.material({ color: "#b49ad6", roughness: 0.4, sheen: 0.7, sheenColor: new THREE.Color("#ffffff"), normalMap: k.normalMap("organic", [2, 1]), clearcoat: 0.5 }));
   stem.scale.setScalar(0.85);
   stem.position.set(-1.5, 1.4, 0);
   const stemNuc = new THREE.Mesh(k.sphere, k.material({ color: "#5a3d8a", roughness: 0.5 }));
@@ -375,7 +379,7 @@ function buildMarrow(k: Kit) {
   stemNuc.position.copy(stem.position).add(v(0.2, 0.15, 0.45));
   group.add(stem, stemNuc);
   // Precursors around the stem cell.
-  const prec = new THREE.InstancedMesh(k.sphere, k.material({ color: "#d9a0b4", roughness: 0.5 }), 14);
+  const prec = new THREE.InstancedMesh(k.sphere, k.material({ color: "#d9a0b4", roughness: 0.42, normalMap: k.normalMap("organic", [2, 1]), sheen: 0.5, sheenColor: new THREE.Color("#ffffff"), clearcoat: 0.4 }), 14);
   const m = new THREE.Matrix4();
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2;

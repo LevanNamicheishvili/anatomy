@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { LessonPage } from "@/components/portal/LessonPage";
 import { requireUser } from "@/lib/auth";
 import { BIOLOGY_GRADES } from "@/lib/curriculum";
+import { lessonPlace } from "@/lib/biology-topics";
 import { findLesson, lessonContent } from "@/lib/lessons";
 
 type Params = Promise<{ grade: string; n: string }>;
@@ -18,12 +19,13 @@ async function resolve(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const r = await resolve(params);
-  return r ? { title: `${r.lesson.n} ${r.lesson.title} — ბიოლოგია ${r.grade.roman}` } : {};
+  return r ? { title: `${r.lesson.title} — ბიოლოგია` } : {};
 }
 
 export default async function Page({ params }: { params: Params }) {
   const r = await resolve(params);
   if (!r) notFound();
   const user = await requireUser(`/biology/lesson/${r.grade.grade}/${encodeURIComponent(r.lesson.n || r.lesson.title)}`);
-  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} grade={r.grade} chapter={r.chapter} lesson={r.lesson} content={r.content} index={r.index} all={r.all} />;
+  const place = lessonPlace(r.grade.grade, r.lesson.n || r.lesson.title);
+  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} topic={place?.topic ?? null} prev={place?.prev ?? null} next={place?.next ?? null} lesson={r.lesson} content={r.content} />;
 }

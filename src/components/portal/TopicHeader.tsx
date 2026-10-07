@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
+import { Atom, Baby, Bone, Droplets, Eye, Fish, FlaskConical, Layers, ShieldPlus, Shuffle, Sprout, Trees, Utensils, Wind, Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
 import type { SubjectIcon, TopicIcon } from "@/lib/subjects";
 import { Logo } from "./ui";
 
@@ -10,6 +10,20 @@ export const TOPIC_ICONS: Record<TopicIcon, LucideIcon> = {
   heart: Heart,
   nerve: Brain,
   journey: Route,
+  atom: Atom,
+  tissue: Layers,
+  bone: Bone,
+  lungs: Wind,
+  digest: Utensils,
+  kidney: Droplets,
+  eye: Eye,
+  hormone: FlaskConical,
+  health: ShieldPlus,
+  baby: Baby,
+  genetics: Shuffle,
+  evolution: Fish,
+  plant: Sprout,
+  eco: Trees,
   blood: Droplet,
   dna: Dna,
   cell: Microscope,
