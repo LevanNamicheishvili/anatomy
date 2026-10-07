@@ -52,6 +52,24 @@ export function rng(seed: number) {
   };
 }
 
+/**
+ * Rim light shared by every material: surfaces glow a little at their edges, the way cells and tissue look
+ * in microscope renders. The engine turns it up in dark (inside-the-body) scenes and off outdoors.
+ */
+export const RIM = { value: 0 };
+
+function addRim(m: THREE.MeshPhysicalMaterial) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uRim = RIM;
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uRim;").replace(
+      "#include <emissivemap_fragment>",
+      "#include <emissivemap_fragment>\n{ float facing = saturate(dot(normal, normalize(vViewPosition))); totalEmissiveRadiance += mix(diffuseColor.rgb, vec3(1.0), 0.35) * pow(1.0 - facing, 2.5) * uRim * diffuseColor.a * diffuseColor.a; }",
+    );
+  };
+  m.customProgramCacheKey = () => "rim";
+  return m;
+}
+
 export const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
@@ -139,7 +157,7 @@ export class Kit {
   }
 
   material(params: THREE.MeshPhysicalMaterialParameters) {
-    return this.track(new THREE.MeshPhysicalMaterial({ roughness: 0.5, clearcoat: 0.2, ...params }));
+    return this.track(addRim(new THREE.MeshPhysicalMaterial({ roughness: 0.5, clearcoat: 0.2, ...params })));
   }
 
   /** A see-through material that doesn't hide what is behind or inside it. */
@@ -446,7 +464,8 @@ export class JourneyScene {
     this.scene.fog = a.bg && a.far ? new THREE.Fog(sky ? "#cfdbe0" : a.bg, a.near, a.far) : null;
     // Dark scenes get a little more exposure so the tissue stays readable on a projector.
     const lum = a.bg ? new THREE.Color(a.bg).getHSL({ h: 0, s: 0, l: 0 }).l : 1;
-    this.renderer.toneMappingExposure = sky ? 1.0 : !a.bg ? 1.1 : lum < 0.3 ? 1.45 : 1.0;
+    this.renderer.toneMappingExposure = sky ? 1.0 : !a.bg ? 1.05 : lum < 0.3 ? 1.15 : 0.95;
+    RIM.value = sky ? 0 : a.bg && lum < 0.3 ? 0.42 : 0.1;
   }
 
   /** Shadows from the key light fitted round what is visible; solid objects cast and receive them. */

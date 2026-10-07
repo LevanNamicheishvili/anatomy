@@ -105,6 +105,9 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
         </ol>
         <h2 className="mt-3 text-lg">{current.title}</h2>
         <p className="mt-1 text-[15px] leading-7 text-[#33413e]">{current.text}</p>
+        <p className="mt-3 text-[11px] leading-4 text-[#97a29e]">
+          3D: BodyParts3D © DBCLS (CC BY 4.0); Poly Haven (CC0); Fox — PixelMannen, @tomkranis (CC BY 4.0). უჯრედები და მოლეკულები სქემატურია.
+        </p>
       </div>
     </section>
   );
