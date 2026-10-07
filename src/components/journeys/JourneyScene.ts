@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { loadBody, type Body } from "./body-model";
-import type { JourneyId } from "./journeys-data";
 
 /*
  * The journeys engine: one journey is a list of stages; each stage runs for a while, moves the camera
@@ -239,8 +238,8 @@ export class Kit {
     return this.track(g);
   }
 
-  async body(withBrain: boolean): Promise<Body> {
-    return loadBody(withBrain);
+  async body(extra: boolean | { brain?: boolean; organs?: boolean }): Promise<Body> {
+    return loadBody(extra);
   }
 
   clear() {
@@ -302,7 +301,7 @@ export class JourneyScene {
     private canvas: HTMLCanvasElement,
     overlay: HTMLElement,
     private cb: JourneyCallbacks,
-    private builders: Record<JourneyId, Builder>,
+    private builders: Record<string, Builder>,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
@@ -332,7 +331,7 @@ export class JourneyScene {
     this.loop();
   }
 
-  async start(id: JourneyId) {
+  async start(id: string) {
     const token = ++this.token;
     this.plan = null;
     this.kit.clear();

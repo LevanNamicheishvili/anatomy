@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { LessonPage } from "@/components/portal/LessonPage";
 import { requireUser } from "@/lib/auth";
 import { BIOLOGY_GRADES } from "@/lib/curriculum";
+import { visualForLesson } from "@/components/visuals/lesson-visuals";
 import { lessonPlace } from "@/lib/biology-topics";
 import { findLesson, lessonContent } from "@/lib/lessons";
 
@@ -26,6 +27,7 @@ export default async function Page({ params }: { params: Params }) {
   const r = await resolve(params);
   if (!r) notFound();
   const user = await requireUser(`/biology/lesson/${r.grade.grade}/${encodeURIComponent(r.lesson.n || r.lesson.title)}`);
-  const place = lessonPlace(r.grade.grade, r.lesson.n || r.lesson.title);
-  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} topic={place?.topic ?? null} prev={place?.prev ?? null} next={place?.next ?? null} lesson={r.lesson} content={r.content} />;
+  const key = r.lesson.n || r.lesson.title;
+  const place = lessonPlace(r.grade.grade, key);
+  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} topic={place?.topic ?? null} prev={place?.prev ?? null} next={place?.next ?? null} lesson={r.lesson} content={r.content} visual={visualForLesson(r.grade.grade, key)} />;
 }

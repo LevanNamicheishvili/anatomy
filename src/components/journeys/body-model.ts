@@ -7,15 +7,15 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
  * that only the nerve-impulse journey asks for. Coordinates are metres; +x is the body's left, +z its front.
  */
 
-const VERSION = "2026-10-07";
+const VERSION = "2026-10-07b";
 
-export type BodyGroup = "skin" | "skeleton" | "humerus" | "radius" | "ulna" | "femur" | "brain" | "heart" | "lungs" | "arteries" | "veins" | "biceps" | "triceps";
+export type BodyGroup = "skin" | "skeleton" | "humerus" | "radius" | "ulna" | "femur" | "brain" | "heart" | "lungs" | "arteries" | "veins" | "biceps" | "triceps" | "endocrine" | "gonads" | "urinary" | "digestive" | "airways" | "spleen";
 
 export interface BodyPart {
   id: string;
   name: string;
   group: BodyGroup;
-  file: "core" | "brain";
+  file: "core" | "brain" | "organs";
   vertexCount: number;
   indexCount: number;
   positions: number;
@@ -75,9 +75,11 @@ export class Body {
   }
 }
 
-export async function loadBody(withBrain: boolean) {
+/** The body; `brain` and `organs` (glands, kidneys, gut, airways) are extra downloads, asked for only where shown. */
+export async function loadBody(extra: boolean | { brain?: boolean; organs?: boolean }) {
   meta ??= fetch(`/journeys/body.json?v=${VERSION}`).then((r) => r.json() as Promise<BodyData>);
-  const names = withBrain ? ["core", "brain"] : ["core"];
+  const o = typeof extra === "boolean" ? { brain: extra } : extra;
+  const names = ["core", ...(o.brain ? ["brain"] : []), ...(o.organs ? ["organs"] : [])];
   for (const n of names) if (!bins.has(n)) bins.set(n, gunzip(`/journeys/${n}.bin.gz?v=${VERSION}`));
   const [data, ...buffers] = await Promise.all([meta, ...names.map((n) => bins.get(n)!)]);
   return new Body(data, Object.fromEntries(names.map((n, i) => [n, buffers[i]])));

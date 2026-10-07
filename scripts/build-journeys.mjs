@@ -27,6 +27,13 @@ function groupOf(p) {
   if (p.id.startsWith("LUNG-")) return "lungs";
   if (["FJ3413", "FJ3411", "FJ3427", "FJ2966", "FJ3019", "FJ2924", "FJ3645", "FJ3441", "FJ3659", "FJ1932", "FJ3482", "FJ3583", "FJ3479", "FJ3483", "FJ3564", "FJ3579"].includes(p.id)) return p.system === "venous" ? "veins" : p.id === "FJ2966" || p.id === "FJ3019" || p.id === "FJ2924" ? "veins" : "arteries";
   if (/right biceps brachii|right brachialis/.test(n)) return "biceps";
+  // Organs for the lesson animations (a separate file, loaded only where needed).
+  if (p.system === "endocrine" || ["FJ1895", "FJ3150", "FJ3151"].includes(p.id)) return "endocrine";
+  if (["FJ3138", "FJ3142", "FJ3136", "FJ3141"].includes(p.id)) return "gonads";
+  if (p.system === "urinary") return "urinary";
+  if (p.system === "digestive" && !/duct/i.test(p.name)) return "digestive";
+  if (p.id === "FJ2541" || /main bronchus/i.test(p.name)) return "airways";
+  if (p.id === "FJ2561") return "spleen";
   if (/right triceps brachii/.test(n)) return "triceps";
   return null;
 }
@@ -42,7 +49,9 @@ const chunk = (i) => {
 
 const parts = [];
 // Two files: the brain is only needed by one journey, so it loads separately.
-const files = { core: { blobs: [], offset: 0 }, brain: { blobs: [], offset: 0 } };
+const files = { core: { blobs: [], offset: 0 }, brain: { blobs: [], offset: 0 }, organs: { blobs: [], offset: 0 } };
+const ORGANS = ["endocrine", "gonads", "urinary", "digestive", "airways", "spleen"];
+const fileOf = (group) => (group === "brain" ? "brain" : ORGANS.includes(group) ? "organs" : "core");
 let file = files.core;
 const push = (typed) => {
   const bytes = Buffer.from(typed.buffer, typed.byteOffset, typed.byteLength);
@@ -75,8 +84,8 @@ for (const p of atlas.parts) {
   const pos = new Float32Array(buf.slice(p.positions, p.positions + p.vertexCount * 12));
   const nrm = new Int16Array(buf.slice(p.normals, p.normals + p.vertexCount * 6));
   const idx = Uint16Array.from(new Uint32Array(buf.slice(p.indices, p.indices + p.indexCount * 4)));
-  file = group === "brain" ? files.brain : files.core;
-  parts.push({ id: p.id, name: p.name, group, file: group === "brain" ? "brain" : "core", vertexCount: p.vertexCount, indexCount: p.indexCount, positions: push(quant(pos)), normals: push(normals8(nrm)), indices: push(idx), centre: centroidOf(pos) });
+  file = files[fileOf(group)];
+  parts.push({ id: p.id, name: p.name, group, file: fileOf(group), vertexCount: p.vertexCount, indexCount: p.indexCount, positions: push(quant(pos)), normals: push(normals8(nrm)), indices: push(idx), centre: centroidOf(pos) });
   kept[group] = (kept[group] ?? 0) + p.vertexCount;
   if (/vertebra|sacrum|^axis$|^atlas$/i.test(p.name)) parts[parts.length - 1].vertebra = true;
 }
@@ -119,4 +128,4 @@ writeFileSync(
     elbowAxis,
   }),
 );
-console.log(`parts ${parts.length}, raw core ${(files.core.offset / 1e6).toFixed(1)} MB, brain ${(files.brain.offset / 1e6).toFixed(1)} MB`);
+console.log(`parts ${parts.length}, raw core ${(files.core.offset / 1e6).toFixed(1)} MB, brain ${(files.brain.offset / 1e6).toFixed(1)} MB, organs ${(files.organs.offset / 1e6).toFixed(1)} MB`);

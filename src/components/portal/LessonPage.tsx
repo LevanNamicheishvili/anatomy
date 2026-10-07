@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, Box, Lightbulb } from "lucide-react";
 import type { BioLesson, BioTopic } from "@/lib/biology-topics";
 import type { Lesson } from "@/lib/curriculum";
 import type { LessonContent } from "@/lib/lessons";
+import { LessonVisual } from "@/components/visuals/LessonVisual";
+import type { LessonVisualDef } from "@/components/visuals/lesson-visuals";
 import { LessonQuiz } from "./LessonQuiz";
 import { PunnettSquare } from "./PunnettSquare";
 import { TopicHeader } from "./TopicHeader";
@@ -17,6 +19,7 @@ export function LessonPage({
   lesson,
   content,
   locked = false,
+  visual = null,
 }: {
   topic: BioTopic | null;
   prev: BioLesson | null;
@@ -24,6 +27,7 @@ export function LessonPage({
   lesson: Lesson;
   content: LessonContent;
   locked?: boolean;
+  visual?: LessonVisualDef | null;
 }) {
   const back = topic ? `/biology/themes/${topic.slug}` : "/biology";
   const title = lesson.title.replace(/\s*\(\+.*\)$/, "");
@@ -46,6 +50,7 @@ export function LessonPage({
           </p>
         ) : (
           <>
+            {visual && <LessonVisual id={visual.id} stages={visual.stages} />}
             <p className="mt-6 text-lg leading-8 text-[#33413e]">
               {content.intro}
             </p>

@@ -109,3 +109,38 @@ export function cylinderUV(geo: THREE.BufferGeometry, origin: V3, axis: V3, perM
   }
   geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
+
+/** Beads (molecules, hormone, smoke) travelling along a curve again and again. */
+export function beads(k: Kit, parent: THREE.Object3D, curve: THREE.Curve<V3>, o: { n: number; color: THREE.ColorRepresentation; size: number; speed: number; spread?: number; seed?: number; emissive?: number; geometry?: THREE.BufferGeometry }) {
+  const mat = k.material({ color: o.color, emissive: o.color, emissiveIntensity: o.emissive ?? 0.5, roughness: 0.35 });
+  const mesh = new THREE.InstancedMesh(o.geometry ?? k.sphere, mat, o.n);
+  mesh.frustumCulled = false;
+  parent.add(mesh);
+  const r = rng(o.seed ?? 17);
+  const items = Array.from({ length: o.n }, () => ({ u: r(), off: v(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar((o.spread ?? 0) * 2), spin: r() * 6 }));
+  const m = new THREE.Matrix4();
+  const p = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const s = new THREE.Vector3();
+  const update = (t: number, amount = 1) => {
+    items.forEach((it, i) => {
+      const u = (it.u + t * o.speed) % 1;
+      curve.getPointAt(u, p).add(it.off);
+      const fade = Math.min(1, u * 8, (1 - u) * 8) * (i < o.n * amount ? 1 : 0);
+      q.setFromEuler(e.set(it.spin + t, it.spin * 2, 0));
+      m.compose(p, q, s.setScalar(o.size * fade));
+      mesh.setMatrixAt(i, m);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  update(0);
+  return { mesh, mat, update };
+}
+
+export const curve = (pts: V3[]) => new THREE.CatmullRomCurve3(pts, false, "centripetal");
+
+/** Make a part glow (pulse) — for the organ the stage is about. */
+export function glow(mat: THREE.MeshPhysicalMaterial, t: number, on: boolean, base = 0.15) {
+  mat.emissiveIntensity = on ? base + 0.35 * (0.5 + 0.5 * Math.sin(t * 4)) : 0;
+}
