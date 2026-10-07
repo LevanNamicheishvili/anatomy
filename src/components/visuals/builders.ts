@@ -12,6 +12,7 @@ const evolution = () => import("./v-evolution");
 const ecology = () => import("./v-ecology");
 const genetics = () => import("./v-genetics");
 const bodyV = () => import("./v-body");
+const nerves = () => import("./v-nerves");
 
 export const VISUAL_BUILDERS: Record<string, Builder> = {
   "endocrine-system": lazy(hormones, (m) => m.endocrineSystem),
@@ -74,4 +75,15 @@ export const VISUAL_BUILDERS: Record<string, Builder> = {
   nephron: lazy(bodyV, (m) => m.nephron),
   skin: lazy(bodyV, (m) => m.skinSection),
   "animal-excretion": lazy(bodyV, (m) => m.animalExcretion),
+  "neuron-types": lazy(nerves, (m) => m.neuronTypes),
+  "impulse-myelin": lazy(nerves, (m) => m.impulseMyelin),
+  "reflex-hand": lazy(nerves, (m) => m.reflexHand),
+  peripheral: lazy(nerves, (m) => m.peripheral),
+  pavlov: lazy(nerves, (m) => m.pavlov),
+  "nerve-evolution": lazy(nerves, (m) => m.nerveEvolution),
+  analyzers: lazy(nerves, (m) => m.analyzers),
+  "vision-defects": lazy(nerves, (m) => m.visionDefects),
+  "eye-care": lazy(nerves, (m) => m.eyeCare),
+  ear: lazy(nerves, (m) => m.ear),
+  "hearing-loss": lazy(nerves, (m) => m.hearingLoss),
 };
