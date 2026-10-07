@@ -62,7 +62,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
     <section ref={boxRef} className={cn("mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white", full && "flex flex-col rounded-none border-0")}>
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : "aspect-[16/10] max-h-[68vh] w-full")}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ანიმაცია: ${current.title}`} />
-        <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
+        <div ref={overlayRef} className="lesson-visual pointer-events-none absolute inset-0 overflow-hidden" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#33413e] shadow-sm">იტვირთება…</span>
@@ -72,7 +72,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
           <button type="button" onClick={() => go(stage - 1)} disabled={stage === 0} aria-label="წინა" className="flex size-11 items-center justify-center rounded-lg bg-white text-[#111a18] shadow-sm disabled:opacity-40">
             <ChevronLeft className="size-5" />
           </button>
-          <button type="button" onClick={() => sceneRef.current?.setPlaying(!playing)} className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg bg-[#111a18] px-4 text-sm font-semibold text-white shadow-sm">
+          <button type="button" onClick={() => sceneRef.current?.setPlaying(!playing)} className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg bg-[#0f8a74] px-4 text-sm font-semibold text-white shadow-sm">
             {playing ? <Pause className="size-4" /> : last ? <RotateCcw className="size-4" /> : <Play className="size-4" />}
             {playing ? "პაუზა" : "გაგრძელება"}
           </button>

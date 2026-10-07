@@ -10,6 +10,7 @@ const hormones = () => import("./v-hormones");
 const health = () => import("./v-health");
 const evolution = () => import("./v-evolution");
 const ecology = () => import("./v-ecology");
+const genetics = () => import("./v-genetics");
 
 export const VISUAL_BUILDERS: Record<string, Builder> = {
   "endocrine-system": lazy(hormones, (m) => m.endocrineSystem),
@@ -42,4 +43,19 @@ export const VISUAL_BUILDERS: Record<string, Builder> = {
   "water-pollution": lazy(ecology, (m) => m.waterPollution),
   "air-pollution": lazy(ecology, (m) => m.airPollution),
   greenhouse: lazy(ecology, (m) => m.greenhouse),
+  mendel: lazy(genetics, (m) => m.mendel),
+  monohybrid: lazy(genetics, (m) => m.monohybrid),
+  probability: lazy(genetics, (m) => m.probability),
+  dihybrid: lazy(genetics, (m) => m.dihybrid),
+  testcross: lazy(genetics, (m) => m.testcross),
+  "sex-chromosomes": lazy(genetics, (m) => m.sexChromosomes),
+  "sex-linked": lazy(genetics, (m) => m.sexLinked),
+  "gene-interaction": lazy(genetics, (m) => m.geneInteraction),
+  modification: lazy(genetics, (m) => m.modification),
+  biotech: lazy(genetics, (m) => m.biotech),
+  "genetic-engineering": lazy(genetics, (m) => m.geneticEngineering),
+  cloning: lazy(genetics, (m) => m.cloning),
+  "human-genetics": lazy(genetics, (m) => m.humanGenetics),
+  "medical-biotech": lazy(genetics, (m) => m.medicalBiotech),
+  "bacterial-transfer": lazy(genetics, (m) => m.bacterialTransfer),
 };

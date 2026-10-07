@@ -368,3 +368,9 @@ body {
     height: 67px;
   }
 }
+
+/* Lesson animations sit on a dark background: light tags read better there. */
+.lesson-visual .dna-tag {
+  background: rgba(255, 255, 255, 0.93);
+  color: #111a18;
+}
