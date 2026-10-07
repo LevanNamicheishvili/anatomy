@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { rng, v, type Kit, type V3 } from "@/components/journeys/JourneyScene";
 import { fbm } from "@/lib/noise";
+import { model, natureAssets } from "./nature-assets";
 
 /*
  * A small nature kit for the ecology and evolution lessons: rolling ground, trees, grass, water, sky,
@@ -38,7 +39,15 @@ export function ground(k: Kit, parent: THREE.Object3D, o: { radius?: number; gra
   }
   geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const mat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.95, clearcoat: 0, normalMap: k.normalMap("organic", [30, 30]), normalScale: new THREE.Vector2(0.4, 0.4) });
+  const A = natureAssets();
+  // A photo-scanned grass-and-soil texture, tinted by the vertex colours above.
+  const map = A ? k.track(A.ground.clone()) : null;
+  const nor = A ? k.track(A.groundNor.clone()) : null;
+  for (const t of [map, nor]) if (t) {
+    t.repeat.set(R * 0.6, R * 0.6);
+    t.needsUpdate = true;
+  }
+  const mat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.95, clearcoat: 0, map, normalMap: nor ?? k.normalMap("organic", [30, 30]), normalScale: new THREE.Vector2(0.8, 0.8) });
   const mesh = new THREE.Mesh(geo, mat);
   parent.add(mesh);
   return { mesh, mat };
@@ -77,7 +86,67 @@ export function natureMaterials(k: Kit): Materials {
   };
 }
 
+/**
+ * A tree from photographed bark and leaf sprays: a tapering trunk with branches and a crown of ~80 leaf
+ * cards (alpha-cut, so the light comes through and the shadow is leafy). One draw call for the crown.
+ */
+function cardTree(k: Kit, parent: THREE.Object3D, at: V3, s: number, seed: number, pine: boolean) {
+  const A = natureAssets()!;
+  const r = rng(seed);
+  const t = new THREE.Group();
+  t.position.copy(at);
+  t.scale.setScalar(s);
+  const barkMap = k.track(A.bark.clone());
+  const barkNor = k.track(A.barkNor.clone());
+  for (const x of [barkMap, barkNor]) {
+    x.repeat.set(1, 3);
+    x.needsUpdate = true;
+  }
+  const bark = k.material({ color: "#c8b8a8", map: barkMap, normalMap: barkNor, roughness: 0.9, clearcoat: 0 });
+  const H = pine ? 5.5 : 4.6;
+  const lean = v((r() - 0.5) * 0.3, 0, (r() - 0.5) * 0.3);
+  k.tube([v(0, -0.1, 0), v(0, H * 0.3, 0).add(lean.clone().multiplyScalar(0.4)), v(0, H * 0.62, 0).add(lean), v(0, H * (pine ? 0.95 : 0.8), 0).add(lean)], (u) => (pine ? 0.2 : 0.24) * (1 - 0.8 * u) + 0.02, bark, t, 24, 10);
+  if (!pine)
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + r();
+      const y = H * (0.45 + r() * 0.2);
+      const base = v(0, y, 0).add(lean.clone().multiplyScalar(y / H));
+      k.tube([base, base.clone().add(v(Math.cos(a) * 0.6, 0.5, Math.sin(a) * 0.6)), base.clone().add(v(Math.cos(a) * 1.3, 1.1 + r() * 0.4, Math.sin(a) * 1.3))], (u) => 0.09 * (1 - 0.7 * u), bark, t, 10, 6);
+    }
+  const leafMat = new THREE.MeshStandardMaterial({ map: A.leaves, normalMap: A.leavesNor, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75, color: pine ? "#6f8f6a" : "#ffffff" });
+  k.track(leafMat);
+  const N = pine ? 90 : 80;
+  const cards = new THREE.InstancedMesh(k.track(new THREE.PlaneGeometry(1.7, 1.7)), leafMat, N);
+  cards.customDepthMaterial = k.track(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: A.leaves, alphaTest: 0.45 }));
+  cards.castShadow = true;
+  cards.userData.noShadowFit = true;
+  const m4 = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const c = new THREE.Color();
+  for (let i = 0; i < N; i++) {
+    let p: V3;
+    if (pine) {
+      const h = r();
+      const rad = (1 - h) * 1.7 * Math.sqrt(r());
+      const a = r() * Math.PI * 2;
+      p = v(Math.cos(a) * rad, H * (0.25 + 0.75 * h), Math.sin(a) * rad);
+    } else {
+      const d = v(r() - 0.5, r() - 0.5, r() - 0.5).normalize().multiplyScalar(Math.cbrt(r()));
+      p = v(d.x * 2.1, H * 0.8 + d.y * 1.4, d.z * 2.1);
+    }
+    p.add(lean);
+    q.setFromEuler(new THREE.Euler(r() * Math.PI, r() * Math.PI * 2, r() * Math.PI));
+    m4.compose(p, q, v(1, 1, 1).multiplyScalar(0.7 + r() * 0.6));
+    cards.setMatrixAt(i, m4);
+    cards.setColorAt(i, c.setHSL(0.24 + r() * 0.06, 0.35 + r() * 0.2, 0.42 + r() * 0.16));
+  }
+  t.add(cards);
+  parent.add(t);
+  return t;
+}
+
 export function tree(k: Kit, M: Materials, parent: THREE.Object3D, at: V3, o: { scale?: number; kind?: "broad" | "pine"; seed?: number; leaf?: THREE.Material } = {}) {
+  if (natureAssets() && !o.leaf) return cardTree(k, parent, at, (o.scale ?? 1) * 1.15, o.seed ?? Math.round(at.x * 13 + at.z * 7 + 101), o.kind === "pine");
   const s = o.scale ?? 1;
   const r = rng(o.seed ?? Math.round(at.x * 13 + at.z * 7));
   const t = new THREE.Group();
@@ -113,8 +182,20 @@ export function tree(k: Kit, M: Materials, parent: THREE.Object3D, at: V3, o: { 
 
 export function grass(k: Kit, parent: THREE.Object3D, n: number, radius: number, o: { seed?: number; avoid?: (x: number, z: number) => boolean; color?: string } = {}) {
   const r = rng(o.seed ?? 5);
-  const geo = k.track(new THREE.ConeGeometry(0.05, 0.6, 3).translate(0, 0.3, 0));
-  const mat = k.material({ color: o.color ?? "#6aa040", roughness: 0.8, clearcoat: 0, side: THREE.DoubleSide });
+  // A curved, tapering blade: dark at the base, lighter at the tip.
+  const geo = k.track(new THREE.PlaneGeometry(0.07, 0.65, 1, 5).translate(0, 0.325, 0));
+  const bp = geo.attributes.position as THREE.BufferAttribute;
+  const cols = new Float32Array(bp.count * 3);
+  for (let i = 0; i < bp.count; i++) {
+    const h = bp.getY(i) / 0.65;
+    bp.setX(i, bp.getX(i) * (1 - 0.85 * h));
+    bp.setZ(i, 0.12 * h * h);
+    const c = 0.35 + 0.65 * h;
+    cols.set([c, c, c], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+  geo.computeVertexNormals();
+  const mat = k.material({ color: o.color ?? "#7aa84a", vertexColors: true, roughness: 0.7, clearcoat: 0, side: THREE.DoubleSide, sheen: 0.4, sheenColor: new THREE.Color("#e8f4b0") });
   const im = new THREE.InstancedMesh(geo, mat, n);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -126,7 +207,8 @@ export function grass(k: Kit, parent: THREE.Object3D, n: number, radius: number,
     const z = Math.sin(a) * d;
     if (o.avoid?.(x, z)) continue;
     q.setFromEuler(new THREE.Euler((r() - 0.5) * 0.4, r() * 3, (r() - 0.5) * 0.4));
-    m.compose(v(x, heightAt(x, z) - 0.05, z), q, v(1, 0.6 + r() * 0.9, 1));
+    m.compose(v(x, heightAt(x, z) - 0.05, z), q, v(1, 0.5 + r() * 0.8, 1));
+    im.setColorAt(placed, new THREE.Color().setHSL(0.2 + r() * 0.07, 0.4, 0.45 + r() * 0.2));
     im.setMatrixAt(placed++, m);
   }
   im.count = placed;
@@ -144,6 +226,13 @@ export function water(k: Kit, parent: THREE.Object3D, at: V3, radius: number, co
 }
 
 export function rock(k: Kit, M: Materials, parent: THREE.Object3D, at: V3, size: number, seed = 1) {
+  const real = model("rock", size * 2.2);
+  if (real) {
+    real.root.position.copy(at).add(v(0, -size * 0.3, 0));
+    real.root.rotation.y = seed * 1.7;
+    parent.add(real.root);
+    return real.root;
+  }
   const m = new THREE.Mesh(blobGeo(k, seed, 0.35, 2), M.rock);
   m.position.copy(at);
   m.scale.set(size, size * 0.6, size * 0.9);
@@ -176,7 +265,7 @@ export function sun(k: Kit, parent: THREE.Object3D, at: V3, size = 1.4) {
 }
 
 /** Sky colour + fog for outdoor scenes. */
-export const outdoor = (k: Kit, sky = "#bcd8ea", near = 25, far = 70) => k.mood(sky, near, far);
+export const outdoor = (k: Kit, sky = "#bcd8ea", near = 25, far = 70) => k.mood(sky, near, far, true);
 
 // ---- Animals --------------------------------------------------------------------------------------
 
@@ -218,6 +307,16 @@ export function rabbit(k: Kit, color = "#9b8a76"): Animal {
 }
 
 export function fox(k: Kit): Animal {
+  const real = model("fox", 1.25);
+  if (real) {
+    // The scanned fox walks along +z like the drawn one; its walk cycle follows `move`.
+    const mixer = new THREE.AnimationMixer(real.root);
+    const clip = real.animations.find((a) => /walk/i.test(a.name)) ?? real.animations[0];
+    if (clip) mixer.clipAction(clip).play();
+    const d = real.dims;
+    if (d.x > d.z) real.root.children[0].rotation.y += Math.PI / 2;
+    return { g: real.root, move: (ph) => clip && mixer.setTime(((ph / (Math.PI * 2)) * clip.duration) % clip.duration) };
+  }
   const g = new THREE.Group();
   const m = fur(k, "#c8642a");
   const white = fur(k, "#f2ece2");
@@ -367,4 +466,42 @@ export function giraffe(k: Kit, neck = 1): Animal & { setNeck(n: number): void }
   };
   setNeck(neck);
   return { g, setNeck, move: (ph) => legs.forEach((l, i) => (l.rotation.x = Math.sin(ph + (i % 2 ? Math.PI : 0)) * 0.25)) };
+}
+
+/** A real scanned plant (shrub, fern, flower, dandelion, potted plant) if loaded; null otherwise. */
+export function plantModel(parent: THREE.Object3D, name: "shrub" | "fern" | "flower" | "dandelion" | "potted-plant", at: V3, size: number, rotY = 0) {
+  const m = model(name, size, "height");
+  if (!m) return null;
+  m.root.position.copy(at);
+  m.root.rotation.y = rotY;
+  parent.add(m.root);
+  return m.root;
+}
+
+/** A crown of leaf cards (photo leaves) filling an ellipsoid; for trees drawn in a scene's own way. */
+export function leafCrown(k: Kit, parent: THREE.Object3D, centre: V3, radii: V3, n: number, seed = 1, tint = "#ffffff") {
+  const A = natureAssets();
+  if (!A) return null;
+  const r = rng(seed);
+  const mat = k.track(new THREE.MeshStandardMaterial({ map: A.leaves, normalMap: A.leavesNor, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75, color: tint }));
+  const im = new THREE.InstancedMesh(k.track(new THREE.PlaneGeometry(1.7, 1.7)), mat, n);
+  im.customDepthMaterial = k.track(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: A.leaves, alphaTest: 0.45 }));
+  im.castShadow = true;
+  im.userData.noShadowFit = true;
+  const m4 = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) {
+    const d = v(r() - 0.5, r() - 0.5, r() - 0.5).normalize().multiplyScalar(Math.cbrt(r()));
+    m4.compose(centre.clone().add(d.multiply(radii)), new THREE.Quaternion().setFromEuler(new THREE.Euler(r() * Math.PI, r() * 6.3, r() * Math.PI)), v(1, 1, 1).multiplyScalar(0.7 + r() * 0.6));
+    im.setMatrixAt(i, m4);
+    im.setColorAt(i, new THREE.Color().setHSL(0.24 + r() * 0.06, 0.35 + r() * 0.2, 0.42 + r() * 0.16));
+  }
+  parent.add(im);
+  return im;
+}
+
+/** A small leaf (photo leaf card) for seedlings; null if the textures are not loaded. */
+export function leafMaterial(k: Kit, tint = "#ffffff") {
+  const A = natureAssets();
+  if (!A) return null;
+  return k.track(new THREE.MeshStandardMaterial({ map: A.leaves, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.7, color: tint }));
 }

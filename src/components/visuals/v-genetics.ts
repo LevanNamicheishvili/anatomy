@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { beads, curve, orbit } from "@/components/journeys/common";
 import { ease, rng, v, type Builder, type Kit, type Shot, type V3 } from "@/components/journeys/JourneyScene";
 import { bacterium, chromosome, dnaLadder, egg, pea, peaPlant, person, phage, sheep, sperm } from "./micro";
+import { model } from "./nature-assets";
 import { grass, ground, outdoor, rabbit, tree, natureMaterials, beetle } from "./nature";
 
 /*
@@ -627,12 +628,16 @@ export const modification: Builder = async (k) => {
   ground(k, g, { radius: 10 });
   grass(k, g, 400, 9);
   // Two halves of one plant: valley (tall) and mountain (short rosette).
-  const valley = peaPlant(k, { tall: true, flower: "#f2c230", seed: 3 });
+  // Bonnier's dandelion: halves of one plant in the valley (tall) and on the mountain (low).
+  const dv = model("dandelion", 3.4, "height");
+  const dm = model("dandelion", 1.1, "height");
+  const valley = dv ? { g: dv.root } : peaPlant(k, { tall: true, flower: "#f2c230", seed: 3 });
   valley.g.position.set(-2.5, 0, 0);
-  valley.g.scale.setScalar(1.4);
-  const mountain = peaPlant(k, { tall: false, flower: "#f2c230", seed: 3 });
+  if (!dv) valley.g.scale.setScalar(1.4);
+  const mountain = dm ? { g: dm.root } : peaPlant(k, { tall: false, flower: "#f2c230", seed: 3 });
   mountain.g.position.set(2.5, 0, 0);
-  mountain.g.scale.set(1.2, 0.6, 1.2);
+  if (dm) mountain.g.scale.set(1.5, 1, 1.5);
+  else mountain.g.scale.set(1.2, 0.6, 1.2);
   const rockMat = k.material({ color: "#8a8780", roughness: 0.9 });
   const rocks = new THREE.Group();
   for (let i = 0; i < 6; i++) {
@@ -690,7 +695,7 @@ export const modification: Builder = async (k) => {
         plants.visible = i === 0;
         hr.visible = i === 1;
         norm.visible = i === 2;
-        valley.g.scale.y = 1.4 * (i === 0 ? 0.3 + 0.7 * ease(u / 0.6) : 1);
+        valley.g.scale.y = (dv ? 1 : 1.4) * (i === 0 ? 0.3 + 0.7 * ease(u / 0.6) : 1);
         const darken = i === 1 ? ease((u - 0.35) / 0.5) : 0;
         patch.scale.set(0.12 * darken + 0.001, 0.05, 0.16 * darken + 0.001);
         ice.visible = i === 1 && u > 0.1 && u < 0.85;

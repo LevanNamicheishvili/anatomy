@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { loadBody, type Body } from "./body-model";
 
 /*
@@ -61,13 +66,14 @@ export class Kit {
   labels: Label[] = [];
 
   /** Background and fog of the stage on screen: dark inside the body, none (page colour) outside. */
-  atmosphere: { bg: string | null; near: number; far: number } = { bg: null, near: 0, far: 0 };
+  atmosphere: { bg: string | null; near: number; far: number; sky: boolean } = { bg: null, near: 0, far: 0, sky: false };
   private normals = new Map<string, THREE.Texture>();
 
   constructor(private overlay: HTMLElement) {}
 
-  mood(bg: string | null, near = 0, far = 0) {
-    this.atmosphere = { bg, near, far };
+  /** `sky`: an outdoor scene — real sky photo as background and its daylight on everything. */
+  mood(bg: string | null, near = 0, far = 0, sky = false) {
+    this.atmosphere = { bg, near, far, sky };
   }
 
   /**
@@ -247,13 +253,13 @@ export class Kit {
     this.labels = [];
     this.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (mesh.geometry && mesh.geometry !== this.sphere && mesh.geometry !== this.cylinder) mesh.geometry.dispose();
+      if (mesh.geometry && !mesh.userData.shared && mesh.geometry !== this.sphere && mesh.geometry !== this.cylinder) mesh.geometry.dispose();
       if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();
     });
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
     this.normals.clear();
-    this.atmosphere = { bg: null, near: 0, far: 0 };
+    this.atmosphere = { bg: null, near: 0, far: 0, sky: false };
     this.root.clear();
   }
 
@@ -296,6 +302,16 @@ export class JourneyScene {
   private target = new THREE.Vector3();
   private dirty = true;
   private _playing = true;
+  private key: THREE.DirectionalLight;
+  private studio: THREE.Texture | null = null;
+  private skyEnv: THREE.Texture | null = null;
+  private skyBg: THREE.Texture | null = null;
+  private envTargets: THREE.WebGLRenderTarget[] = [];
+  private composer: EffectComposer;
+  private ao: GTAOPass;
+  /** Ambient occlusion is used while the computer keeps up; it switches itself off on slow machines. */
+  private aoAllowed = true;
+  private slowFrames = 0;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -305,17 +321,32 @@ export class JourneyScene {
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMapping = THREE.AgXToneMapping;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.env = pmrem.fromScene(new RoomEnvironment(), 0.04);
     this.scene.environment = this.env.texture;
     pmrem.dispose();
-    const key = new THREE.DirectionalLight("#ffffff", 1.3);
+    const key = new THREE.DirectionalLight("#fff6ea", 1.6);
     key.position.set(4, 7, 8);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.bias = -0.0005;
+    key.shadow.normalBias = 0.02;
+    key.shadow.radius = 4;
+    this.key = key;
     const fill = new THREE.DirectionalLight("#eef0ff", 0.55);
     fill.position.set(-6, -2, 5);
     this.kit = new Kit(overlay);
-    this.scene.add(new THREE.HemisphereLight("#ffffff", "#d9e2df", 0.8), key, fill, this.kit.root);
+    this.scene.add(new THREE.HemisphereLight("#ffffff", "#d9e2df", 0.6), key, key.target, fill, this.kit.root);
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.ao = new GTAOPass(this.scene, this.camera, 512, 512);
+    this.ao.blendIntensity = 0.9;
+    this.composer.addPass(this.ao);
+    this.composer.addPass(new OutputPass());
+    this.loadLight();
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
     this.controls.enabled = false;
@@ -373,15 +404,80 @@ export class JourneyScene {
     this.stage = i;
     this.stageTime = 0;
     plan.stages[i].enter?.();
-    const a = this.kit.atmosphere;
-    this.scene.background = a.bg ? new THREE.Color(a.bg) : null;
-    this.scene.fog = a.bg && a.far ? new THREE.Fog(a.bg, a.near, a.far) : null;
-    // Dark scenes get a little more exposure so the tissue stays readable on a projector.
-    const lum = a.bg ? new THREE.Color(a.bg).getHSL({ h: 0, s: 0, l: 0 }).l : 1;
-    this.renderer.toneMappingExposure = !a.bg ? 1 : lum < 0.3 ? 1.3 : 0.85;
+    this.applyAtmosphere();
+    this.fitShadows();
     if (cut) this.snap = true;
     this.dirty = true;
     this.cb.onStage(i);
+  }
+
+  /** Photographic light (CC0 HDRIs from Poly Haven): a studio for body and cell scenes, a meadow outdoors. */
+  private loadLight() {
+    const loader = new HDRLoader();
+    const pm = new THREE.PMREMGenerator(this.renderer);
+    const take = (tex: THREE.DataTexture) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      const rt = pm.fromEquirectangular(tex);
+      this.envTargets.push(rt);
+      return rt.texture;
+    };
+    void loader.loadAsync("/env/studio_small_09-1k.hdr").then((tex) => {
+      if (this.disposed) return;
+      this.studio = take(tex);
+      tex.dispose();
+      this.applyAtmosphere();
+    });
+    void loader.loadAsync("/env/meadow_2-1k.hdr").then((tex) => {
+      if (this.disposed) return;
+      this.skyEnv = take(tex);
+      this.skyBg = tex;
+      this.applyAtmosphere();
+    });
+  }
+
+  /** Background, fog, environment light, exposure and shadows for what is on screen now. */
+  private applyAtmosphere() {
+    const a = this.kit.atmosphere;
+    const sky = a.sky && this.skyBg;
+    this.scene.background = sky ? this.skyBg : a.bg ? new THREE.Color(a.bg) : null;
+    this.scene.backgroundBlurriness = sky ? 0.03 : 0;
+    this.scene.environment = (sky ? this.skyEnv : this.studio) ?? this.env.texture;
+    this.scene.environmentIntensity = sky ? 1 : 0.9;
+    this.scene.fog = a.bg && a.far ? new THREE.Fog(sky ? "#cfdbe0" : a.bg, a.near, a.far) : null;
+    // Dark scenes get a little more exposure so the tissue stays readable on a projector.
+    const lum = a.bg ? new THREE.Color(a.bg).getHSL({ h: 0, s: 0, l: 0 }).l : 1;
+    this.renderer.toneMappingExposure = sky ? 1.0 : !a.bg ? 1.1 : lum < 0.3 ? 1.45 : 1.0;
+  }
+
+  /** Shadows from the key light fitted round what is visible; solid objects cast and receive them. */
+  private fitShadows() {
+    const box = new THREE.Box3();
+    this.kit.root.updateMatrixWorld(true);
+    this.kit.root.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const mat = m.material as THREE.Material;
+      const solid = !mat.transparent;
+      if (!m.userData.noShadowFit) m.castShadow = solid;
+      m.receiveShadow = solid;
+      if (m.geometry.boundingSphere === null) m.geometry.computeBoundingSphere();
+      if (!(m as THREE.InstancedMesh).isInstancedMesh && m.geometry.boundingSphere) box.expandByObject(m);
+    });
+    if (box.isEmpty()) return;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const r = Math.max(1e-3, Math.min(sphere.radius, 40));
+    const dir = new THREE.Vector3(0.45, 0.8, 0.4).normalize();
+    this.key.position.copy(sphere.center).addScaledVector(dir, r * 2);
+    this.key.target.position.copy(sphere.center);
+    const cam = this.key.shadow.camera;
+    cam.left = cam.bottom = -r;
+    cam.right = cam.top = r;
+    cam.near = r * 0.05;
+    cam.far = r * 4;
+    cam.updateProjectionMatrix();
+    this.key.shadow.needsUpdate = true;
+    // Occlusion radius in proportion to the scene's size.
+    this.ao.updateGtaoMaterial({ radius: r * 0.06, distanceExponent: 1.5, thickness: r * 0.02, scale: 1 });
   }
 
   private resize() {
@@ -389,6 +485,7 @@ export class JourneyScene {
     const h = this.canvas.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
+    this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.dirty = true;
@@ -483,7 +580,14 @@ export class JourneyScene {
       }
     }
     if (!this._playing) this.controls.update();
-    this.renderer.render(this.scene, this.camera);
+    // Occlusion needs an opaque background (the composer has none of the page behind it).
+    const useAo = this.aoAllowed && !!this.scene.background;
+    if (useAo) {
+      this.composer.render(dt);
+      // Slow machine: after a run of slow frames, drop the occlusion for good.
+      this.slowFrames = dt > 1 / 35 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
+      if (this.slowFrames > 90) this.aoAllowed = false;
+    } else this.renderer.render(this.scene, this.camera);
     this.placeLabels();
   };
 
@@ -494,6 +598,10 @@ export class JourneyScene {
     this.kit.dispose();
     this.fade.remove();
     this.env.dispose();
+    for (const rt of this.envTargets) rt.dispose();
+    this.skyBg?.dispose();
+    this.ao.dispose();
+    this.composer.dispose();
     this.controls.dispose();
     this.renderer.dispose();
   }

@@ -20,5 +20,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Static files (3D models, images, the service worker) don't need the check.
-  matcher: ["/((?!_next/static|_next/image|sites/|images/|seo/|sw\\.js|favicon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|gz|bin|json)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|sites/|images/|seo/|sw\\.js|favicon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|gz|bin|json|hdr|glb|ktx2)$).*)"],
 };

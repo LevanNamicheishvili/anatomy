@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { beads, curve, orbit } from "@/components/journeys/common";
 import { ease, rng, v, type Builder, type Kit, type V3 } from "@/components/journeys/JourneyScene";
 import { fbm } from "@/lib/noise";
-import { beetle, bird, cloud, fish, fox, frog, grass, ground, heightAt, mushroom, natureMaterials, outdoor, rabbit, rock, sun, tree, water, type Animal } from "./nature";
+import { beetle, bird, cloud, fish, fox, frog, grass, ground, heightAt, mushroom, natureMaterials, outdoor, rabbit, rock, sun, tree, water, type Animal, plantModel } from "./nature";
 
 /*
  * Ecology lessons: a meadow-and-pond ecosystem, ecological factors, predators and prey with their
@@ -68,6 +68,14 @@ function diorama(k: Kit, parent: THREE.Object3D, o: { seed?: number } = {}) {
     const x = Math.cos(a) * d - 2;
     const z = Math.sin(a) * d - 1;
     trees.push(tree(k, M, parent, v(x, heightAt(x, z), z), { scale: 0.7 + r() * 0.5, kind: r() < 0.4 ? "pine" : "broad" }));
+  }
+  // Scanned shrubs and ferns between the trees.
+  for (let i = 0; i < 10; i++) {
+    const a = r() * Math.PI * 2;
+    const d = 5 + r() * 7;
+    const x = Math.cos(a) * d;
+    const z = Math.sin(a) * d - 2;
+    plantModel(parent, i % 3 ? "fern" : "shrub", v(x, heightAt(x, z), z), i % 3 ? 0.5 + r() * 0.3 : 0.9 + r() * 0.5, r() * 6);
   }
   for (let i = 0; i < 5; i++) rock(k, M, parent, v(POND.x + Math.cos(i * 1.3) * 3.4, -0.1, POND.z + Math.sin(i * 1.3) * 3.4), 0.3 + r() * 0.3, i);
   const shrooms = [v(-3, 0, -2.6), v(-2.6, 0, -2.2), v(-3.3, 0, -2)].map((p) => mushroom(k, parent, v(p.x, heightAt(p.x, p.z), p.z), 2));

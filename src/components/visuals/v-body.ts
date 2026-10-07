@@ -3,6 +3,7 @@ import { beads, context, curve, flow, layer, orbit } from "@/components/journeys
 import { ease, rng, v, type Builder, type Kit, type Shot, type V3 } from "@/components/journeys/JourneyScene";
 import { beetle } from "./nature";
 import { bacterium } from "./micro";
+import { loadNatureAssets, model } from "./nature-assets";
 
 /*
  * Body lessons: bone chemistry, joints, injuries, posture (the atlas spine, vertebra by vertebra), how
@@ -603,6 +604,7 @@ export const respiratoryDisease: Builder = async (k) => {
 // ---- 8 3.14 Nutrients ---------------------------------------------------------------------------------------------------
 
 export const nutrients: Builder = async (k) => {
+  await loadNatureAssets().catch(() => null);
   lab(k);
   const g = new THREE.Group();
   k.root.add(g);
@@ -611,6 +613,15 @@ export const nutrients: Builder = async (k) => {
   const bread = new THREE.Mesh(k.track(new THREE.CapsuleGeometry(0.9, 1.4, 8, 16)), k.material({ color: "#c98a4a", roughness: 0.6, normalMap: k.normalMap("organic", [3, 3]) }));
   bread.rotation.z = Math.PI / 2;
   bread.position.set(-4, 0, 0);
+  // The scanned bread replaces the drawn loaf when available.
+  const realBread = model("bread", 2.6);
+  if (realBread) {
+    // Hide the drawn loaf but keep it as the parent; the loaf is turned 90°, so its local x is world up.
+    (bread.material as THREE.Material).visible = false;
+    realBread.root.rotation.z = -Math.PI / 2;
+    realBread.root.position.x = -0.6;
+    bread.add(realBread.root);
+  }
   const glu = k.material({ color: "#f4f1ea", roughness: 0.4, emissive: "#ffffff", emissiveIntensity: 0.1 });
   const chain = Array.from({ length: 12 }, () => {
     const h = new THREE.Mesh(hexGeo, glu);
@@ -690,22 +701,31 @@ export const nutrients: Builder = async (k) => {
 // ---- 8 3.15 Food energy ----------------------------------------------------------------------------------------------------
 
 function foodModels(k: Kit) {
-  const mk = (geo: THREE.BufferGeometry, color: string, scale: V3, extra: THREE.MeshPhysicalMaterialParameters = {}) => {
+  const mk = (geo: THREE.BufferGeometry, color: string, scale: V3, extra: THREE.MeshPhysicalMaterialParameters = {}): THREE.Object3D => {
     const m = new THREE.Mesh(geo, k.material({ color, roughness: 0.5, ...extra }));
     m.scale.copy(scale);
     return m;
   };
+  const real = (name: "bread" | "apple", size: number) => {
+    const r = model(name, size);
+    if (!r) return null;
+    r.root.position.y = -size * 0.4;
+    const g = new THREE.Group();
+    g.add(r.root);
+    return g;
+  };
   return [
     { name: "ზეთი", kcal: 900, m: mk(k.track(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 24)), "#e8c43a", v(1, 1, 1), { transparent: true, opacity: 0.8, clearcoat: 1 }) },
     { name: "შაქარი", kcal: 400, m: mk(k.track(new THREE.BoxGeometry(0.7, 0.7, 0.7)), "#f8f8f8", v(1, 1, 1)) },
-    { name: "პური", kcal: 250, m: mk(k.track(new THREE.CapsuleGeometry(0.35, 0.6, 6, 12).rotateZ(Math.PI / 2)), "#c98a4a", v(1, 1, 1)) },
+    { name: "პური", kcal: 250, m: real("bread", 1.1) ?? mk(k.track(new THREE.CapsuleGeometry(0.35, 0.6, 6, 12).rotateZ(Math.PI / 2)), "#c98a4a", v(1, 1, 1)) },
     { name: "ხორცი", kcal: 200, m: mk(k.sphere, "#a8463a", v(0.6, 0.25, 0.45)) },
-    { name: "ვაშლი", kcal: 50, m: mk(k.sphere, "#c0392b", v(0.4, 0.4, 0.4), { clearcoat: 1 }) },
+    { name: "ვაშლი", kcal: 50, m: real("apple", 0.75) ?? mk(k.sphere, "#c0392b", v(0.4, 0.4, 0.4), { clearcoat: 1 }) },
     { name: "კიტრი", kcal: 15, m: mk(k.track(new THREE.CapsuleGeometry(0.18, 0.8, 6, 12).rotateZ(Math.PI / 2)), "#4b8a3a", v(1, 1, 1)) },
   ];
 }
 
 export const foodEnergy: Builder = async (k) => {
+  await loadNatureAssets().catch(() => null);
   lab(k);
   const g = new THREE.Group();
   k.root.add(g);

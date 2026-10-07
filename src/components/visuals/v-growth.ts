@@ -3,6 +3,7 @@ import { beads, context, curve, flow, layer, orbit } from "@/components/journeys
 import { ease, rng, v, type Builder, type Kit, type Shot, type V3 } from "@/components/journeys/JourneyScene";
 import { chromosome, sperm } from "./micro";
 import { beetle, natureMaterials, tree } from "./nature";
+import { model } from "./nature-assets";
 
 /*
  * Plants (minerals, transport, flowers and fertilisation, phototropism, hormones) and human reproduction
@@ -401,6 +402,29 @@ export const plantHormones: Builder = async (k) => {
   apple.scale.setScalar(0.5);
   apple.position.set(3, 1, 0);
   s2.add(apple);
+  // Scanned bananas and apple, when loaded: the bunch's colour goes from green to its real yellow.
+  const realApple = model("apple", 1);
+  if (realApple) {
+    apple.visible = false;
+    realApple.root.position.set(3, 0.5, 0);
+    s2.add(realApple.root);
+  }
+  const bunch = model("bananas", 3.4);
+  const bunchMats: THREE.MeshStandardMaterial[] = [];
+  if (bunch) {
+    bananas.forEach((b) => (b.visible = false));
+    bunch.root.position.set(-0.3, 0.4, 0);
+    bunch.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        const mat = (m.material as THREE.MeshStandardMaterial).clone();
+        k.track(mat);
+        m.material = mat;
+        bunchMats.push(mat);
+      }
+    });
+    s2.add(bunch.root);
+  }
   const gas = flow(k, s2, { n: 30, color: "#d8d8e0", size: 0.07, period: 3, from: () => v(3, 1, 0), to: (i) => v(-2 + (i % 5) * 0.9, 1.5 + (i % 3) * 0.6, 0.4), seed: 2, emissive: 0.6 });
   tag(k, s2, v(3, 1.9, 0), "მწიფე ვაშლი — ეთილენი", [2]);
   const groups = [s0, s1, s2];
@@ -416,6 +440,7 @@ export const plantHormones: Builder = async (k) => {
         cells.forEach((c, j) => (c.visible = j < 4 * Math.pow(2, Math.floor(ease(u) * 2))));
         guards.forEach((m, j) => (m.position.x = 2.5 + (j ? 1 : -1) * (0.5 - 0.2 * ease((u - 0.4) / 0.4))));
         bananas.forEach((b) => (b.material as THREE.MeshPhysicalMaterial).color.set("#6aa83a").lerp(new THREE.Color("#f2d33a"), ease((u - 0.15) / 0.6)));
+        bunchMats.forEach((m) => m.color.set("#7fb04a").lerp(new THREE.Color("#ffffff"), ease((u - 0.15) / 0.6)));
         gas.update(t);
         return front(s, 9, v(0, 2, 0), 0.12);
       },

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { context, layer, orbit } from "@/components/journeys/common";
 import { ease, rng, v, type Builder, type Kit, type Shot, type V3 } from "@/components/journeys/JourneyScene";
-import { beetle, bird, cloud, fish, fox, frog, giraffe, grass, ground, heightAt, moth, mushroom, natureMaterials, outdoor, rabbit, sun, tree, water, type Animal } from "./nature";
+import { beetle, bird, cloud, fish, fox, frog, giraffe, grass, ground, heightAt, moth, mushroom, natureMaterials, outdoor, rabbit, sun, tree, water, type Animal, leafCrown, leafMaterial, plantModel } from "./nature";
 
 /*
  * Evolution lessons: the tree of life and the ranks of classification, Lamarck's and Darwin's giraffes,
@@ -34,6 +34,14 @@ function meadow(k: Kit, parent: THREE.Object3D, o: { grassColor?: string; trees?
     const x = Math.cos(a) * d;
     const z = Math.sin(a) * d - 3;
     tree(k, M, parent, v(x, heightAt(x, z), z), { scale: 0.8 + r() * 0.5, kind: r() < 0.35 ? "pine" : "broad" });
+  }
+  // Scanned shrubs and ferns between the trees.
+  for (let i = 0; i < 10; i++) {
+    const a = r() * Math.PI * 2;
+    const d = 5 + r() * 7;
+    const x = Math.cos(a) * d;
+    const z = Math.sin(a) * d - 2;
+    plantModel(parent, i % 3 ? "fern" : "shrub", v(x, heightAt(x, z), z), i % 3 ? 0.5 + r() * 0.3 : 0.9 + r() * 0.5, r() * 6);
   }
   cloud(k, parent, v(-8, 11, -14), 1.6);
   cloud(k, parent, v(9, 12, -16), 2);
@@ -186,14 +194,16 @@ export const giraffes: Builder = async (k) => {
   acacia.add(trunk);
   const low = new THREE.Group();
   acacia.add(low);
-  for (let i = 0; i < 7; i++) {
+  const realCrown = leafCrown(k, acacia, v(0, 6, 0), v(3.2, 0.6, 3.2), 150, 4);
+  if (realCrown) leafCrown(k, low, v(0, 3.7, 0), v(2, 0.5, 2), 60, 5);
+  for (let i = 0; i < (realCrown ? 0 : 7); i++) {
     const b = new THREE.Mesh(M.crowns[i % 4], M.leaf);
     const a = (i / 7) * Math.PI * 2;
     b.position.set(Math.cos(a) * 1.8, 5.8 + (i % 2) * 0.3, Math.sin(a) * 1.8);
     b.scale.set(1.5, 0.6, 1.5);
     acacia.add(b);
   }
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < (realCrown ? 0 : 5); i++) {
     const b = new THREE.Mesh(M.crowns[i % 4], M.leaf);
     const a = (i / 5) * Math.PI * 2;
     b.position.set(Math.cos(a) * 1.4, 3.6, Math.sin(a) * 1.4);
@@ -425,18 +435,28 @@ export const struggle: Builder = async (k) => {
   for (const [x, z] of [[-9, -6], [8, -7], [-6, -10], [10, 2]]) tree(k, M, g, v(x, heightAt(x, z), z), { scale: 1 });
   const r = rng(31);
   // Seedlings in a patch.
-  const sproutGeo = k.track(new THREE.ConeGeometry(0.08, 0.9, 5).translate(0, 0.45, 0));
-  const leafGeo = k.track(new THREE.SphereGeometry(1, 8, 6));
+  const sproutGeo = k.track(new THREE.ConeGeometry(0.03, 0.9, 5).translate(0, 0.45, 0));
+  const photoLeaf = leafMaterial(k);
+  const leafGeo = photoLeaf ? k.track(new THREE.PlaneGeometry(1, 1)) : k.track(new THREE.SphereGeometry(1, 8, 6));
   const live = k.material({ color: "#5e9e3a", roughness: 0.7 });
   const dead = k.material({ color: "#8a6a3a", roughness: 0.9 });
+  const liveLeaf = photoLeaf ?? live;
+  const deadLeaf = leafMaterial(k, "#8a6a3a") ?? dead;
   const seedlings = Array.from({ length: 110 }, (_, i) => {
     const sg = new THREE.Group();
     const stem = new THREE.Mesh(sproutGeo, live);
-    const l1 = new THREE.Mesh(leafGeo, live);
-    l1.scale.set(0.18, 0.04, 0.08);
-    l1.position.set(0.12, 0.8, 0);
+    const l1 = new THREE.Mesh(leafGeo, liveLeaf);
+    if (photoLeaf) {
+      l1.scale.setScalar(0.45);
+      l1.position.set(0.1, 0.85, 0);
+      l1.rotation.set(-1.1, r() * 3, 0.3);
+    } else {
+      l1.scale.set(0.18, 0.04, 0.08);
+      l1.position.set(0.12, 0.8, 0);
+    }
     const l2 = l1.clone();
-    l2.position.x = -0.12;
+    l2.position.x = -0.1;
+    l2.rotation.y += Math.PI;
     sg.add(stem, l1, l2);
     const x = (r() - 0.5) * 6 - 2;
     const z = (r() - 0.5) * 5 + 1;
@@ -476,7 +496,8 @@ export const struggle: Builder = async (k) => {
           const grow = stage === 0 ? ease((u - x.delay * 0.5) / 0.4) : 1;
           const wither = stage >= 1 && !x.winner ? ease((stage === 1 ? u : 1) * 1.6 - x.delay * 0.6) : 0;
           x.sg.scale.setScalar(Math.max(0.001, grow * (1 - 0.7 * wither)));
-          for (const p of x.parts) p.material = wither > 0.5 ? dead : live;
+          x.parts[0].material = wither > 0.5 ? dead : live;
+          for (const p of x.parts.slice(1)) p.material = wither > 0.5 ? deadLeaf : liveLeaf;
           x.sg.visible = !(x.winner && stage >= 1);
         });
         winners.forEach((w) => w.scale.setScalar(stage >= 1 ? 0.15 + 0.35 * (stage === 1 ? ease(u) : 1) : 0.001));

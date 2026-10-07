@@ -1,0 +1,13 @@
+3D models and textures used by the lesson animations
+
+Poly Haven (https://polyhaven.com) — CC0 (public domain):
+  shrub (shrub_03), rock (rock_07), fern (fern_02), flower (flower_gazania), dandelion (dandelion_01),
+  potted-plant (potted_plant_04), apple (food_apple_01), bananas, bread (croissant),
+  leaves / bark textures (jacaranda_tree), ground textures (aerial_grass_rock),
+  HDRIs in /env: meadow_2, studio_small_09.
+
+Fox — Khronos glTF Sample Assets (https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox)
+  Model: PixelMannen, CC0; rigging and animation: @tomkranis (Sketchfab), CC BY 4.0;
+  glTF conversion: @AsoboStudio and @scurest. Attribution required (shown on the lesson pages).
+
+Files were reduced (simplified meshes, 512 px WebP textures, meshopt compression) with glTF-Transform.
