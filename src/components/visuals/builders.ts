@@ -13,6 +13,7 @@ const ecology = () => import("./v-ecology");
 const genetics = () => import("./v-genetics");
 const bodyV = () => import("./v-body");
 const nerves = () => import("./v-nerves");
+const chem = () => import("./v-chem");
 
 export const VISUAL_BUILDERS: Record<string, Builder> = {
   "endocrine-system": lazy(hormones, (m) => m.endocrineSystem),
@@ -86,4 +87,17 @@ export const VISUAL_BUILDERS: Record<string, Builder> = {
   "eye-care": lazy(nerves, (m) => m.eyeCare),
   ear: lazy(nerves, (m) => m.ear),
   "hearing-loss": lazy(nerves, (m) => m.hearingLoss),
+  water: lazy(chem, (m) => m.waterVisual),
+  minerals: lazy(chem, (m) => m.minerals),
+  buffer: lazy(chem, (m) => m.buffer),
+  "protein-structure": lazy(chem, (m) => m.proteinStructure),
+  "protein-functions": lazy(chem, (m) => m.proteinFunctions),
+  carbohydrates: lazy(chem, (m) => m.carbohydrates),
+  atp: lazy(chem, (m) => m.atpVisual),
+  "animal-tissues": lazy(chem, (m) => m.animalTissues),
+  "plant-tissues": lazy(chem, (m) => m.plantTissues),
+  "stem-and-blood": lazy(chem, (m) => m.stemAndBlood),
+  levels: lazy(chem, (m) => m.levels),
+  symmetry: lazy(chem, (m) => m.symmetry),
+  "toxins-cell": lazy(chem, (m) => m.toxinsCell),
 };
