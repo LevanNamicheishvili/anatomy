@@ -115,7 +115,7 @@ export async function loadTerrain(k: Kit) {
   }
   for (const t of [sat, detail, detailNor, wsat]) k.track(t);
 
-  const field = new LocalField(meta, new Int16Array(buf), k.lowPower ? 2 : 1);
+  const field = new LocalField(meta, new Int16Array(buf), k.lowPower ? 3 : 1);
   const group = new THREE.Group();
 
   // ---- The close-up ground ----
@@ -152,7 +152,8 @@ export async function loadTerrain(k: Kit) {
     col: { value: Array.from({ length: MAX_MARKS }, () => new THREE.Vector4()) },
     overlay: { value: 0 },
   };
-  const mat = new THREE.MeshStandardMaterial({ map: sat, normalMap: detailNor, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.96, metalness: 0 });
+  // Weak computers: plain diffuse light (much cheaper per pixel), no fine normal detail.
+  const mat = k.lowPower ? new THREE.MeshLambertMaterial({ map: sat }) : new THREE.MeshStandardMaterial({ map: sat, normalMap: detailNor, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.96, metalness: 0 });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uDetail = { value: detail };
     sh.uniforms.uAvg = { value: new THREE.Vector3(avg.r, avg.g, avg.b) };
@@ -197,7 +198,7 @@ export async function loadTerrain(k: Kit) {
           // Close up, take some of the photo's own colour (grass blades, bare earth).
           c = mix(c, c * (d1 / max(uAvg, vec3(0.02))), 0.35 * near);
           // Regiments' footprints.
-          for (int i = 0; i < ${MAX_MARKS}; i++) {
+          if (uOverlay > 0.001) for (int i = 0; i < ${MAX_MARKS}; i++) {
             if (i >= uMarkN) break;
             vec4 p = uMarkPos[i];
             vec2 r = uMarkRot[i];
@@ -222,9 +223,14 @@ export async function loadTerrain(k: Kit) {
 
   // ---- The mountains round about (100 m grid), with a hole where the close-up ground is ----
   {
-    const GW = wmeta.width;
-    const GH = wmeta.height;
-    const hw = new Int16Array(wbuf);
+    // Every grid point, or every second one on weak computers.
+    const st = k.lowPower ? 2 : 1;
+    const GW0 = wmeta.width;
+    const GW = Math.floor((GW0 - 1) / st) + 1;
+    const GH = Math.floor((wmeta.height - 1) / st) + 1;
+    const hw0 = new Int16Array(wbuf);
+    const hw = new Int16Array(GW * GH);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) hw[j * GW + i] = hw0[j * st * GW0 + i * st];
     const L = meta.lon;
     const A = meta.lat;
     const toX = (lon: number) => ((lon - L[0]) / (L[1] - L[0])) * meta.metres[0];

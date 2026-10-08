@@ -177,9 +177,11 @@ const GOLD = "#c8a24a";
  */
 function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: string) {
   const P = look.mounted ? SEATED : STANDING;
-  const seg = [10, 6, 4][lod];
+  const seg = [10, 6, 3][lod];
   const jb = (j: number) => j + jointBase;
   const near = lod === 0;
+  // Far away a soldier is a few dozen faces: no hands, feet, neck, mail curtain or second layers.
+  const far = lod === 2;
   const trousers = look.trousers ?? "#3b2f27";
 
   // Legs.
@@ -190,11 +192,11 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
     parts.add(limb(hip, knee, 0.085, 0.066, seg), look.armour === "mail" ? MAIL : trousers, jb(thigh), look.armour === "mail" ? "mail" : "cloth");
     if (lod < 2) parts.add(blob(knee, v(0.066, 0.066, 0.066), seg, Math.max(3, seg / 2)), look.armour === "mail" ? MAIL : trousers, jb(thigh), "cloth");
     parts.add(limb(knee, ankle, 0.062, 0.048, seg), LEATHER, jb(shin), "leather");
-    parts.add(limb(ankle.clone().add(v(0, 0.02, -0.03)), toe, 0.052, 0.04, seg), LEATHER, jb(shin), "leather");
+    if (!far) parts.add(limb(ankle.clone().add(v(0, 0.02, -0.03)), toe, 0.052, 0.04, seg), LEATHER, jb(shin), "leather");
   }
 
   // Hips and the skirts of hauberk and coat.
-  parts.add(blob(P.pelvis, v(0.16, 0.1, 0.12), seg, Math.max(3, seg / 2)), trousers, jb(J.pelvis), "cloth");
+  if (!far) parts.add(blob(P.pelvis, v(0.16, 0.1, 0.12), seg, Math.max(3, seg / 2)), trousers, jb(J.pelvis), "cloth");
   const skirt = (top: number, bottom: number, r0: number, r1: number, color: string, tint: number, mat: "cloth" | "mail") => {
     const g = new THREE.CylinderGeometry(r0, r1, top - bottom, seg * 2, 1, true).scale(1, 1, 1.12);
     g.translate(P.waist.x, (top + bottom) / 2, P.waist.z + (look.mounted ? 0.02 : 0));
@@ -202,10 +204,10 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
   };
   const wy = P.waist.y;
   if (look.mounted) {
-    if (look.armour === "mail") skirt(wy + 0.04, wy - 0.33, 0.165, 0.31, MAIL, TINT.none, "mail");
+    if (look.armour === "mail" && !far) skirt(wy + 0.04, wy - 0.33, 0.165, 0.31, MAIL, TINT.none, "mail");
     skirt(wy + 0.05, wy - (look.armour === "mail" ? 0.25 : 0.34), 0.17, look.armour === "mail" ? 0.3 : 0.33, "#ffffff", TINT.a, "cloth");
   } else {
-    if (look.armour === "mail") skirt(wy + 0.04, 0.5, 0.165, 0.27, MAIL, TINT.none, "mail");
+    if (look.armour === "mail" && !far) skirt(wy + 0.04, 0.5, 0.165, 0.27, MAIL, TINT.none, "mail");
     skirt(wy + 0.05, look.armour === "mail" ? 0.6 : 0.52, 0.17, look.armour === "mail" ? 0.25 : 0.28, look.armour === "gambeson" ? "#b49d78" : "#ffffff", look.armour === "gambeson" ? TINT.none : TINT.a, "cloth");
   }
 
@@ -226,7 +228,9 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
     g.translate(P.waist.x, P.waist.y, P.waist.z + (look.mounted ? 0.01 : 0));
     parts.add(g, color, jb(J.torso), mat, tint);
   };
-  if (look.armour === "mail") {
+  if (far) {
+    torso(1.03, "#ffffff", TINT.a, "cloth");
+  } else if (look.armour === "mail") {
     torso(1, MAIL, TINT.none, "mail");
     torso(1.05, "#ffffff", TINT.a, "cloth", 0.8);
   } else if (look.armour === "lamellar") {
@@ -255,16 +259,16 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
     [P.shoulderR, P.elbowR, P.wristR, J.uaR, J.faR],
     [P.shoulderL, P.elbowL, P.wristL, J.uaL, J.faL],
   ] as const) {
-    parts.add(blob(sh, v(0.075, 0.075, 0.075), seg, Math.max(3, seg / 2)), sleeve, jb(ua), sleeveMat, sleeveTint);
+    if (!far) parts.add(blob(sh, v(0.075, 0.075, 0.075), seg, Math.max(3, seg / 2)), sleeve, jb(ua), sleeveMat, sleeveTint);
     parts.add(limb(sh, el, 0.064, 0.054, seg), sleeve, jb(ua), sleeveMat, sleeveTint);
     if (lod < 2) parts.add(blob(el, v(0.055, 0.055, 0.055), seg, Math.max(3, seg / 2)), sleeve, jb(fa), sleeveMat, sleeveTint);
     parts.add(limb(el, wr, 0.052, 0.043, seg), sleeve, jb(fa), sleeveMat, sleeveTint);
     const hand = wr.clone().add(wr.clone().sub(el).normalize().multiplyScalar(0.05));
-    parts.add(blob(hand, v(0.045, 0.05, 0.045), seg, Math.max(3, seg / 2)), look.armour === "mail" ? LEATHER : skin, jb(fa), look.armour === "mail" ? "leather" : "skin");
+    if (!far) parts.add(blob(hand, v(0.045, 0.05, 0.045), seg, Math.max(3, seg / 2)), look.armour === "mail" ? LEATHER : skin, jb(fa), look.armour === "mail" ? "leather" : "skin");
   }
 
   // Neck and head.
-  parts.add(limb(P.neck.clone().add(v(0, -0.04, 0)), P.headC.clone().add(v(0, -0.07, 0)), 0.055, 0.05, seg), skin, jb(J.head), "skin");
+  if (!far) parts.add(limb(P.neck.clone().add(v(0, -0.04, 0)), P.headC.clone().add(v(0, -0.07, 0)), 0.055, 0.05, seg), skin, jb(J.head), "skin");
   const hc = P.headC;
   parts.add(blob(hc, v(0.092, 0.112, 0.102), seg, Math.max(4, seg - 2)), skin, jb(J.head), "skin");
   if (lod < 2 && look.beard) parts.add(blob(hc.clone().add(v(0, -0.07, 0.045)), v(0.078, 0.07, 0.065), seg, Math.max(3, seg / 2)), look.beard, jb(J.head), "hair");
@@ -277,8 +281,10 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
     if (look.head === "nasal" && lod < 2) parts.add(box(v(hc.x, hc.y + 0.0, hc.z + 0.112), v(0.022, 0.12, 0.012)), IRON, jb(J.head), "iron");
     if (look.head === "spiked" && near) parts.add(blob(v(hc.x, top + h + 0.02, hc.z), v(0.02, 0.03, 0.02), 6, 4), GOLD, jb(J.head), "gold");
     // Mail curtain (aventail) round the neck, open at the face.
-    const av = new THREE.CylinderGeometry(0.118, 0.15, 0.17, seg * 2, 1, true, 0.55, Math.PI * 2 - 1.1);
-    parts.add(av.translate(hc.x, top - 0.09, hc.z - 0.005), MAIL, jb(J.head), "mail");
+    if (!far) {
+      const av = new THREE.CylinderGeometry(0.118, 0.15, 0.17, seg * 2, 1, true, 0.55, Math.PI * 2 - 1.1);
+      parts.add(av.translate(hc.x, top - 0.09, hc.z - 0.005), MAIL, jb(J.head), "mail");
+    }
     if (look.head === "spiked" && lod < 2) parts.add(new THREE.TorusGeometry(0.12, 0.03, 4, seg * 2).rotateX(Math.PI / 2).translate(hc.x, top + 0.02, hc.z), "#ffffff", jb(J.head), "cloth", TINT.b);
   } else if (look.head === "turban") {
     for (let i = 0; i < (lod < 2 ? 3 : 1); i++) parts.add(new THREE.TorusGeometry(0.1 - i * 0.015, 0.04, 5, seg * 2).rotateX(Math.PI / 2).translate(hc.x, top + i * 0.045, hc.z - 0.005), "#e9e2d0", jb(J.head), "cloth");
@@ -372,7 +378,7 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
     }
   }
   // A sword for close combat (hidden until drawn), and its scabbard on the left hip.
-  {
+  if (!far) {
     parts.add(box(handR.clone().add(v(0, 0.5, 0)), v(0.045, 0.82, 0.01)), "#b8bec4", jb(J.sword), "iron");
     if (lod < 2) parts.add(box(handR.clone().add(v(0, 0.07, 0)), v(0.17, 0.025, 0.03)), IRON, jb(J.sword), "iron");
     if (lod < 2) {

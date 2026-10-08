@@ -304,10 +304,10 @@ export const didgori: Builder = async (k) => {
   const footB = infantryBones(k);
   const types = new Map<string, FigureType>();
   Object.entries(LOOKS).forEach(([id, d], i) => types.set(id, figureType(id, d.look, d.role, d.look.mounted ? horse : null, i)));
-  const units: Unit[] = UNITS.map((u) => (low ? { ...u, n: Math.max(4, Math.round(u.n / 3)), files: Math.max(3, Math.round(u.files / 1.7)) } : u));
+  const units: Unit[] = UNITS.map((u) => (low ? { ...u, n: Math.max(4, Math.round(u.n / 4)), files: Math.max(3, Math.round(u.files / 2)) } : u));
   const sim = new BattleSim(field, units, types, cavB, footB);
   const mats = new Map<BoneSet, ReturnType<typeof crowdMaterial>[]>();
-  for (const b of [cavB, footB]) mats.set(b, [crowdMaterial(k, b, low ? 2 : 4, !low), crowdMaterial(k, b, 2, false), crowdMaterial(k, b, 1, false)]);
+  for (const b of [cavB, footB]) mats.set(b, [crowdMaterial(k, b, low ? 2 : 4, !low, low), crowdMaterial(k, b, 2, false, low), crowdMaterial(k, b, 1, false, low)]);
   const layers = new Map<string, CrowdLayer[]>();
   for (const [id, t] of types) {
     const cap = units.filter((u) => u.type === id).reduce((s, u) => s + u.n, 0);
@@ -551,6 +551,7 @@ export const didgori: Builder = async (k) => {
     });
     marks.n.value = m;
     placeLabels.visible = labelsOn;
+    for (const g of [...moves, flight]) g.fade(marks.overlay.value);
   };
 
   return {

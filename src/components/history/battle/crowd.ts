@@ -153,11 +153,12 @@ varying vec2 vMat;
  * slots filled per instance — 1: the regiment's colour, 2: its second colour, 3: horse coat, 4: mane (its
  * brightness only, in iCoat.w: WebGL allows just 16 attributes per vertex).
  */
-export function crowdMaterial(k: Kit, bones: BoneSet, taps: 1 | 2 | 4, lerp: boolean) {
+export function crowdMaterial(k: Kit, bones: BoneSet, taps: 1 | 2 | 4, lerp: boolean, cheap = false) {
   const defines: Record<string, string | number> = { CROWD_TAPS: taps };
   if (lerp) defines.CROWD_LERP = "";
   const uBones = { value: bones.texture };
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 1, roughness: 1 });
+  // `cheap`: diffuse light only (weak computers); the metal/roughness lines then simply don't apply.
+  const mat = cheap ? new THREE.MeshLambertMaterial({ vertexColors: true }) : new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 1, roughness: 1 });
   mat.defines = { ...defines };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uBones = uBones;
@@ -177,7 +178,7 @@ export function crowdMaterial(k: Kit, bones: BoneSet, taps: 1 | 2 | 4, lerp: boo
       .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vMat.x;")
       .replace("#include <roughnessmap_fragment>", "float roughnessFactor = vMat.y;");
   };
-  mat.customProgramCacheKey = () => `crowd-${taps}-${lerp}`;
+  mat.customProgramCacheKey = () => `crowd-${taps}-${lerp}-${cheap}`;
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   depth.defines = { ...defines };
   depth.onBeforeCompile = (sh) => {

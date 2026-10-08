@@ -411,12 +411,19 @@ export function groundArrow(k: Kit, ground: Ground, path: [number, number][], wi
   mesh.userData.noShadowFit = true;
   mesh.renderOrder = 2;
   const total = idx.length;
+  let base = 0;
   return {
     mesh,
     set(reveal: number, opacity: number) {
+      base = opacity;
       mesh.visible = reveal > 0.001 && opacity > 0.001;
       g.setDrawRange(0, Math.floor((total / 6) * Math.min(1, reveal)) * 6);
       mat.opacity = opacity;
+    },
+    /** Only in the map-like shots: `f` fades it with them. */
+    fade(f: number) {
+      mat.opacity = base * f;
+      if (f < 0.01) mesh.visible = false;
     },
   };
 }

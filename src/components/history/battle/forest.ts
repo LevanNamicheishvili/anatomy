@@ -50,12 +50,30 @@ function treeGeometry(k: Kit, detailed: boolean) {
     g.rotateX(tilt).rotateY(rotY).translate(0, y, 0);
     parts.push(g);
   };
-  const n = detailed ? 3 : 2;
-  for (let i = 0; i < n; i++) card((i / n) * Math.PI, 0, crownC.y, R * 2.2);
-  card(0, -Math.PI / 2, crownC.y + 0.05, R * 2.1);
   if (detailed) {
-    card(0.6, -Math.PI / 2 + 0.5, crownC.y - 0.1, R * 1.7);
-    card(2.2, -Math.PI / 2 - 0.5, crownC.y + 0.12, R * 1.5);
+    // Near: a crown of leaf clumps spread over a dome, each turned outwards, so it looks solid from any side.
+    const r = rng(31);
+    const N = 14;
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 0, 1);
+    for (let i = 0; i < N; i++) {
+      // Even-ish points on the upper part of an ellipsoid.
+      const yN = 1 - (i + 0.5) / N * 1.35;
+      const a = i * 2.39996 + r() * 0.4;
+      const rr = Math.sqrt(Math.max(0, 1 - yN * yN));
+      const dir = new THREE.Vector3(Math.cos(a) * rr, yN, Math.sin(a) * rr).normalize();
+      const at = crownC.clone().add(new THREE.Vector3(dir.x * R * 0.78, dir.y * R * 0.6, dir.z * R * 0.78));
+      const size = R * (0.95 + r() * 0.35);
+      const g = new THREE.PlaneGeometry(size, size);
+      q.setFromUnitVectors(up, dir.clone().lerp(new THREE.Vector3(0, 1, 0), 0.25).normalize());
+      g.applyQuaternion(q).rotateY(r() * 0.5).translate(at.x, at.y, at.z);
+      parts.push(g);
+    }
+    // A core so the crown never looks hollow.
+    for (let i = 0; i < 3; i++) card((i / 3) * Math.PI, 0, crownC.y, R * 1.5);
+  } else {
+    for (let i = 0; i < 2; i++) card((i / 2) * Math.PI, 0, crownC.y, R * 2.2);
+    card(0, -Math.PI / 2, crownC.y + 0.05, R * 2.1);
   }
   for (const g of parts) {
     const p = g.attributes.position as THREE.BufferAttribute;
