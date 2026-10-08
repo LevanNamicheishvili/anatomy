@@ -1,530 +1,753 @@
 import * as THREE from "three";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { beads, curve, orbit } from "@/components/journeys/common";
-import { ease, rng, v, type Builder, type Kit, type Shot, type V3 } from "@/components/journeys/JourneyScene";
+import { orbit } from "@/components/journeys/common";
+import { ease, v, type Builder, type Shot, type V3 } from "@/components/journeys/JourneyScene";
+import { campaignMap } from "./battle/campaign";
+import { CrowdLayer, crowdMaterial, type BoneSet } from "./battle/crowd";
+import { buildForest } from "./battle/forest";
+import { Arrows, banner, camp, groundArrow, Particles, waveBanners, type Banner, type BannerKind } from "./battle/fx";
+import { BattleSim, type Cmd, type RegimentDef, type Setup, type StageScript, type XZ } from "./battle/sim";
+import { loadTerrain, MAX_MARKS, skyDome } from "./battle/terrain";
+import { cavalryBones, figureType, infantryBones, loadHorse, type FigureType, type Look } from "./battle/units";
 
 /*
- * The Battle of Didgori (12 August 1121) on the real ground: elevation from AWS Terrain Tiles and a
- * Sentinel-2 picture (EOxCloudless 2024, modern town and reservoir painted out) for the area between
- * Manglisi, Didgori and Tbilisi, plus a map of Georgia for the campaign. The armies are figures in
- * regiments (≈ 1 figure per 100 soldiers on the Georgian side; the coalition's size is disputed and shown
- * schematically). Positions are a reconstruction from the sources' descriptions, not exact.
+ * The Battle of Didgori, 12 August 1121, on the real ground (an 11 × 7 km window round the Didgori field).
+ * About 5000 figures, one for every ≈ 20 men on the Georgian side (the coalition's numbers are disputed; it
+ * is shown at ≈ 60 000): mail-clad Georgian lancers and Frankish knights, Kipchak horse archers, Turkmen
+ * horse archers and lancers, Arab riders and footmen. The course of the fight follows the sources (the
+ * feigned surrender of the 200, the frontal charge, the attacks on the flanks by King David and his son
+ * Demetre, rout and pursuit); the exact places are a reconstruction.
  */
 
-const VERSION = "2026-10-08";
+// ---- Who fought ------------------------------------------------------------------------------------------
 
-// ---- Battlefield grid ------------------------------------------------------------------------------------
+const LOOKS: Record<string, { look: Look; role: FigureType["role"] }> = {
+  gHeavy: { look: { mounted: true, armour: "mail", head: "nasal", shield: "kite", weapon: "lance", emblem: "cross", beard: "#2a1d14" }, role: "lancer" },
+  frank: { look: { mounted: true, armour: "mail", head: "nasal", shield: "kite", weapon: "lance", emblem: "cross", emblemColor: "#a3171b", beard: "#5a4430" }, role: "lancer" },
+  kipchak: { look: { mounted: true, armour: "kaftan", head: "furcap", shield: "round", weapon: "bow", emblem: "rings", trousers: "#4a3a2a", beard: "#2a1d14" }, role: "archer" },
+  gSpear: { look: { mounted: false, armour: "gambeson", head: "nasal", shield: "kite", weapon: "spear", emblem: "cross", beard: "#2a1d14" }, role: "spear" },
+  gBow: { look: { mounted: false, armour: "gambeson", head: "nasal", shield: "none", weapon: "bow", beard: "#3a2a1c" }, role: "bowman" },
+  turkBow: { look: { mounted: true, armour: "kaftan", head: "spiked", shield: "round", weapon: "bow", emblem: "rings", trousers: "#3a3530", beard: "#1d1712" }, role: "archer" },
+  turkLance: { look: { mounted: true, armour: "lamellar", head: "spiked", shield: "round", weapon: "lance", emblem: "boss", trousers: "#2f2a26", beard: "#1d1712" }, role: "lancer" },
+  arab: { look: { mounted: true, armour: "kaftan", head: "turban", shield: "round", weapon: "lance", emblem: "rings", trousers: "#d8d0bc", beard: "#1d1712" }, role: "lancer" },
+  cSpear: { look: { mounted: false, armour: "kaftan", head: "turban", shield: "round", weapon: "spear", emblem: "boss", beard: "#1d1712" }, role: "spear" },
+};
 
-interface FieldMeta {
-  width: number;
-  height: number;
-  lon: [number, number];
-  lat: [number, number];
-}
-
-const UNIT = 100; // metres per scene unit
-const EXAG = 1.4; // vertical exaggeration
-
-class Field {
-  W: number;
-  D: number;
-  constructor(
-    readonly meta: FieldMeta,
-    readonly h: Int16Array,
-  ) {
-    const midLat = ((meta.lat[0] + meta.lat[1]) / 2) * (Math.PI / 180);
-    this.W = ((meta.lon[1] - meta.lon[0]) * 111320 * Math.cos(midLat)) / UNIT;
-    this.D = ((meta.lat[0] - meta.lat[1]) * 110570) / UNIT;
-  }
-  /** Scene x, z of a longitude/latitude (x east, z south). */
-  xz(lon: number, lat: number) {
-    const { lon: L, lat: A } = this.meta;
-    return [((lon - L[0]) / (L[1] - L[0]) - 0.5) * this.W, ((A[0] - lat) / (A[0] - A[1]) - 0.5) * this.D] as const;
-  }
-  /** Ground height (scene units) at scene x, z, bilinear. */
-  y(x: number, z: number) {
-    const { width: GW, height: GH } = this.meta;
-    const fx = THREE.MathUtils.clamp((x / this.W + 0.5) * (GW - 1), 0, GW - 1.001);
-    const fz = THREE.MathUtils.clamp((z / this.D + 0.5) * (GH - 1), 0, GH - 1.001);
-    const i = Math.floor(fx);
-    const j = Math.floor(fz);
-    const tx = fx - i;
-    const tz = fz - j;
-    const at = (a: number, b: number) => this.h[b * GW + a];
-    const m = (at(i, j) * (1 - tx) + at(i + 1, j) * tx) * (1 - tz) + (at(i, j + 1) * (1 - tx) + at(i + 1, j + 1) * tx) * tz;
-    return ((m - 1000) / UNIT) * EXAG;
-  }
-  p(lon: number, lat: number, lift = 0) {
-    const [x, z] = this.xz(lon, lat);
-    return v(x, this.y(x, z) + lift, z);
-  }
-}
-
-async function loadField(k: Kit) {
-  const [meta, buf, sat] = await Promise.all([
-    fetch(`/history/didgori-terrain.json?v=${VERSION}`).then((r) => r.json() as Promise<FieldMeta>),
-    fetch(`/history/didgori-terrain.bin.gz?v=${VERSION}`).then((r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
-    new THREE.TextureLoader().loadAsync(`/history/didgori-satellite.jpg?v=${VERSION}`),
-  ]);
-  sat.colorSpace = THREE.SRGBColorSpace;
-  sat.anisotropy = 8;
-  k.track(sat);
-  const field = new Field(meta, new Int16Array(buf));
-  const geo = k.track(new THREE.PlaneGeometry(field.W, field.D, meta.width - 1, meta.height - 1).rotateX(-Math.PI / 2));
-  const pos = geo.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, ((field.h[i] - 1000) / UNIT) * EXAG);
-  geo.computeVertexNormals();
-  // A fine detail normal map on a second, tiled UV set.
-  const uv = geo.attributes.uv as THREE.BufferAttribute;
-  const uv1 = new Float32Array(uv.count * 2);
-  for (let i = 0; i < uv.count; i++) {
-    uv1[i * 2] = uv.getX(i) * 90;
-    uv1[i * 2 + 1] = uv.getY(i) * 56;
-  }
-  geo.setAttribute("uv1", new THREE.BufferAttribute(uv1, 2));
-  const detail = k.normalMap("organic", [1, 1]);
-  detail.channel = 1;
-  const mesh = new THREE.Mesh(geo, k.material({ map: sat, roughness: 0.95, clearcoat: 0, normalMap: detail, normalScale: new THREE.Vector2(0.15, 0.15) }));
-  mesh.receiveShadow = true;
-  return { field, mesh };
-}
-
-// ---- Soldiers ---------------------------------------------------------------------------------------------
-
-/** Parts merged into one geometry, each part with its own vertex colour. */
-function merged(k: Kit, parts: { g: THREE.BufferGeometry; color: string }[]) {
-  const list = parts.map(({ g, color }) => {
-    const geo = g.index ? g : g;
-    const c = new THREE.Color(color);
-    const n = geo.attributes.position.count;
-    const cols = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) cols.set([c.r, c.g, c.b], i * 3);
-    geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
-    geo.deleteAttribute("uv");
-    return geo;
-  });
-  const m = mergeGeometries(list)!;
-  for (const g of list) g.dispose();
-  return k.track(m);
-}
-
-/** Cavalry facing +z: horse, rider, lance. `team` parts take the regiment's colour. */
-function cavalryGeometry(k: Kit) {
-  const neutral = merged(k, [
-    { g: new THREE.CapsuleGeometry(0.16, 0.55, 4, 10).rotateX(Math.PI / 2).translate(0, 0.58, 0), color: "#6b4a32" },
-    { g: new THREE.CapsuleGeometry(0.08, 0.3, 4, 8).rotateX(-0.6).translate(0, 0.8, 0.36), color: "#5e4029" },
-    ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ g: new THREE.BoxGeometry(0.06, 0.45, 0.06).translate(sx * 0.09, 0.24, sz * 0.22), color: "#3a2a1e" }))),
-    { g: new THREE.SphereGeometry(0.075, 10, 8).translate(0, 1.3, 0), color: "#9a9ea4" },
-    { g: new THREE.CylinderGeometry(0.014, 0.014, 1.5, 5).rotateX(1.25).translate(0.13, 1.05, 0.3), color: "#8a6a44" },
-  ]);
-  const team = merged(k, [
-    { g: new THREE.CapsuleGeometry(0.1, 0.3, 4, 8).translate(0, 1.02, 0), color: "#ffffff" },
-    { g: new THREE.BoxGeometry(0.04, 0.28, 0.22).translate(-0.14, 0.98, 0.04), color: "#e8e8e8" },
-    { g: new THREE.BoxGeometry(0.34, 0.06, 0.5).translate(0, 0.72, -0.02), color: "#d8d8d8" },
-  ]);
-  return { neutral, team };
-}
-
-function infantryGeometry(k: Kit) {
-  const neutral = merged(k, [
-    { g: new THREE.BoxGeometry(0.18, 0.42, 0.1).translate(0, 0.21, 0), color: "#4a3a2a" },
-    { g: new THREE.SphereGeometry(0.085, 10, 8).translate(0, 1.0, 0), color: "#9a9ea4" },
-    { g: new THREE.CylinderGeometry(0.014, 0.014, 1.7, 5).translate(0.17, 0.85, 0.02), color: "#8a6a44" },
-  ]);
-  const team = merged(k, [
-    { g: new THREE.CapsuleGeometry(0.12, 0.3, 4, 8).translate(0, 0.66, 0), color: "#ffffff" },
-    { g: new THREE.BoxGeometry(0.05, 0.42, 0.3).translate(-0.17, 0.64, 0.06), color: "#e0e0e0" },
-  ]);
-  return { neutral, team };
-}
-
-type LonLat = [number, number];
-
-interface Regiment {
-  name: string;
-  side: "g" | "c";
-  kind: "cav" | "inf";
-  color: string;
-  count: number;
-  /** Position at the end of stages 1..6 (index 0 = stage 1). Missing entries keep the previous one. */
-  at: (LonLat | null)[];
-  /** When in each stage it moves (0..1 of the stage). */
-  when?: Record<number, [number, number]>;
-  /** Stages in which it is broken (fleeing). */
-  rout?: number[];
+interface Unit extends RegimentDef {
+  banner?: BannerKind;
+  /** Stages in which its name is shown. */
   label?: number[];
-  size?: number;
 }
 
-// Positions (lon, lat): a reconstruction. Georgians on the heights in the east and in hidden side valleys;
-// the coalition strung out westwards towards Manglisi.
-const REGIMENTS: Regiment[] = [
-  { name: "მძიმე ცხენოსნები", side: "g", kind: "cav", color: "#c0392b", count: 100, at: [[44.556, 41.698], null, [44.537, 41.692], [44.527, 41.69], [44.515, 41.688], [44.5, 41.686]], when: { 3: [0.15, 0.7], 4: [0, 0.8] }, label: [1, 3] },
-  { name: "ფრანგი რაინდები", side: "g", kind: "cav", color: "#f4f1ea", count: 8, size: 1.3, at: [[44.552, 41.6945], null, [44.535, 41.6895], [44.525, 41.688], [44.513, 41.687], null], when: { 3: [0.15, 0.7] }, label: [1, 3] },
-  { name: "მეფე დავითი", side: "g", kind: "cav", color: "#a01f2a", count: 100, at: [[44.532, 41.7125], null, null, [44.512, 41.6975], [44.5, 41.695], [44.488, 41.692]], when: { 4: [0.1, 0.75] }, label: [1, 4] },
-  { name: "დემეტრე", side: "g", kind: "cav", color: "#b8402e", count: 80, at: [[44.538, 41.6715], null, null, [44.515, 41.6795], [44.5, 41.678], [44.488, 41.676]], when: { 4: [0.2, 0.85] }, label: [1, 4] },
-  { name: "ქვეითები", side: "g", kind: "inf", color: "#9a2a2a", count: 70, at: [[44.566, 41.7], null, null, [44.541, 41.693], [44.53, 41.691], null], when: { 4: [0.1, 1] }, label: [1] },
-  { name: "ყივჩაყები", side: "g", kind: "cav", color: "#c9a23a", count: 150, at: [[44.569, 41.6875], null, null, null, [44.53, 41.682], [44.37, 41.645]], when: { 5: [0.2, 1], 6: [0, 1] }, label: [1, 6] },
-  { name: "200 მხედარი", side: "g", kind: "cav", color: "#e8c23a", count: 5, size: 1.5, at: [[44.552, 41.6875], [44.5285, 41.6865], [44.539, 41.6865], null, null, [44.38, 41.648]], when: { 2: [0.05, 0.6], 3: [0, 0.4], 6: [0, 1] }, label: [2] },
-  { name: "ალანები", side: "g", kind: "cav", color: "#8a6a3a", count: 6, at: [[44.563, 41.6825], null, null, null, [44.528, 41.681], [44.39, 41.65]], when: { 5: [0.2, 1] } },
-  { name: "მოწინავე რაზმი", side: "c", kind: "cav", color: "#2b3a6b", count: 250, at: [[44.527, 41.688], null, [44.522, 41.6875], null, [44.47, 41.675], [44.36, 41.63]], when: { 3: [0.3, 0.9], 5: [0.1, 1], 6: [0, 1] }, rout: [5, 6], label: [1, 3] },
-  { name: "მარცხენა ფრთა", side: "c", kind: "cav", color: "#33417a", count: 300, at: [[44.511, 41.6985], null, null, [44.506, 41.6965], [44.45, 41.69], [44.33, 41.65]], when: { 4: [0.5, 1], 5: [0.05, 1], 6: [0, 1] }, rout: [5, 6], label: [1, 4] },
-  { name: "მარჯვენა ფრთა", side: "c", kind: "cav", color: "#33417a", count: 300, at: [[44.511, 41.677], null, null, [44.506, 41.6795], [44.46, 41.665], [44.34, 41.625]], when: { 4: [0.5, 1], 5: [0.05, 1], 6: [0, 1] }, rout: [5, 6], label: [1, 4] },
-  { name: "ილღაზის ცენტრი", side: "c", kind: "inf", color: "#1e2a52", count: 350, at: [[44.497, 41.6885], null, null, null, [44.45, 41.68], [44.33, 41.64]], when: { 5: [0, 1], 6: [0, 1] }, rout: [5, 6], label: [1, 5] },
-  { name: "ბანაკები მანგლისამდე", side: "c", kind: "inf", color: "#4a5578", count: 300, size: 0.9, at: [[44.44, 41.6955], null, null, null, [44.4, 41.69], [44.3, 41.66]], when: { 5: [0.3, 1], 6: [0, 1] }, rout: [5, 6], label: [1] },
+const W = -Math.PI / 2;
+const E = Math.PI / 2;
+
+const UNITS: Unit[] = [
+  { id: "gHeavy", name: "ქართველი მძიმე ცხენოსნები", side: 0, type: "gHeavy", n: 600, files: 60, gap: [2.3, 4.2], loose: 0.5, colA: ["#8f1d21", "#7a1a20", "#a3262a"], colB: ["#5e1216", "#8a1c1c"], coats: [0, 1, 2, 3], banner: "georgia", label: [1, 3] },
+  { id: "franks", name: "ფრანგი რაინდები", side: 0, type: "frank", n: 10, files: 10, gap: [2.6, 4.5], colA: ["#e6e0d0"], colB: ["#ebe5d8"], coats: [4, 3], banner: "frank", label: [1, 3] },
+  { id: "david", name: "მეფე დავითის რაზმი", side: 0, type: "gHeavy", n: 300, files: 30, gap: [2.4, 4.3], loose: 1, colA: ["#6d1424", "#7a1a2a"], colB: ["#b08a3a", "#6d1424"], coats: [0, 1, 3], banner: "royal", label: [1, 4] },
+  { id: "demetre", name: "დემეტრეს რაზმი", side: 0, type: "gHeavy", n: 300, files: 30, gap: [2.4, 4.3], loose: 1, colA: ["#a5321f", "#b8402e"], colB: ["#5a1a12"], coats: [0, 2, 1], banner: "georgia", label: [1, 4] },
+  { id: "kipchak", name: "ყივჩაყები", side: 0, type: "kipchak", n: 700, files: 35, gap: [3, 4.6], loose: 2.5, colA: ["#9a4a24", "#8a5a2a", "#a0522d"], colB: ["#5a3a22", "#7a3a1e"], coats: [5, 0, 2], banner: "kipchak", label: [1, 5] },
+  { id: "alans", name: "ალანები", side: 0, type: "gHeavy", n: 25, files: 13, gap: [2.5, 4.2], colA: ["#6b2a3a"], colB: ["#3a2a2a"], coats: [0, 3], banner: "georgia" },
+  { id: "ruse", name: "200 მხედარი", side: 0, type: "kipchak", n: 10, files: 5, gap: [3, 4.5], colA: ["#9a4a24"], colB: ["#5a3a22"], coats: [5], label: [2] },
+  { id: "gSpear", name: "ქართველი ქვეითები", side: 0, type: "gSpear", n: 200, files: 40, gap: [1.0, 1.3], loose: 0.2, colA: ["#8a2a24", "#9a3328"], colB: ["#7a1d1d"], banner: "georgia", label: [1, 4] },
+  { id: "gBow", name: "მშვილდოსნები", side: 0, type: "gBow", n: 120, files: 30, gap: [1.2, 1.4], loose: 0.3, colA: ["#8a2a24"], colB: ["#7a1d1d"] },
+  { id: "cVan", name: "მოწინავე რაზმი (მშვილდოსანი ცხენოსნები)", side: 1, type: "turkBow", n: 500, files: 40, gap: [3, 4.5], loose: 2, colA: ["#2c3f6e", "#26406a", "#33507a"], colB: ["#3b5f8a", "#6a7fa8"], coats: [0, 2, 4, 5], banner: "tugh", label: [1, 3] },
+  { id: "cLeft", name: "კოალიციის მარცხენა ფრთა", side: 1, type: "turkBow", n: 450, files: 30, gap: [3, 4.6], loose: 2.5, colA: ["#24365e", "#2a4a6a"], colB: ["#6b7fa8", "#e2dccb"], coats: [0, 1, 4, 5], banner: "tugh", label: [1, 4] },
+  { id: "cRight", name: "კოალიციის მარჯვენა ფრთა", side: 1, type: "turkLance", n: 450, files: 30, gap: [2.8, 4.4], loose: 2, colA: ["#1f3f5f", "#283c66"], colB: ["#4a6a9a"], coats: [0, 2, 3, 4], banner: "tugh", label: [1, 4] },
+  { id: "cGuard", name: "მეთაურთა დაცვა", side: 1, type: "turkLance", n: 80, files: 16, gap: [2.6, 4.3], colA: ["#1b2a4a"], colB: ["#c9a54a"], coats: [3, 4], banner: "black" },
+  { id: "cCmd", name: "ილღაზი და დუბაისი", side: 1, type: "turkLance", n: 6, files: 6, gap: [3, 4], colA: ["#1b2240"], colB: ["#c9a54a"], coats: [4], banner: "tugh", label: [2, 5] },
+  { id: "cArab", name: "დუბაისის არაბები", side: 1, type: "arab", n: 250, files: 25, gap: [2.7, 4.4], loose: 1.5, colA: ["#2f4f86", "#d8d2c2"], colB: ["#1f3e6e"], coats: [4, 0], banner: "arab", label: [1] },
+  { id: "cInf", name: "კოალიციის ქვეითები", side: 1, type: "cSpear", n: 300, files: 30, gap: [1.1, 1.4], loose: 0.6, colA: ["#34507a", "#4a5a7a"], colB: ["#8a8270"], banner: "tugh" },
+  { id: "cRear", name: "ზურგის რაზმები", side: 1, type: "turkBow", n: 300, files: 20, gap: [3, 4.6], loose: 3, colA: ["#2a4060"], colB: ["#7a8aa8"], coats: [0, 1, 2, 5], banner: "tugh", label: [1] },
+  { id: "cCamp1", name: "ბანაკი", side: 1, type: "cSpear", n: 300, files: 20, gap: [2.5, 2.5], loose: 6, colA: ["#4a5a7a", "#5a5a6a"], colB: ["#8a8270"], label: [1] },
+  { id: "cCamp2", name: "ბანაკები მანგლისისკენ", side: 1, type: "turkBow", n: 250, files: 20, gap: [3.5, 4.5], loose: 6, colA: ["#3a4a6a"], colB: ["#8a8270"], coats: [0, 1, 2, 3, 5], label: [1] },
 ];
 
-const COMMAND: LonLat = [44.518, 41.688];
+// ---- Where, and what happens ---------------------------------------------------------------------------------
 
-interface Figure {
-  reg: number;
-  ox: number;
-  oz: number;
-  jx: number;
-  jz: number;
-  seed: number;
-  /** In the pursuit, this figure is gone after this fraction of the stage. */
-  fall: number;
+/** The road of flight: west and south-west, towards Manglisi and Trialeti. */
+const ROUT: XZ[] = [
+  [4500, 2950],
+  [3900, 3350],
+  [3200, 3900],
+  [2400, 4600],
+  [1400, 5600],
+  [300, 6700],
+];
+
+const BASE: Record<string, Setup> = {
+  gHeavy: { pos: [5750, 2730], face: W },
+  franks: { pos: [5708, 2730], face: W },
+  david: { pos: [4700, 2080], face: 0.53, hidden: true },
+  demetre: { pos: [4990, 3570], face: Math.PI, hidden: true },
+  kipchak: { pos: [5800, 3060], face: W },
+  alans: { pos: [5770, 2440], face: W },
+  ruse: { pos: [5690, 2900], face: W },
+  gSpear: { pos: [5880, 2660], face: W },
+  gBow: { pos: [5885, 2820], face: W },
+  cVan: { pos: [5200, 2750], face: E },
+  cLeft: { pos: [4900, 2420], face: E },
+  cRight: { pos: [4950, 3180], face: E },
+  cGuard: { pos: [4990, 2805], face: E },
+  cCmd: { pos: [4992, 2752], face: E },
+  cArab: { pos: [4720, 2770], face: E },
+  cInf: { pos: [4580, 2820], face: E },
+  cRear: { pos: [4150, 2980], face: E },
+  cCamp1: { pos: [3800, 3260], face: E },
+  cCamp2: { pos: [3330, 3760], face: E },
+};
+
+const PAVILION: XZ = [4990, 2785];
+
+function setup(over: Record<string, Partial<Setup>>): Record<string, Setup> {
+  const out: Record<string, Setup> = {};
+  for (const [id, s] of Object.entries(BASE)) out[id] = { ...s, ...(over[id] ?? {}) };
+  return out;
 }
 
-function army(k: Kit, field: Field, parent: THREE.Object3D) {
-  const r = rng(1121);
-  const cav = cavalryGeometry(k);
-  const inf = infantryGeometry(k);
-  const figs: Figure[] = [];
-  REGIMENTS.forEach((reg, ri) => {
-    const sp = reg.kind === "cav" ? 1.35 : 0.95;
-    const cols = Math.ceil(Math.sqrt(reg.count * (reg.kind === "cav" ? 2.2 : 3)));
-    for (let i = 0; i < reg.count; i++) {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
-      figs.push({ reg: ri, ox: (row - Math.floor(reg.count / cols) / 2) * sp, oz: (col - cols / 2) * sp, jx: (r() - 0.5) * 0.5, jz: (r() - 0.5) * 0.5, seed: r(), fall: 0.15 + r() * 1.6 });
-    }
-  });
-  const byKind = (kind: "cav" | "inf") => figs.filter((f) => REGIMENTS[f.reg].kind === kind);
-  const groups = (["cav", "inf"] as const).map((kind) => {
-    const list = byKind(kind);
-    const geo = kind === "cav" ? cav : inf;
-    const neutralMat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.65, clearcoat: 0 });
-    const teamMat = k.material({ color: "#ffffff", vertexColors: true, roughness: 0.6, clearcoat: 0.2 });
-    const a = new THREE.InstancedMesh(geo.neutral, neutralMat, list.length);
-    const b = new THREE.InstancedMesh(geo.team, teamMat, list.length);
-    for (const m of [a, b]) {
-      m.frustumCulled = false;
-      m.castShadow = true;
-      parent.add(m);
-    }
-    list.forEach((f, i) => b.setColorAt(i, new THREE.Color(REGIMENTS[f.reg].color)));
-    return { list, a, b };
-  });
-  // Banners with the regiment's colour.
-  const banners = REGIMENTS.map((reg) => {
-    const g = new THREE.Group();
-    const pole = new THREE.Mesh(k.cylinder, k.material({ color: "#6a4a2a" }));
-    pole.scale.set(0.05, 4, 0.05);
-    pole.position.y = 2;
-    const flag = new THREE.Mesh(k.track(new THREE.PlaneGeometry(1.6, 1)), k.material({ color: reg.color, side: THREE.DoubleSide, roughness: 0.8, emissive: reg.color, emissiveIntensity: 0.15 }));
-    flag.position.set(0.8, 3.4, 0);
-    g.add(pole, flag);
-    parent.add(g);
-    return { g, flag };
-  });
-  return { figs, groups, banners };
+const routAll = (list: [string, number][]): Record<string, Cmd[]> => Object.fromEntries(list.map(([id, at]) => [id, [{ at, do: "rout", path: ROUT }]]));
+
+const SCRIPTS: Record<number, StageScript> = {
+  1: {
+    timeScale: 1,
+    odds: [0, 0],
+    setup: setup({ cRear: { pos: [3700, 3200] } }),
+    cmds: { cRear: [{ at: 0, do: "move", path: [[4150, 2980]], gait: "walk", face: E }] },
+  },
+  2: {
+    timeScale: 1.5,
+    odds: [0.1, 0.03],
+    setup: setup({}),
+    cmds: {
+      ruse: [
+        { at: 0, do: "pose", clip: "humble" },
+        { at: 0, do: "move", path: [[5420, 2880]], gait: "trot" },
+        { at: 0.33, do: "place", pos: [5088, 2878], face: -2.24 },
+        { at: 0.335, do: "move", path: [[5050, 2848]], gait: "walk" },
+        { at: 0.43, do: "pose", clip: null },
+        { at: 0.44, do: "shoot", target: "cGuard" },
+        { at: 0.7, do: "move", path: [[5070, 2965], [5300, 3030], [5620, 2950]], gait: "gallop" },
+      ],
+      cGuard: [
+        { at: 0.56, do: "panic" },
+        { at: 0.88, do: "hold" },
+      ],
+      cCmd: [
+        { at: 0.6, do: "panic" },
+        { at: 0.9, do: "hold" },
+      ],
+      cVan: [
+        { at: 0.72, do: "shoot", target: "ruse" },
+        { at: 0.97, do: "hold" },
+      ],
+      gHeavy: [{ at: 0.45, do: "move", path: [[5600, 2730]], gait: "trot", face: W }],
+      franks: [{ at: 0.45, do: "move", path: [[5558, 2730]], gait: "trot", face: W }],
+    },
+  },
+  3: {
+    timeScale: 2,
+    odds: [0.12, 0.045],
+    setup: setup({ gHeavy: { pos: [5600, 2730] }, franks: { pos: [5558, 2730] }, ruse: { pos: [5640, 2950] }, cGuard: { dead: 0.12, deadAt: [4995, 2800] } }),
+    cmds: {
+      cVan: [{ at: 0, do: "shoot", target: "gHeavy" }],
+      gHeavy: [
+        { at: 0.02, do: "move", path: [[5520, 2731]], gait: "trot" },
+        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
+      ],
+      franks: [
+        { at: 0.02, do: "move", path: [[5480, 2731]], gait: "trot" },
+        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
+      ],
+      gSpear: [{ at: 0.3, do: "move", path: [[5650, 2690]], gait: "walk" }],
+      gBow: [{ at: 0.3, do: "move", path: [[5660, 2830]], gait: "walk" }],
+      kipchak: [{ at: 0.2, do: "move", path: [[5580, 3080]], gait: "trot", face: W }],
+    },
+  },
+  4: {
+    timeScale: 1.8,
+    odds: [0.16, 0.04],
+    setup: setup({
+      gHeavy: { pos: [5246, 2745], dead: 0.05, deadAt: [5290, 2742] },
+      franks: { pos: [5236, 2742] },
+      cVan: { pos: [5196, 2752], dead: 0.22, deadAt: [5240, 2750] },
+      cGuard: { dead: 0.12, deadAt: [4995, 2800] },
+      ruse: { pos: [5640, 2950] },
+      gSpear: { pos: [5650, 2690] },
+      gBow: { pos: [5660, 2830] },
+      kipchak: { pos: [5580, 3080] },
+    }),
+    cmds: {
+      david: [
+        { at: 0.03, do: "move", path: [[4750, 2180]], gait: "walk" },
+        { at: 0.12, do: "charge", target: "cLeft", gait: "gallop" },
+      ],
+      demetre: [
+        { at: 0.05, do: "move", path: [[4980, 3470]], gait: "walk" },
+        { at: 0.14, do: "charge", target: "cRight", gait: "gallop" },
+      ],
+      alans: [{ at: 0.15, do: "charge", target: "cLeft", gait: "gallop" }],
+      gSpear: [{ at: 0.05, do: "charge", target: "cVan", gait: "trot" }],
+      gBow: [{ at: 0.05, do: "shoot", target: "cVan", advance: true }],
+      kipchak: [{ at: 0.1, do: "shoot", target: "cRight", advance: true }],
+      cArab: [{ at: 0.4, do: "charge", target: "gHeavy", gait: "gallop" }],
+    },
+  },
+  5: {
+    timeScale: 2,
+    odds: [0.2, 0.02],
+    setup: setup({
+      gHeavy: { pos: [5140, 2755], dead: 0.08, deadAt: [5250, 2745] },
+      franks: { pos: [5132, 2752] },
+      cVan: { pos: [5098, 2760], dead: 0.45, deadAt: [5190, 2755] },
+      david: { pos: [4890, 2405], hidden: false, dead: 0.06, deadAt: [4880, 2390] },
+      cLeft: { pos: [4858, 2442], dead: 0.35, deadAt: [4880, 2420] },
+      demetre: { pos: [4955, 3215], hidden: false, dead: 0.06, deadAt: [4960, 3230] },
+      cRight: { pos: [4948, 3172], dead: 0.35, deadAt: [4950, 3190] },
+      cGuard: { dead: 0.15, deadAt: [4995, 2800] },
+      cArab: { pos: [5070, 2800], dead: 0.25, deadAt: [5100, 2790] },
+      gSpear: { pos: [5190, 2700], dead: 0.05, deadAt: [5230, 2720] },
+      gBow: { pos: [5380, 2830] },
+      kipchak: { pos: [5150, 3120] },
+      alans: { pos: [4930, 2430] },
+      ruse: { pos: [5600, 2950] },
+    }),
+    cmds: {
+      ...routAll([
+        ["cCmd", 0.03],
+        ["cGuard", 0.05],
+        ["cVan", 0.14],
+        ["cLeft", 0.2],
+        ["cRight", 0.24],
+        ["cArab", 0.28],
+        ["cInf", 0.33],
+        ["cRear", 0.4],
+        ["cCamp1", 0.48],
+        ["cCamp2", 0.55],
+      ]),
+      kipchak: [{ at: 0.15, do: "pursue", path: ROUT }],
+      gHeavy: [{ at: 0.22, do: "pursue", path: ROUT }],
+      franks: [{ at: 0.22, do: "pursue", path: ROUT }],
+      david: [{ at: 0.28, do: "pursue", path: ROUT }],
+      demetre: [{ at: 0.3, do: "pursue", path: ROUT }],
+      alans: [{ at: 0.3, do: "pursue", path: ROUT }],
+      ruse: [{ at: 0.2, do: "pursue", path: ROUT }],
+      gSpear: [{ at: 0.3, do: "move", path: [[5000, 2800]], gait: "walk" }],
+      gBow: [{ at: 0.3, do: "move", path: [[5050, 2850]], gait: "walk" }],
+    },
+  },
+  6: {
+    timeScale: 3,
+    odds: [0.25, 0.01],
+    setup: setup({
+      cCmd: { pos: [1500, 5500], face: W, rout: ROUT },
+      cGuard: { pos: [2000, 5000], face: W, rout: ROUT, dead: 0.2, deadAt: [4995, 2800] },
+      cVan: { pos: [3000, 4050], face: W, rout: ROUT, dead: 0.6, deadAt: [4950, 2840] },
+      cLeft: { pos: [3300, 3800], face: W, rout: ROUT, dead: 0.55, deadAt: [4800, 2550] },
+      cRight: { pos: [2800, 4300], face: W, rout: ROUT, dead: 0.5, deadAt: [4900, 3100] },
+      cArab: { pos: [2500, 4500], face: W, rout: ROUT, dead: 0.45, deadAt: [4700, 2900] },
+      cInf: { pos: [3700, 3450], face: W, rout: ROUT, dead: 0.5, deadAt: [4400, 3000] },
+      cRear: { pos: [2300, 4700], face: W, rout: ROUT, dead: 0.3, deadAt: [3900, 3300] },
+      cCamp1: { pos: [3400, 3700], face: W, rout: ROUT, dead: 0.3, deadAt: [3800, 3260] },
+      cCamp2: { pos: [2100, 4900], face: W, rout: ROUT, dead: 0.2, deadAt: [3300, 3760] },
+      kipchak: { pos: [3450, 3620], face: W },
+      gHeavy: { pos: [3900, 3300], face: W, dead: 0.1, deadAt: [5200, 2750] },
+      franks: { pos: [3880, 3290], face: W },
+      david: { pos: [3700, 3420], face: W, hidden: false, dead: 0.08, deadAt: [4880, 2400] },
+      demetre: { pos: [3600, 3500], face: W, hidden: false, dead: 0.08, deadAt: [4950, 3200] },
+      alans: { pos: [3650, 3450], face: W },
+      ruse: { pos: [3300, 3750], face: W },
+      gSpear: { pos: [5000, 2800], dead: 0.06, deadAt: [5200, 2720] },
+      gBow: { pos: [5050, 2850] },
+    }),
+    cmds: Object.fromEntries(["kipchak", "gHeavy", "franks", "david", "demetre", "alans", "ruse"].map((id) => [id, [{ at: 0, do: "pursue", path: ROUT } as Cmd]])),
+  },
+};
+
+// ---- Cameras ------------------------------------------------------------------------------------------------------
+
+interface Cam {
+  pos: V3;
+  target: V3;
+  fov?: number;
 }
 
-// ---- Map of Georgia for the campaign -------------------------------------------------------------------
-
-interface GeoMeta {
-  detail: [number, number];
-  lon: [number, number];
-  lat: [number, number];
+/** One shot of a stage. */
+interface Beat {
+  /** Ends at this point of the stage (0..1). */
+  to: number;
+  cam: (b: number, u: number) => Cam;
+  /** Regiment names and footprints shown. */
+  map?: boolean;
+  /** Radius of sharp shadows round the target (m). */
+  shadow?: number;
 }
 
-async function georgiaMap(k: Kit) {
-  const [meta, buf, sat] = await Promise.all([
-    fetch("/geo/georgia-terrain.json?v=2026-10-04").then((r) => r.json() as Promise<GeoMeta>),
-    fetch("/geo/georgia-terrain.bin.gz?v=2026-10-04").then((r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()),
-    new THREE.TextureLoader().loadAsync("/geo/georgia-satellite.jpg?v=2026-10-04"),
-  ]);
-  sat.colorSpace = THREE.SRGBColorSpace;
-  sat.anisotropy = 8;
-  k.track(sat);
-  const [DW, DH] = meta.detail;
-  const coded = new Int16Array(buf, 0, DW * DH);
-  const step = 6;
-  const GW = Math.floor(DW / step);
-  const GH = Math.floor(DH / step);
-  const row = new Int16Array(DW);
-  const h = new Float32Array(GW * GH);
-  for (let j = 0; j < GH; j++) {
-    let val = 0;
-    for (let i = 0; i < DW; i++) {
-      const kk = j * step * DW + i;
-      val = i === 0 ? coded[kk] : val + coded[kk];
-      row[i] = val;
-    }
-    for (let i = 0; i < GW; i++) h[j * GW + i] = row[i * step];
-  }
-  const SIZE = 60;
-  const aspect = DH / DW;
-  const geo = k.track(new THREE.PlaneGeometry(SIZE, SIZE * aspect, GW - 1, GH - 1).rotateX(-Math.PI / 2));
-  const p = geo.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < p.count; i++) p.setY(i, Math.max(0, h[i]) * 0.0009);
-  geo.computeVertexNormals();
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(geo, k.material({ map: sat, roughness: 0.95, clearcoat: 0 })));
-  const sea = new THREE.Mesh(k.track(new THREE.PlaneGeometry(SIZE * 1.6, SIZE * 1.4).rotateX(-Math.PI / 2)), k.material({ color: "#2f6f95", roughness: 0.1, clearcoat: 1 }));
-  sea.position.y = 0.02;
-  g.add(sea);
-  const at = (lon: number, lat: number, lift = 0.5) => {
-    const x = ((lon - meta.lon[0]) / (meta.lon[1] - meta.lon[0]) - 0.5) * SIZE;
-    const z = ((lat - meta.lat[0]) / (meta.lat[1] - meta.lat[0]) - 0.5) * SIZE * aspect;
-    const gi = THREE.MathUtils.clamp(Math.round((x / SIZE + 0.5) * (GW - 1)), 0, GW - 1);
-    const gj = THREE.MathUtils.clamp(Math.round((z / (SIZE * aspect) + 0.5) * (GH - 1)), 0, GH - 1);
-    return v(x, Math.max(0, h[gj * GW + gi]) * 0.0009 + lift, z);
-  };
-  return { g, at };
-}
+// ---- The scene ------------------------------------------------------------------------------------------------------
 
-// ---- The simulation ------------------------------------------------------------------------------------------
+/** Morning sun from the east, a little south. */
+const SUN = new THREE.Vector3(0.88, 0.42, 0.2).normalize();
+const HAZE = "#b9cde0";
 
 export const didgori: Builder = async (k) => {
-  const [{ field, mesh }, map] = await Promise.all([loadField(k), georgiaMap(k)]);
+  const low = k.lowPower;
+  const [terrain, horse, map] = await Promise.all([loadTerrain(k), loadHorse(), campaignMap(k)]);
+  const { field, marks } = terrain;
+  const forest = await buildForest(k, field, low ? 3 : 9);
   const battle = new THREE.Group();
   k.root.add(battle);
-  battle.add(mesh);
-  // A skirt so the cut edges of the terrain read as a model.
-  const skirtMat = k.material({ color: "#5a4a38", roughness: 1 });
-  const base = new THREE.Mesh(k.track(new THREE.BoxGeometry(field.W, 4, field.D)), skirtMat);
-  base.position.y = -8;
-  battle.add(base);
-  const A = army(k, field, battle);
-  const tent = new THREE.Group();
-  const tentMesh = new THREE.Mesh(k.track(new THREE.ConeGeometry(1.3, 1.6, 8)), k.material({ color: "#e8dcc0", roughness: 0.9 }));
-  tentMesh.position.y = 0.8;
-  tent.add(tentMesh);
-  const tentPos = field.p(COMMAND[0], COMMAND[1]);
-  tent.position.copy(tentPos);
-  battle.add(tent);
+  battle.add(terrain.group, forest.group);
+  const sky = skyDome(k, SUN, HAZE);
+  battle.add(sky);
 
-  // Place names.
-  const place = (lon: number, lat: number, text: string, stages: number[]) => k.label(k.anchor(battle, field.p(lon, lat, 2)), text, { stages });
-  place(44.517, 41.683, "დიდგორი", [1, 4, 5]);
-  place(44.38, 41.7, "მანგლისი", [1, 5, 6]);
-  place(44.3, 41.62, "თრიალეთისკენ", [6]);
-  place(44.79, 41.72, "თბილისი (საამირო)", [1]);
-  k.label(k.anchor(tent, v(0, 2.5, 0)), "მეთაურთა კარავი", { kind: "tag", stages: [2] });
+  // Figure types, bones, and instanced layers per type and level of detail.
+  const cavB = cavalryBones(k, horse);
+  const footB = infantryBones(k);
+  const types = new Map<string, FigureType>();
+  Object.entries(LOOKS).forEach(([id, d], i) => types.set(id, figureType(id, d.look, d.role, d.look.mounted ? horse : null, i)));
+  const units: Unit[] = UNITS.map((u) => (low ? { ...u, n: Math.max(4, Math.round(u.n / 3)), files: Math.max(3, Math.round(u.files / 1.7)) } : u));
+  const sim = new BattleSim(field, units, types, cavB, footB);
+  const mats = new Map<BoneSet, ReturnType<typeof crowdMaterial>[]>();
+  for (const b of [cavB, footB]) mats.set(b, [crowdMaterial(k, b, low ? 2 : 4, !low), crowdMaterial(k, b, 2, false), crowdMaterial(k, b, 1, false)]);
+  const layers = new Map<string, CrowdLayer[]>();
+  for (const [id, t] of types) {
+    const cap = units.filter((u) => u.type === id).reduce((s, u) => s + u.n, 0);
+    if (!cap) continue;
+    const ms = mats.get(t.mounted ? cavB : footB)!;
+    layers.set(
+      id,
+      t.lods.map((g, lod) => {
+        const l = new CrowdLayer(k, g, ms[lod], cap);
+        l.mesh.castShadow = lod < 2;
+        l.mesh.receiveShadow = lod === 0;
+        battle.add(l.mesh);
+        return l;
+      }),
+    );
+  }
 
-  // Regiment labels follow their banners.
-  const regAnchors = REGIMENTS.map((reg, i) => {
-    const a = k.anchor(battle, v(0, 0, 0));
-    if (reg.label) k.label(a, `${reg.name}`, { kind: "tag", stages: reg.label });
-    return { a, i };
+  // Banners carried by the first man of each regiment.
+  const banners: { b: Banner; reg: number }[] = [];
+  units.forEach((u, i) => {
+    if (!u.banner) return;
+    const b = banner(k, u.banner, types.get(u.type)!.mounted);
+    battle.add(b.group);
+    banners.push({ b, reg: i });
   });
 
-  // Arrows: the 200 at the commanders; coalition archers at the charging Georgians.
-  const arrowGeo = k.track(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 4).rotateZ(Math.PI / 2));
-  const ruse = field.p(44.5285, 41.6865, 1.5);
-  const volley = beads(k, battle, curve([ruse, ruse.clone().lerp(tentPos, 0.5).add(v(0, 4, 0)), tentPos.clone().add(v(0, 1, 0))]), { n: 24, color: "#2a2018", size: 1, speed: 0.6, spread: 0.6, geometry: arrowGeo, emissive: 0 });
-  const vg = field.p(44.527, 41.688, 1.5);
-  const gc = field.p(44.547, 41.695, 1.5);
-  const counter = beads(k, battle, curve([vg, vg.clone().lerp(gc, 0.5).add(v(0, 6, 0)), gc]), { n: 40, color: "#2a2018", size: 1, speed: 0.5, spread: 2.5, geometry: arrowGeo, emissive: 0 });
-  // Dust behind galloping horsemen.
-  const dustMat = k.material({ color: "#a08a66", roughness: 1, transparent: true, opacity: 0.12, depthWrite: false });
-  const dust = new THREE.InstancedMesh(k.sphere, dustMat, 160);
-  dust.frustumCulled = false;
-  battle.add(dust);
-  const dayTag = k.label(k.anchor(battle, field.p(44.45, 41.66, 12)), "", { kind: "tag", stages: [6] });
-
-  // Campaign map.
-  map.g.visible = false;
-  k.root.add(map.g);
-  const M = map.at;
-  const mapPlace = (lon: number, lat: number, text: string, stages: number[], kind: "label" | "tag" = "label") => k.label(k.anchor(map.g, M(lon, lat, 0.8)), text, { stages, kind });
-  mapPlace(42.7, 42.27, "ქუთაისი — სამეფო დედაქალაქი", [0]);
-  mapPlace(44.72, 41.84, "მცხეთა", [0]);
-  mapPlace(44.79, 41.72, "თბილისი — საამირო", [0]);
-  mapPlace(44.52, 41.69, "დიდგორი", [0, 7]);
-  mapPlace(44.15, 41.55, "თრიალეთი", [0]);
-  mapPlace(46.0, 41.1, "განჯისკენ", [0]);
-  mapPlace(44.0, 41.05, "სამხრეთიდან: ილღაზის კოალიცია", [0], "tag");
-  const coalitionRoute = curve([M(44.0, 40.97, 0.6), M(44.1, 41.3, 0.6), M(44.25, 41.52, 0.6), M(44.45, 41.66, 0.6)]);
-  const georgianRoute = curve([M(44.72, 41.84, 0.6), M(44.62, 41.77, 0.6), M(44.55, 41.71, 0.6)]);
-  const mapArrows = [beads(k, map.g, coalitionRoute, { n: 30, color: "#2f6a3a", size: 0.14, speed: 0.12, emissive: 0.6 }), beads(k, map.g, georgianRoute, { n: 20, color: "#c0392b", size: 0.14, speed: 0.12, emissive: 0.6 })];
-  const flag = new THREE.Group();
-  const fpole = new THREE.Mesh(k.cylinder, k.material({ color: "#6a4a2a" }));
-  fpole.scale.set(0.04, 1.6, 0.04);
-  fpole.position.y = 0.8;
-  const fcloth = new THREE.Mesh(k.track(new THREE.PlaneGeometry(0.8, 0.5)), k.material({ color: "#c0392b", side: THREE.DoubleSide, emissive: "#c0392b", emissiveIntensity: 0.3 }));
-  fcloth.position.set(0.4, 1.35, 0);
-  flag.add(fpole, fcloth);
-  flag.position.copy(M(44.79, 41.72, 0.4));
-  map.g.add(flag);
-  mapPlace(44.79, 41.72, "1122 — თბილისი, საქართველოს დედაქალაქი", [7]);
-
-  // ---- Per-frame placement of the figures ----
-  const m4 = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const up = v(0, 1, 0);
-  const ZERO = v(0, 0, 0);
-  const scl = new THREE.Vector3();
-  const tmp = new THREE.Vector3();
-  /** Regiment centre during stage `s` at progress u, with heading. */
-  const where = (reg: Regiment, s: number, u: number) => {
-    const pick = (stage: number): LonLat => {
-      for (let t = Math.min(stage, 6); t >= 1; t--) {
-        const p = reg.at[t - 1];
-        if (p) return p;
+  // The coalition's camps, the commanders' pavilion, camp fires.
+  const spots: { x: number; z: number; kind: "yurt" | "tent" | "pavilion"; rot?: number }[] = [{ x: PAVILION[0], z: PAVILION[1], kind: "pavilion" }];
+  const fires: XZ[] = [];
+  {
+    let s = 9;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (const [cx, cz, n] of [
+      [3760, 3230, 18],
+      [3300, 3740, 16],
+      [4120, 2960, 6],
+    ] as const) {
+      for (let i = 0; i < n; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = 30 + rnd() * 120;
+        spots.push({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r * 0.7, kind: rnd() < 0.6 ? "yurt" : "tent", rot: rnd() * 6 });
       }
-      return reg.at[0]!;
-    };
-    const from = pick(s - 1 >= 1 ? s - 1 : 1);
-    const to = pick(s);
-    const w = reg.when?.[s] ?? [0, 1];
-    const f = ease((u - w[0]) / Math.max(0.01, w[1] - w[0]));
-    const [x0, z0] = field.xz(from[0], from[1]);
-    const [x1, z1] = field.xz(to[0], to[1]);
-    const moving = (x1 - x0) ** 2 + (z1 - z0) ** 2 > 0.01 && f > 0 && f < 1;
-    return { x: x0 + (x1 - x0) * f, z: z0 + (z1 - z0) * f, hx: x1 - x0, hz: z1 - z0, moving };
-  };
-  const facing = REGIMENTS.map((reg) => (reg.side === "g" ? Math.PI * 1.5 : Math.PI * 0.5));
-  let dustI = 0;
-  const place3 = (s: number, u: number, t: number) => {
-    const centres = REGIMENTS.map((reg, i) => {
-      const c = where(reg, s, u);
-      if (c.moving) facing[i] = Math.atan2(c.hx, c.hz);
-      else if (s <= 4) facing[i] = reg.side === "g" ? -Math.PI / 2 : Math.PI / 2;
-      return c;
-    });
-    dustI = 0;
-    for (const grp of A.groups) {
-      grp.list.forEach((f, i) => {
-        const reg = REGIMENTS[f.reg];
-        const c = centres[f.reg];
-        const routed = reg.rout?.includes(s) ?? false;
-        const spread = routed ? 2.4 + (s === 6 ? 1.5 * u : u) : 1;
-        const ang = facing[f.reg];
-        const ca = Math.cos(ang);
-        const sa = Math.sin(ang);
-        const ox = (f.ox + f.jx * (routed ? 6 : 1)) * spread * (reg.size ?? 1);
-        const oz = (f.oz + f.jz * (routed ? 6 : 1)) * spread * (reg.size ?? 1);
-        const x = c.x + ox * sa + oz * ca;
-        const z = c.z + ox * ca - oz * sa;
-        // During the pursuit the broken army thins out.
-        const gone = reg.side === "c" && s === 6 && u > f.fall;
-        const bob = c.moving && reg.kind === "cav" ? Math.abs(Math.sin(t * 9 + f.seed * 20)) * 0.12 : 0;
-        tmp.set(x, field.y(x, z) + bob, z);
-        const turn = routed ? ang + Math.PI + (f.seed - 0.5) * 0.8 : ang;
-        q.setFromAxisAngle(up, turn + (c.moving ? 0 : (f.seed - 0.5) * 0.15));
-        m4.compose(tmp, q, gone ? ZERO : scl.setScalar(reg.size ?? 1));
-        grp.a.setMatrixAt(i, m4);
-        grp.b.setMatrixAt(i, m4);
-        if (c.moving && reg.kind === "cav" && f.seed < 0.08 && dustI < 160) {
-          tmp.set(x - Math.sin(ang) * 1.2, field.y(x, z) + 0.4, z - Math.cos(ang) * 1.2);
-          m4.compose(tmp, q, scl.setScalar(0.35 + ((f.seed * 50 + t) % 0.3)));
-          dust.setMatrixAt(dustI++, m4);
-        }
-      });
-      grp.a.instanceMatrix.needsUpdate = true;
-      grp.b.instanceMatrix.needsUpdate = true;
+      for (let i = 0; i < 3; i++) fires.push([cx + (rnd() - 0.5) * 120, cz + (rnd() - 0.5) * 80]);
     }
-    dust.count = dustI;
-    dust.instanceMatrix.needsUpdate = true;
-    A.banners.forEach((b, i) => {
-      const c = centres[i];
-      const routed = REGIMENTS[i].rout?.includes(s) ?? false;
-      b.g.visible = !routed && s >= 1 && s <= 6;
-      b.g.position.set(c.x, field.y(c.x, c.z), c.z);
-      b.flag.rotation.y = Math.sin(t * 2 + i) * 0.3;
-      regAnchors[i].a.position.set(c.x, field.y(c.x, c.z) + 5, c.z);
-    });
+    for (let i = 0; i < 6; i++) spots.push({ x: PAVILION[0] - 40 + (i % 3) * 35, z: PAVILION[1] + 45 + Math.floor(i / 3) * 25, kind: "tent", rot: i });
+  }
+  const campOut = camp(k, field, spots);
+  battle.add(campOut.group);
+  const pavilion = campOut.pavilions[0];
+
+  const arrows = new Arrows(k, low ? 400 : 1600);
+  const dust = new Particles(k, low ? 1200 : 5000, "#b4a07c", 2.2, 0.32);
+  const smoke = new Particles(k, low ? 200 : 600, "#9a9a98", 3.2, 0.45);
+  battle.add(arrows.mesh, dust.points, smoke.points);
+
+  // Manoeuvres drawn on the ground.
+  const moves = [
+    groundArrow(k, field, [[4700, 2080], [4770, 2240], [4870, 2400]], 34, "#c0392b"),
+    groundArrow(k, field, [[4990, 3570], [4975, 3380], [4955, 3215]], 34, "#c0392b"),
+    groundArrow(k, field, [[5650, 2690], [5450, 2710], [5270, 2740]], 28, "#d0563f"),
+  ];
+  const flight = groundArrow(k, field, [[4700, 2850], [4300, 3050], [3700, 3450], [3000, 4050]], 60, "#2f5fd0");
+  for (const m of [...moves, flight]) {
+    m.set(0, 0);
+    battle.add(m.mesh);
+  }
+
+  // Labels: regiments (they follow them) and places.
+  const regAnchors = units.map((u) => {
+    const a = new THREE.Object3D();
+    battle.add(a);
+    if (u.label) k.label(a, u.name, { kind: "tag", stages: u.label });
+    return a;
+  });
+  let labelsOn = true;
+  const placeLabels = new THREE.Group();
+  battle.add(placeLabels);
+  const place = (x: number, z: number, text: string, stages: number[]) => {
+    const a = new THREE.Object3D();
+    a.position.copy(field.p(x, z, 40));
+    placeLabels.add(a);
+    k.label(a, text, { stages });
+  };
+  place(5420, 2560, "დიდგორის ველი", [1, 3, 4, 6]);
+  place(1300, 5700, "მანგლისისკენ", [5, 6]);
+  place(8800, 1600, "თბილისისკენ", [1]);
+  const dayAnchor = new THREE.Object3D();
+  battle.add(dayAnchor);
+  const dayTag = k.label(dayAnchor, "", { kind: "tag", stages: [6] });
+
+  battle.add(map.group);
+  map.group.visible = false;
+
+  // ---- Stage control ----
+  let lastStage = -1;
+  let lastU = 0;
+  let beatIdx = -1;
+  let showMap = false;
+  let shadowR = 200;
+  const focus = new THREE.Vector3();
+  const at = (id: string, lift = 0) => {
+    const r = sim.byId.get(id)!;
+    return field.p(r.mx, r.mz, lift);
+  };
+  const ground = (x: number, z: number, h: number) => field.p(x, z, h);
+  const keepAbove = (p: V3) => {
+    const y = field.y(p.x, p.z) + 2.2;
+    if (p.y < y) p.y = y;
+    return p;
   };
 
-  const focus = (lon: number, lat: number) => field.p(lon, lat);
-  const show = (battleOn: boolean) => {
-    battle.visible = battleOn;
-    map.g.visible = !battleOn;
-    k.mood("#c8d4da", battleOn ? 350 : 80, battleOn ? 1500 : 300, true);
+  const enterBattle = (stage: number) => {
+    showMap = false;
+    battle.visible = true;
+    map.group.visible = false;
+    k.mood(HAZE, 3500, 40000, true, HAZE);
+    k.clip = [1, 40000];
+    k.noAO = true;
+    k.sun = { dir: SUN, focus, radius: shadowR, color: "#ffe2bf", intensity: 3.4, ambient: 0.22, exposure: 1.15 };
+    // Playing on from the previous stage continues the fight; a jump sets the stage up afresh.
+    const natural = lastStage === stage - 1 && lastU > 0.97 && stage > 1;
+    if (natural) sim.begin(SCRIPTS[stage], stage);
+    else {
+      sim.reset(SCRIPTS[stage], stage);
+      arrows.clear();
+      dust.clear();
+    }
+    beatIdx = -1;
+    lastStage = stage;
+    lastU = 0;
   };
-  const mapShot = (s: number, toward: V3, d: number): Shot => orbit(toward, d, s, { start: 0.15, speed: 0.01, height: 0.7 });
-  const shot = (at: V3, d: number, s: number, start: number, height: number, speed = 0.015): Shot => orbit(at, d, s, { start, speed, height });
+  const enterMap = (stage: number) => {
+    showMap = true;
+    battle.visible = false;
+    map.group.visible = true;
+    k.mood("#c8d4da", 80, 300, true);
+    k.clip = null;
+    k.noAO = false;
+    k.sun = null;
+    lastStage = stage;
+    lastU = 0;
+    beatIdx = -1;
+  };
+
+  /** Runs the battle one frame and returns the camera of the active shot. */
+  const run = (stage: number, beats: Beat[], u: number, dt: number, extra?: (u: number) => void): Shot => {
+    lastU = u;
+    const script = SCRIPTS[stage];
+    sim.step(dt, u);
+    sim.animate(dt);
+    for (const m of [...moves, flight]) m.set(0, 0);
+    extra?.(u);
+    arrows.update(dt * script.timeScale, sim, field, stage === 2 ? 0.35 : stage >= 5 ? 0.1 : 0.06);
+    // Dust from galloping horses, smoke from the camp fires.
+    const d = sim.dust;
+    for (let i = 0; i + 2 < d.length && i < 240; i += 3) {
+      const y = field.y(d[i], d[i + 1]);
+      dust.emit(d[i], y + 0.5, d[i + 1], (Math.random() - 0.5) * 2, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 2, 1.2 + Math.random(), 2.5 + Math.random() * 1.5);
+    }
+    d.length = 0;
+    if (stage <= 4 && Math.random() < dt * fires.length * 3) {
+      const [fx, fz] = fires[Math.floor(Math.random() * fires.length)];
+      smoke.emit(fx, field.y(fx, fz) + 1.5, fz, 0.6, 1.4 + Math.random() * 0.6, 0.2, 2.5, 9);
+    }
+    dust.update(dt);
+    smoke.update(dt);
+    // The commanders' pavilion comes down when the 200 shoot (and stays down).
+    const fall = stage === 2 ? ease((u - 0.62) / 0.08) : stage > 2 ? 1 : 0;
+    pavilion.rotation.set(fall * 0.5, 0, fall * 0.12);
+    pavilion.scale.y = 1 - fall * 0.65;
+    // The shot for this moment.
+    let b = beats.findIndex((x) => u <= x.to);
+    if (b < 0) b = beats.length - 1;
+    const from = b > 0 ? beats[b - 1].to : 0;
+    const beat = beats[b];
+    const cam = beat.cam((u - from) / Math.max(1e-3, beat.to - from), u);
+    const cut = b !== beatIdx;
+    beatIdx = b;
+    labelsOn = !!beat.map;
+    marks.overlay.value += ((beat.map ? 1 : 0) - marks.overlay.value) * (cut ? 1 : Math.min(1, dt * 3));
+    shadowR = beat.shadow ?? 220;
+    focus.copy(cam.target);
+    if (k.sun) k.sun.radius = shadowR;
+    return { pos: keepAbove(cam.pos), target: cam.target, fov: cam.fov ?? 35, cut };
+  };
+
+  // ---- Every frame (also while paused, so the crowd follows a camera the user moves) ----
+  const markColor = [new THREE.Color("#e0392b"), new THREE.Color("#2f62d6")];
+  const frame = (camera: THREE.PerspectiveCamera) => {
+    if (showMap) return;
+    sky.position.copy(camera.position);
+    forest.update(camera, focus, shadowR);
+    sim.draw(camera, layers, low ? [35, 170] : [110, 620]);
+    waveBanners(performance.now() / 1000);
+    // Banners with their bearers.
+    for (const { b, reg } of banners) {
+      const r = sim.regs[reg];
+      let bearer = -1;
+      for (let i = r.first; i < r.first + r.count; i++)
+        if (sim.isAlive(i) && sim.state[i] !== 2) {
+          bearer = i;
+          break;
+        }
+      b.group.visible = bearer >= 0 && !r.routed;
+      if (bearer < 0) continue;
+      const hd = sim.head[bearer];
+      const x = sim.x[bearer] - Math.cos(hd) * 0.45;
+      const z = sim.z[bearer] + Math.sin(hd) * 0.45;
+      b.group.position.set(x, field.y(x, z) + (b.mounted ? 1.15 : 0.25), z);
+      b.group.rotation.y = hd + Math.PI;
+    }
+    // Regiment names and footprints on the ground.
+    let m = 0;
+    units.forEach((u, i) => {
+      const r = sim.regs[i];
+      const a = regAnchors[i];
+      a.visible = labelsOn && r.alive > 0 && !r.routed;
+      a.position.set(r.mx, field.y(r.mx, r.mz) + 26, r.mz);
+      if (m < MAX_MARKS && r.alive > 2 && !r.routed && u.n >= 20) {
+        marks.pos.value[m].set(r.mx, r.mz, r.ext[0], r.ext[1]);
+        marks.rot.value[m].set(Math.cos(r.face), Math.sin(r.face));
+        const c = markColor[u.side];
+        marks.col.value[m].set(c.r, c.g, c.b, r.hidden ? 0.45 : 0.85);
+        m++;
+      }
+    });
+    marks.n.value = m;
+    placeLabels.visible = labelsOn;
+  };
 
   return {
+    frame,
     stages: [
       {
-        duration: 18,
+        duration: 16,
         cut: true,
-        enter: () => show(false),
+        enter: () => enterMap(0),
         update: (u, s, t) => {
-          mapArrows.forEach((b) => b.update(t));
-          flag.visible = false;
-          return mapShot(s, M(44.3, 41.6, 0), 34 - 10 * ease(u));
+          map.routes.forEach((b) => b.update(t));
+          map.flag.visible = false;
+          return orbit(map.at(44.3, 41.6, 0), 34 - 10 * ease(u), s, { start: 0.15, speed: 0.01, height: 0.7 });
         },
       },
       {
-        duration: 18,
+        duration: 24,
         cut: true,
-        enter: () => show(true),
-        update: (u, s, t) => {
-          place3(1, u, t);
-          volley.update(t, 0);
-          counter.update(t, 0);
-          return shot(focus(44.52, 41.69), 170 - 40 * ease(u), s, 0.9, 0.55);
+        enter: () => enterBattle(1),
+        update: (u, _s, _t, dt) =>
+          run(
+            1,
+            [
+              { to: 0.4, map: true, shadow: 450, cam: (b) => ({ pos: ground(2900 + 1400 * b, 3750 - 600 * b, 480 - 160 * b), target: ground(5250, 2780, 0), fov: 38 }) },
+              {
+                to: 0.72,
+                shadow: 110,
+                cam: (b) => {
+                  const c = at("gHeavy");
+                  return { pos: c.clone().add(v(-70 + 25 * b, 7, -95 + 40 * b)), target: c.clone().add(v(10, 2.5, 0)), fov: 30 };
+                },
+              },
+              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(6350 - 150 * b, 4350 - 150 * b, 950), target: ground(5000, 2800, 0), fov: 36 }) },
+            ],
+            u,
+            dt,
+          ),
+      },
+      {
+        duration: 26,
+        enter: () => enterBattle(2),
+        update: (u, _s, _t, dt) =>
+          run(
+            2,
+            [
+              {
+                to: 0.33,
+                shadow: 100,
+                cam: () => {
+                  const c = at("ruse");
+                  return { pos: c.clone().add(v(42, 6, 22)), target: c.clone().add(v(-90, 1, -10)), fov: 32 };
+                },
+              },
+              {
+                to: 0.7,
+                shadow: 110,
+                cam: (b) => {
+                  const p = ground(PAVILION[0], PAVILION[1], 0);
+                  return { pos: p.clone().add(v(-55 + 20 * b, 9, 75 - 10 * b)), target: p.clone().lerp(at("ruse"), 0.5).add(v(0, 3, 0)), fov: 34 };
+                },
+              },
+              { to: 1, shadow: 260, map: true, cam: (b) => ({ pos: ground(5420 + 40 * b, 3200, 190), target: ground(5150, 2830, 0), fov: 36 }) },
+            ],
+            u,
+            dt,
+          ),
+      },
+      {
+        duration: 28,
+        enter: () => enterBattle(3),
+        update: (u, _s, _t, dt) => {
+          const clash = () => at("gHeavy").lerp(at("cVan"), 0.5);
+          return run(
+            3,
+            [
+              {
+                to: 0.25,
+                shadow: 120,
+                cam: () => {
+                  const c = at("gHeavy");
+                  return { pos: c.clone().add(v(75, 10, 30)), target: at("cVan", 3), fov: 30 };
+                },
+              },
+              {
+                to: 0.6,
+                shadow: 110,
+                cam: () => {
+                  const c = at("gHeavy");
+                  return { pos: c.clone().add(v(-25, 4, -82)), target: c.clone().add(v(-45, 2, 0)), fov: 28 };
+                },
+              },
+              {
+                to: 0.85,
+                shadow: 90,
+                cam: (b) => {
+                  const p = clash();
+                  return { pos: p.clone().add(v(22 - 10 * b, 2.4, -48 + 8 * b)), target: p.clone().add(v(0, 1.8, 0)), fov: 32 };
+                },
+              },
+              {
+                to: 1,
+                shadow: 260,
+                cam: (b) => {
+                  const p = clash();
+                  return { pos: p.clone().add(v(130, 60 + 50 * b, -170)), target: p, fov: 36 };
+                },
+              },
+            ],
+            u,
+            dt,
+          );
         },
       },
       {
-        duration: 16,
-        update: (u, s, t) => {
-          place3(2, u, t);
-          volley.update(t, u > 0.62 ? 1 : 0);
-          counter.update(t, 0);
-          tentMesh.rotation.z = u > 0.8 ? Math.min(1.2, (u - 0.8) * 6) : 0;
-          return shot(focus(44.535, 41.687), 48, s, 2.2, 0.38, 0.02);
-        },
+        duration: 28,
+        enter: () => enterBattle(4),
+        update: (u, _s, _t, dt) =>
+          run(
+            4,
+            [
+              { to: 0.3, map: true, shadow: 450, cam: (b) => ({ pos: ground(6200 - 60 * b, 2950, 820), target: ground(4950, 2800, 0), fov: 36 }) },
+              {
+                to: 0.58,
+                shadow: 120,
+                cam: () => {
+                  const c = at("david");
+                  return { pos: c.clone().add(v(70, 12, -40)), target: at("cLeft", 2), fov: 32 };
+                },
+              },
+              {
+                to: 0.82,
+                shadow: 100,
+                cam: (b) => {
+                  const p = at("cLeft");
+                  return { pos: p.clone().add(v(70 - 10 * b, 2.6, 45)), target: p.clone().add(v(0, 2, -10)), fov: 32 };
+                },
+              },
+              {
+                to: 1,
+                shadow: 200,
+                cam: () => {
+                  const p = at("cRight");
+                  return { pos: p.clone().add(v(110, 30, 90)), target: p.clone().add(v(0, 2, 0)), fov: 34 };
+                },
+              },
+            ],
+            u,
+            dt,
+            (uu) => moves.forEach((m, i) => m.set(ease((uu - 0.04 - i * 0.04) / 0.22), uu < 0.3 ? 0.75 : Math.max(0, 0.75 - (uu - 0.3) * 4))),
+          ),
       },
       {
-        duration: 16,
-        update: (u, s, t) => {
-          place3(3, u, t);
-          volley.update(t, 0);
-          counter.update(t, u < 0.5 ? 1 : 0);
-          return shot(focus(44.532, 41.69), 70, s, 2.4, 0.42);
-        },
+        duration: 24,
+        enter: () => enterBattle(5),
+        update: (u, _s, _t, dt) =>
+          run(
+            5,
+            [
+              {
+                to: 0.3,
+                shadow: 120,
+                cam: () => {
+                  const c = at("cCmd");
+                  return { pos: c.clone().add(v(55, 14, -30)), target: c.clone().add(v(-50, 2, 20)), fov: 32 };
+                },
+              },
+              { to: 0.65, map: true, shadow: 450, cam: (b) => ({ pos: ground(5650 - 100 * b, 3900, 620), target: ground(4550, 3000, 0), fov: 38 }) },
+              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(3930 - 20 * b, 3440, 7), target: ground(4520, 2980, 6), fov: 34 }) },
+            ],
+            u,
+            dt,
+            (uu) => flight.set(ease((uu - 0.3) / 0.3), uu > 0.3 && uu < 0.68 ? 0.7 : 0),
+          ),
       },
       {
-        duration: 17,
-        update: (u, s, t) => {
-          place3(4, u, t);
-          counter.update(t, 0);
-          return shot(focus(44.515, 41.689), 105, s, 2.0, 0.6);
-        },
-      },
-      {
-        duration: 16,
-        update: (u, s, t) => {
-          place3(5, u, t);
-          return shot(focus(44.49, 41.685), 120, s, 1.6, 0.55);
-        },
-      },
-      {
-        duration: 18,
-        update: (u, s, t) => {
-          place3(6, u, t);
+        duration: 22,
+        enter: () => enterBattle(6),
+        update: (u, _s, _t, dt) => {
+          // Follow the mass of the fleeing.
+          let sx = 0;
+          let sz = 0;
+          let n = 0;
+          for (const r of sim.regs)
+            if (r.def.side === 1 && r.alive > 0 && r.routed) {
+              sx += r.mx * r.alive;
+              sz += r.mz * r.alive;
+              n += r.alive;
+            }
+          const c = n ? ground(sx / n, sz / n, 0) : ground(3000, 4000, 0);
+          dayAnchor.position.copy(c).add(v(0, 60, 0));
           (dayTag.querySelector(".blood-label-text") ?? dayTag).textContent = `დევნა: დღე ${Math.min(3, 1 + Math.floor(u * 3))}`;
-          const at = focus(44.5 - 0.13 * ease(u), 41.67);
-          return shot(at, 165, s, 1.3, 0.6);
+          return run(
+            6,
+            [
+              { to: 0.62, shadow: 400, map: true, cam: () => ({ pos: c.clone().add(v(520, 380, 380)), target: c, fov: 36 }) },
+              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(5480 - 30 * b, 2600, 40), target: ground(5120, 2790, 2), fov: 34 }) },
+            ],
+            u,
+            dt,
+            (uu) => flight.set(1, uu < 0.62 ? 0.5 : 0),
+          );
         },
       },
       {
-        duration: 18,
+        duration: 16,
         cut: true,
-        enter: () => show(false),
-        update: (u, s, t) => {
-          mapArrows.forEach((b) => b.update(t, 0));
-          flag.visible = true;
-          flag.position.y = M(44.79, 41.72, 0.4).y + 0.0 * u;
-          fcloth.rotation.y = Math.sin(t * 2) * 0.3;
-          return mapShot(s, M(44.65, 41.72, 0), 16);
+        enter: () => enterMap(7),
+        update: (_u, s, t) => {
+          map.routes.forEach((b) => b.update(t, 0));
+          map.flag.visible = true;
+          map.cloth.rotation.y = Math.sin(t * 2) * 0.3;
+          return orbit(map.at(44.65, 41.72, 0), 16, s, { start: 0.15, speed: 0.01, height: 0.7 });
         },
       },
     ],

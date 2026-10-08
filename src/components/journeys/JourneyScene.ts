@@ -20,6 +20,10 @@ export const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
 export interface Shot {
   pos: V3;
   target: V3;
+  /** Lens (vertical field of view, degrees); default 35. */
+  fov?: number;
+  /** Jump straight to this shot (a film cut) instead of gliding there. */
+  cut?: boolean;
 }
 
 export interface StagePlan {
@@ -33,6 +37,8 @@ export interface StagePlan {
 
 export interface Plan {
   stages: StagePlan[];
+  /** Called every frame before drawing, also while paused (e.g. level of detail for the camera's position). */
+  frame?(camera: THREE.PerspectiveCamera, dt: number, running: boolean): void;
 }
 
 interface Label {
@@ -96,14 +102,22 @@ export class Kit {
   labels: Label[] = [];
 
   /** Background and fog of the stage on screen: dark inside the body, none (page colour) outside. */
-  atmosphere: { bg: string | null; near: number; far: number; sky: boolean } = { bg: null, near: 0, far: 0, sky: false };
+  atmosphere: { bg: string | null; near: number; far: number; sky: boolean; fog?: string } = { bg: null, near: 0, far: 0, sky: false };
+  /** Outdoor sun that follows the action: its shadows cover `radius` round `focus` (moved by the scene). */
+  sun: { dir: V3; focus: V3; radius: number; color?: THREE.ColorRepresentation; intensity?: number; ambient?: number; exposure?: number } | null = null;
+  /** Camera clipping planes for this scene (default: fitted to the scene's size). */
+  clip: [number, number] | null = null;
+  /** No screen-space occlusion (scenes whose vertices move in the shader, or cut-out foliage). */
+  noAO = false;
+  /** Set by the engine: software or very old graphics — scenes should draw less. */
+  lowPower = false;
   private normals = new Map<string, THREE.Texture>();
 
   constructor(private overlay: HTMLElement) {}
 
-  /** `sky`: an outdoor scene — real sky photo as background and its daylight on everything. */
-  mood(bg: string | null, near = 0, far = 0, sky = false) {
-    this.atmosphere = { bg, near, far, sky };
+  /** `sky`: an outdoor scene — real sky photo as background and its daylight on everything; `fog`: haze colour. */
+  mood(bg: string | null, near = 0, far = 0, sky = false, fog?: string) {
+    this.atmosphere = { bg, near, far, sky, fog };
   }
 
   /**
@@ -290,6 +304,9 @@ export class Kit {
     this.disposables = [];
     this.normals.clear();
     this.atmosphere = { bg: null, near: 0, far: 0, sky: false };
+    this.sun = null;
+    this.clip = null;
+    this.noAO = false;
     this.root.clear();
   }
 
@@ -333,6 +350,8 @@ export class JourneyScene {
   private dirty = true;
   private _playing = true;
   private key: THREE.DirectionalLight;
+  private fill: THREE.DirectionalLight;
+  private hemi: THREE.HemisphereLight;
   private studio: THREE.Texture | null = null;
   private skyEnv: THREE.Texture | null = null;
   private skyBg: THREE.Texture | null = null;
@@ -346,6 +365,8 @@ export class JourneyScene {
   private onScreen = true;
   private visibility: IntersectionObserver;
   private slowFrames = 0;
+  /** Seconds before slow frames count (loading and shader compiling make the first frames slow). */
+  private warmup = 3;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -374,8 +395,11 @@ export class JourneyScene {
     this.key = key;
     const fill = new THREE.DirectionalLight("#eef0ff", 0.55);
     fill.position.set(-6, -2, 5);
+    this.fill = fill;
     this.kit = new Kit(overlay);
-    this.scene.add(new THREE.HemisphereLight("#ffffff", "#d9e2df", 0.6), key, key.target, fill, this.kit.root);
+    this.kit.lowPower = this.lowPower;
+    this.hemi = new THREE.HemisphereLight("#ffffff", "#d9e2df", 0.6);
+    this.scene.add(this.hemi, key, key.target, fill, this.kit.root);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.ao = new GTAOPass(this.scene, this.camera, 512, 512);
@@ -442,6 +466,7 @@ export class JourneyScene {
     const cut = plan.stages[i].cut || i === 0;
     this.stage = i;
     this.stageTime = 0;
+    this.warmup = Math.max(this.warmup, 2);
     plan.stages[i].enter?.();
     this.applyAtmosphere();
     this.fitShadows();
@@ -482,11 +507,49 @@ export class JourneyScene {
     this.scene.backgroundBlurriness = sky ? 0.03 : 0;
     this.scene.environment = (sky ? this.skyEnv : this.studio) ?? this.env.texture;
     this.scene.environmentIntensity = sky ? 1 : 0.9;
-    this.scene.fog = a.bg && a.far ? new THREE.Fog(sky ? "#cfdbe0" : a.bg, a.near, a.far) : null;
+    this.scene.fog = a.bg && a.far ? new THREE.Fog(a.fog ?? (sky ? "#cfdbe0" : a.bg), a.near, a.far) : null;
     // Dark scenes get a little more exposure so the tissue stays readable on a projector.
     const lum = a.bg ? new THREE.Color(a.bg).getHSL({ h: 0, s: 0, l: 0 }).l : 1;
     this.renderer.toneMappingExposure = sky ? 1.0 : !a.bg ? 1.05 : lum < 0.3 ? 1.15 : 0.95;
     RIM.value = sky ? 0 : a.bg && lum < 0.3 ? 0.42 : 0.1;
+    const sun = this.kit.sun;
+    this.key.color.set(sun?.color ?? "#fff6ea");
+    this.key.intensity = sun?.intensity ?? 1.6;
+    // Outdoors under a real sun: less fill light (deeper shadows) and a filmic curve with more contrast.
+    const amb = sun?.ambient ?? 1;
+    this.hemi.intensity = 0.6 * amb;
+    this.fill.intensity = 0.55 * amb;
+    this.scene.environmentIntensity = (sky ? 1 : 0.9) * amb;
+    this.renderer.toneMapping = sun ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
+    if (sun?.exposure) this.renderer.toneMappingExposure = sun.exposure;
+    // A sharper shadow map for a sun over a wide landscape.
+    const size = sun && !this.lowPower ? 2048 : 1024;
+    if (this.key.shadow.mapSize.x !== size) {
+      this.key.shadow.mapSize.set(size, size);
+      this.key.shadow.map?.dispose();
+      this.key.shadow.map = null;
+    }
+  }
+
+  /** The sun's shadows follow the scene's focus (snapped to whole shadow texels so they don't shimmer). */
+  private followSun() {
+    const s = this.kit.sun;
+    if (!s) return;
+    const r = s.radius;
+    const texel = (2 * r) / this.key.shadow.mapSize.x;
+    const f = this.tmp.set(Math.round(s.focus.x / texel) * texel, s.focus.y, Math.round(s.focus.z / texel) * texel);
+    this.key.position.copy(f).addScaledVector(s.dir, r * 3);
+    this.key.target.position.copy(f);
+    const cam = this.key.shadow.camera;
+    if (cam.right !== r) {
+      cam.left = cam.bottom = -r;
+      cam.right = cam.top = r;
+      cam.near = r * 0.5;
+      cam.far = r * 6;
+      cam.updateProjectionMatrix();
+    }
+    this.key.shadow.bias = -0.0004;
+    this.key.shadow.normalBias = r * 0.0015;
   }
 
   /** Shadows from the key light fitted round what is visible; solid objects cast and receive them. */
@@ -507,12 +570,21 @@ export class JourneyScene {
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     // Clipping planes in proportion to the scene (a cell is a few units, a battlefield hundreds).
     const R = Math.max(10, sphere.radius);
-    const near = Math.max(0.002, R * 0.0004);
-    if (Math.abs(this.camera.far - R * 8) > 1 || this.camera.near !== near) {
+    const [near, far] = this.kit.clip ?? [Math.max(0.002, R * 0.0004), Math.max(80, R * 8)];
+    if (this.camera.far !== far || this.camera.near !== near) {
       this.camera.near = near;
-      this.camera.far = Math.max(80, R * 8);
+      this.camera.far = far;
       this.camera.updateProjectionMatrix();
     }
+    if (this.kit.sun) {
+      this.key.shadow.radius = 2;
+      this.followSun();
+      this.key.shadow.needsUpdate = true;
+      return;
+    }
+    this.key.shadow.radius = 4;
+    this.key.shadow.bias = -0.0005;
+    this.key.shadow.normalBias = 0.02;
     const r = Math.max(1e-3, Math.min(sphere.radius, 40));
     const dir = new THREE.Vector3(0.45, 0.8, 0.4).normalize();
     this.key.position.copy(sphere.center).addScaledVector(dir, r * 2);
@@ -546,7 +618,7 @@ export class JourneyScene {
   private fit(shot: Shot) {
     const k = Math.max(1, 1.25 / this.camera.aspect);
     if (k === 1) return shot;
-    return { target: shot.target, pos: shot.target.clone().add(shot.pos.clone().sub(shot.target).multiplyScalar(k)) };
+    return { ...shot, pos: shot.target.clone().add(shot.pos.clone().sub(shot.target).multiplyScalar(k)) };
   }
 
   private tmp = new THREE.Vector3();
@@ -609,6 +681,12 @@ export class JourneyScene {
       }
       if (run || this.dirty) {
         const shot = this.fit(stage.update(Math.min(1, this.stageTime / stage.duration), this.stageTime, this.time, run ? dt : 0));
+        if (shot.cut && this._playing) this.snap = true;
+        const fov = shot.fov ?? 35;
+        if (this.camera.fov !== fov && (this._playing || this.snap)) {
+          this.camera.fov = this.snap || Math.abs(this.camera.fov - fov) < 0.01 ? fov : this.camera.fov + (fov - this.camera.fov) * (1 - Math.exp(-dt * 2.2));
+          this.camera.updateProjectionMatrix();
+        }
         if (this._playing) {
           const k = this.snap ? 1 : 1 - Math.exp(-dt * 2.2);
           this.camera.position.lerp(shot.pos, k);
@@ -632,22 +710,30 @@ export class JourneyScene {
     }
     if (!this._playing) this.controls.update();
     if (!this.onScreen) return;
+    if (this.kit.sun) this.followSun();
+    plan?.frame?.(this.camera, dt, !!plan && this._playing && this.pending === null);
     // Occlusion needs an opaque background (the composer has none of the page behind it).
-    const useAo = this.aoAllowed && !!this.scene.background;
+    const useAo = this.aoAllowed && !!this.scene.background && !this.kit.noAO;
+    this.warmup -= dt;
+    const counts = this.warmup <= 0 && !!this.plan;
     if (useAo) {
       this.composer.render(dt);
       // Slow machine: after a run of slow frames, drop the occlusion for good.
-      this.slowFrames = dt > 1 / 35 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
+      if (counts) this.slowFrames = dt > 1 / 35 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
       if (this.slowFrames > 90) {
         this.aoAllowed = false;
         this.slowFrames = 0;
+        console.info("3D: slow frames — ambient occlusion off");
       }
     } else {
       this.renderer.render(this.scene, this.camera);
       // Still slow without occlusion: drop shadows too.
-      if (!this.aoAllowed && this.renderer.shadowMap.enabled) {
+      if (counts && !this.aoAllowed && this.renderer.shadowMap.enabled) {
         this.slowFrames = dt > 1 / 30 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
-        if (this.slowFrames > 90) this.renderer.shadowMap.enabled = false;
+        if (this.slowFrames > 90) {
+          this.renderer.shadowMap.enabled = false;
+          console.info("3D: slow frames — shadows off");
+        }
       }
     }
     this.placeLabels();
