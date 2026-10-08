@@ -186,8 +186,10 @@ export async function loadTerrain(k: Kit) {
           float l = dot(c, vec3(0.3, 0.55, 0.15));
           c = mix(vec3(l), c, 1.25);
           float dist = length(vWPos - cameraPosition);
-          vec3 d1 = texture2D(uDetail, vWPos.xz / 6.5).rgb;
-          vec3 d2 = texture2D(uDetail, vWPos.xz / 47.0 + 0.37).rgb;
+          // Two scales of the photo, turned against each other so their repeats don't line up in stripes.
+          vec2 q1 = mat2(0.82, -0.57, 0.57, 0.82) * vWPos.xz;
+          vec3 d1 = mix(texture2D(uDetail, q1 / 6.5).rgb, texture2D(uDetail, vWPos.xz / 17.0 + 0.61).rgb, 0.45);
+          vec3 d2 = texture2D(uDetail, mat2(0.38, 0.92, -0.92, 0.38) * vWPos.xz / 53.0 + 0.37).rgb;
           float a = dot(uAvg, vec3(0.333));
           float near = 1.0 - smoothstep(40.0, 650.0, dist);
           c *= mix(1.0, dot(d1, vec3(0.333)) / a, 0.85 * near);

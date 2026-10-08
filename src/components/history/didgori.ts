@@ -76,8 +76,8 @@ const ROUT: XZ[] = [
 ];
 
 const BASE: Record<string, Setup> = {
-  gHeavy: { pos: [5750, 2730], face: W },
-  franks: { pos: [5708, 2730], face: W },
+  gHeavy: { pos: [5650, 2730], face: W },
+  franks: { pos: [5608, 2730], face: W },
   david: { pos: [4700, 2080], face: 0.53, hidden: true },
   demetre: { pos: [4990, 3570], face: Math.PI, hidden: true },
   kipchak: { pos: [5800, 3060], face: W },
@@ -140,23 +140,23 @@ const SCRIPTS: Record<number, StageScript> = {
         { at: 0.72, do: "shoot", target: "ruse" },
         { at: 0.97, do: "hold" },
       ],
-      gHeavy: [{ at: 0.45, do: "move", path: [[5600, 2730]], gait: "trot", face: W }],
-      franks: [{ at: 0.45, do: "move", path: [[5558, 2730]], gait: "trot", face: W }],
+      gHeavy: [{ at: 0.2, do: "move", path: [[5510, 2730]], gait: "trot", face: W }],
+      franks: [{ at: 0.2, do: "move", path: [[5468, 2730]], gait: "trot", face: W }],
     },
   },
   3: {
     timeScale: 2,
     odds: [0.12, 0.045],
-    setup: setup({ gHeavy: { pos: [5600, 2730] }, franks: { pos: [5558, 2730] }, ruse: { pos: [5640, 2950] }, cGuard: { dead: 0.12, deadAt: [4995, 2800] } }),
+    setup: setup({ gHeavy: { pos: [5510, 2730] }, franks: { pos: [5468, 2730] }, ruse: { pos: [5640, 2950] }, cGuard: { dead: 0.12, deadAt: [4995, 2800] } }),
     cmds: {
       cVan: [{ at: 0, do: "shoot", target: "gHeavy" }],
       gHeavy: [
-        { at: 0.02, do: "move", path: [[5520, 2731]], gait: "trot" },
-        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
+        { at: 0.02, do: "move", path: [[5470, 2731]], gait: "trot" },
+        { at: 0.1, do: "charge", target: "cVan", gait: "gallop" },
       ],
       franks: [
-        { at: 0.02, do: "move", path: [[5480, 2731]], gait: "trot" },
-        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
+        { at: 0.02, do: "move", path: [[5428, 2731]], gait: "trot" },
+        { at: 0.1, do: "charge", target: "cVan", gait: "gallop" },
       ],
       gSpear: [{ at: 0.3, do: "move", path: [[5650, 2690]], gait: "walk" }],
       gBow: [{ at: 0.3, do: "move", path: [[5660, 2830]], gait: "walk" }],
@@ -178,12 +178,12 @@ const SCRIPTS: Record<number, StageScript> = {
     }),
     cmds: {
       david: [
-        { at: 0.03, do: "move", path: [[4750, 2180]], gait: "walk" },
-        { at: 0.12, do: "charge", target: "cLeft", gait: "gallop" },
+        { at: 0.02, do: "move", path: [[4760, 2200]], gait: "walk" },
+        { at: 0.1, do: "charge", target: "cLeft", gait: "gallop" },
       ],
       demetre: [
-        { at: 0.05, do: "move", path: [[4980, 3470]], gait: "walk" },
-        { at: 0.14, do: "charge", target: "cRight", gait: "gallop" },
+        { at: 0.03, do: "move", path: [[4980, 3440]], gait: "walk" },
+        { at: 0.11, do: "charge", target: "cRight", gait: "gallop" },
       ],
       alans: [{ at: 0.15, do: "charge", target: "cLeft", gait: "gallop" }],
       gSpear: [{ at: 0.05, do: "charge", target: "cVan", gait: "trot" }],
@@ -413,6 +413,19 @@ export const didgori: Builder = async (k) => {
     return field.p(r.mx, r.mz, lift);
   };
   const ground = (x: number, z: number, h: number) => field.p(x, z, h);
+  /** Where the mass of the fleeing coalition is. */
+  const fleeing = () => {
+    let sx = 0;
+    let sz = 0;
+    let n = 0;
+    for (const r of sim.regs)
+      if (r.def.side === 1 && r.alive > 0 && r.routed) {
+        sx += r.mx * r.alive;
+        sz += r.mz * r.alive;
+        n += r.alive;
+      }
+    return n ? ground(sx / n, sz / n, 0) : ground(3000, 4000, 0);
+  };
   const keepAbove = (p: V3) => {
     const y = field.y(p.x, p.z) + 2.2;
     if (p.y < y) p.y = y;
@@ -426,6 +439,7 @@ export const didgori: Builder = async (k) => {
     k.mood(HAZE, 3500, 40000, true, HAZE);
     k.clip = [1, 40000];
     k.noAO = true;
+    k.ground = (x, z) => field.y(x, z);
     k.sun = { dir: SUN, focus, radius: shadowR, color: "#ffe2bf", intensity: 3.4, ambient: 0.22, exposure: 1.15 };
     // Playing on from the previous stage continues the fight; a jump sets the stage up afresh.
     const natural = lastStage === stage - 1 && lastU > 0.97 && stage > 1;
@@ -447,6 +461,7 @@ export const didgori: Builder = async (k) => {
     k.clip = null;
     k.noAO = false;
     k.sun = null;
+    k.ground = null;
     lastStage = stage;
     lastU = 0;
     beatIdx = -1;
@@ -460,7 +475,7 @@ export const didgori: Builder = async (k) => {
     sim.animate(dt);
     for (const m of [...moves, flight]) m.set(0, 0);
     extra?.(u);
-    arrows.update(dt * script.timeScale, sim, field, stage === 2 ? 0.35 : stage >= 5 ? 0.1 : 0.06);
+    arrows.update(dt * script.timeScale, sim, field, stage === 2 ? [0.02, 0.35] : stage >= 5 ? [0.01, 0.1] : [0.012, 0.05]);
     // Dust from galloping horses, smoke from the camp fires.
     const d = sim.dust;
     for (let i = 0; i + 2 < d.length && i < 240; i += 3) {
@@ -594,7 +609,7 @@ export const didgori: Builder = async (k) => {
                 shadow: 110,
                 cam: (b) => {
                   const p = ground(PAVILION[0], PAVILION[1], 0);
-                  return { pos: p.clone().add(v(-55 + 20 * b, 9, 75 - 10 * b)), target: p.clone().lerp(at("ruse"), 0.5).add(v(0, 3, 0)), fov: 34 };
+                  return { pos: p.clone().add(v(-42 + 12 * b, 8, -58 + 8 * b)), target: p.clone().lerp(at("ruse"), 0.6).add(v(0, 3, 0)), fov: 36 };
                 },
               },
               { to: 1, shadow: 260, map: true, cam: (b) => ({ pos: ground(5420 + 40 * b, 3200, 190), target: ground(5150, 2830, 0), fov: 36 }) },
@@ -612,27 +627,27 @@ export const didgori: Builder = async (k) => {
             3,
             [
               {
-                to: 0.25,
+                to: 0.2,
                 shadow: 120,
                 cam: () => {
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(75, 10, 30)), target: at("cVan", 3), fov: 30 };
+                  return { pos: c.clone().add(v(48, 5, 18)), target: at("cVan", 3), fov: 30 };
                 },
               },
               {
-                to: 0.6,
+                to: 0.5,
                 shadow: 110,
                 cam: () => {
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(-25, 4, -82)), target: c.clone().add(v(-45, 2, 0)), fov: 28 };
+                  return { pos: c.clone().add(v(-12, 3.5, -98)), target: c.clone().add(v(-38, 2, -42)), fov: 30 };
                 },
               },
               {
-                to: 0.85,
+                to: 0.82,
                 shadow: 90,
                 cam: (b) => {
                   const p = clash();
-                  return { pos: p.clone().add(v(22 - 10 * b, 2.4, -48 + 8 * b)), target: p.clone().add(v(0, 1.8, 0)), fov: 32 };
+                  return { pos: p.clone().add(v(18 - 8 * b, 2.6, -92 + 6 * b)), target: p.clone().add(v(-4, 1.8, -38)), fov: 32 };
                 },
               },
               {
@@ -658,7 +673,7 @@ export const didgori: Builder = async (k) => {
             [
               { to: 0.3, map: true, shadow: 450, cam: (b) => ({ pos: ground(6200 - 60 * b, 2950, 820), target: ground(4950, 2800, 0), fov: 36 }) },
               {
-                to: 0.58,
+                to: 0.6,
                 shadow: 120,
                 cam: () => {
                   const c = at("david");
@@ -666,21 +681,14 @@ export const didgori: Builder = async (k) => {
                 },
               },
               {
-                to: 0.82,
+                to: 0.84,
                 shadow: 100,
                 cam: (b) => {
                   const p = at("cLeft");
-                  return { pos: p.clone().add(v(70 - 10 * b, 2.6, 45)), target: p.clone().add(v(0, 2, -10)), fov: 32 };
+                  return { pos: p.clone().add(v(62 - 10 * b, 3, 52)), target: p.clone().add(v(-5, 2, -22)), fov: 32 };
                 },
               },
-              {
-                to: 1,
-                shadow: 200,
-                cam: () => {
-                  const p = at("cRight");
-                  return { pos: p.clone().add(v(110, 30, 90)), target: p.clone().add(v(0, 2, 0)), fov: 34 };
-                },
-              },
+              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(5560 - 40 * b, 3420, 430), target: ground(4930, 2820, 0), fov: 36 }) },
             ],
             u,
             dt,
@@ -699,11 +707,19 @@ export const didgori: Builder = async (k) => {
                 shadow: 120,
                 cam: () => {
                   const c = at("cCmd");
-                  return { pos: c.clone().add(v(55, 14, -30)), target: c.clone().add(v(-50, 2, 20)), fov: 32 };
+                  return { pos: c.clone().add(v(32, 7, -22)), target: c.clone().add(v(-40, 1.5, 18)), fov: 32 };
                 },
               },
               { to: 0.65, map: true, shadow: 450, cam: (b) => ({ pos: ground(5650 - 100 * b, 3900, 620), target: ground(4550, 3000, 0), fov: 38 }) },
-              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(3930 - 20 * b, 3440, 7), target: ground(4520, 2980, 6), fov: 34 }) },
+              {
+                to: 1,
+                shadow: 130,
+                cam: () => {
+                  // Ahead of the fleeing vanguard on its road, looking back at the riders coming.
+                  const c = at("cVan");
+                  return { pos: c.clone().add(v(-62, 7, 40)), target: c.clone().add(v(15, 2, -8)), fov: 34 };
+                },
+              },
             ],
             u,
             dt,
@@ -715,23 +731,14 @@ export const didgori: Builder = async (k) => {
         enter: () => enterBattle(6),
         update: (u, _s, _t, dt) => {
           // Follow the mass of the fleeing.
-          let sx = 0;
-          let sz = 0;
-          let n = 0;
-          for (const r of sim.regs)
-            if (r.def.side === 1 && r.alive > 0 && r.routed) {
-              sx += r.mx * r.alive;
-              sz += r.mz * r.alive;
-              n += r.alive;
-            }
-          const c = n ? ground(sx / n, sz / n, 0) : ground(3000, 4000, 0);
+          const c = fleeing();
           dayAnchor.position.copy(c).add(v(0, 60, 0));
           (dayTag.querySelector(".blood-label-text") ?? dayTag).textContent = `დევნა: დღე ${Math.min(3, 1 + Math.floor(u * 3))}`;
           return run(
             6,
             [
-              { to: 0.62, shadow: 400, map: true, cam: () => ({ pos: c.clone().add(v(520, 380, 380)), target: c, fov: 36 }) },
-              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(5480 - 30 * b, 2600, 40), target: ground(5120, 2790, 2), fov: 34 }) },
+              { to: 0.62, shadow: 300, map: true, cam: () => ({ pos: c.clone().add(v(240, 150, 170)), target: c, fov: 36 }) },
+              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(5290 - 20 * b, 2712, 7), target: ground(5200, 2756, 1.5), fov: 34 }) },
             ],
             u,
             dt,

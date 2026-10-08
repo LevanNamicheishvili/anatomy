@@ -111,6 +111,8 @@ export class Kit {
   noAO = false;
   /** Set by the engine: software or very old graphics — scenes should draw less. */
   lowPower = false;
+  /** Height of the ground under x, z (outdoor scenes): the camera is kept above it. */
+  ground: ((x: number, z: number) => number) | null = null;
   private normals = new Map<string, THREE.Texture>();
 
   constructor(private overlay: HTMLElement) {}
@@ -306,6 +308,7 @@ export class Kit {
     this.atmosphere = { bg: null, near: 0, far: 0, sky: false };
     this.sun = null;
     this.clip = null;
+    this.ground = null;
     this.noAO = false;
     this.root.clear();
   }
@@ -618,7 +621,11 @@ export class JourneyScene {
   private fit(shot: Shot) {
     const k = Math.max(1, 1.25 / this.camera.aspect);
     if (k === 1) return shot;
-    return { ...shot, pos: shot.target.clone().add(shot.pos.clone().sub(shot.target).multiplyScalar(k)) };
+    const pos = shot.target.clone().add(shot.pos.clone().sub(shot.target).multiplyScalar(k));
+    // Stepping back must not take the camera into a hillside.
+    const g = this.kit.ground;
+    if (g) pos.y = Math.max(pos.y, g(pos.x, pos.z) + 2);
+    return { ...shot, pos };
   }
 
   private tmp = new THREE.Vector3();

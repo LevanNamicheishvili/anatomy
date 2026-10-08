@@ -54,7 +54,8 @@ export class Arrows {
   }
 
   /** Takes the shots the simulation asked for and flies everything one step. */
-  update(dt: number, sim: BattleSim, ground: Ground, hitChance: number) {
+  /** `hit`: chance an arrow kills, against [Georgians, coalition]. */
+  update(dt: number, sim: BattleSim, ground: Ground, hit: [number, number]) {
     for (const s of sim.shots) {
       if (this.list.length >= this.cap) break;
       const from = v(sim.x[s.from], ground.y(sim.x[s.from], sim.z[s.from]) + (sim.mounted[s.from] ? 2.3 : 1.5), sim.z[s.from]);
@@ -63,7 +64,8 @@ export class Arrows {
       const tz = sim.z[s.to] + (this.r() - 0.5) * spread;
       const to = v(tx, ground.y(tx, tz) + 0.2, tz);
       const dist = from.distanceTo(to);
-      this.list.push({ from, to, t: 0, T: dist / 52 + 0.25, arc: dist * 0.16, target: s.to, hit: this.r() < hitChance, stuck: 0 });
+      const side = sim.regs[sim.reg[s.to]].def.side;
+      this.list.push({ from, to, t: 0, T: dist / 52 + 0.25, arc: dist * 0.16, target: s.to, hit: this.r() < hit[side], stuck: 0 });
     }
     sim.shots.length = 0;
     let n = 0;
@@ -347,7 +349,8 @@ export function camp(k: Kit, ground: Ground, spots: { x: number; z: number; kind
   const stripes = k.material({ map: canvas, roughness: 0.9, clearcoat: 0, side: THREE.DoubleSide });
   const yurtWall = k.track(new THREE.CylinderGeometry(3, 3, 1.7, 18, 1, true).translate(0, 0.85, 0));
   const yurtRoof = k.track(new THREE.ConeGeometry(3.15, 1.6, 18, 1, true).translate(0, 2.5, 0));
-  const tentGeo = k.track(new THREE.CylinderGeometry(0.01, 2.2, 2.3, 4, 1, true).rotateY(Math.PI / 4).scale(1, 1, 1.6).translate(0, 1.15, 0));
+  // Ridge tent: a three-sided prism lying on one face.
+  const tentGeo = k.track(new THREE.CylinderGeometry(1.5, 1.5, 4.2, 3, 1, false).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).translate(0, 0.75, 0));
   const pavWall = k.track(new THREE.CylinderGeometry(7, 7, 2.8, 28, 1, true).translate(0, 1.4, 0));
   const pavRoof = k.track(new THREE.ConeGeometry(7.6, 4.2, 28, 1, true).translate(0, 4.9, 0));
   const pavilions: THREE.Group[] = [];

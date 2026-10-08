@@ -363,7 +363,12 @@ export class BattleSim {
         reg.pathI = 0;
         reg.shooting = c.do === "shoot";
         if (c.do === "hold" && c.face !== undefined) reg.face = c.face;
-        if (c.do === "pursue") for (let i = reg.first; i < reg.first + reg.count; i++) if (this.state[i] === ST.form) this.target[i] = -1;
+        if (c.do === "pursue") {
+          for (let i = reg.first; i < reg.first + reg.count; i++) if (this.state[i] === ST.form) this.target[i] = -1;
+          // Join the road of flight ahead (west) of where the regiment is.
+          const k = c.path.findIndex((p) => p[0] < reg.cx - 60);
+          reg.pathI = k < 0 ? c.path.length - 1 : k;
+        }
     }
   }
 
