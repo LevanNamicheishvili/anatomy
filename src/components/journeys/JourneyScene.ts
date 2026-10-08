@@ -505,6 +505,14 @@ export class JourneyScene {
     });
     if (box.isEmpty()) return;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
+    // Clipping planes in proportion to the scene (a cell is a few units, a battlefield hundreds).
+    const R = Math.max(10, sphere.radius);
+    const near = Math.max(0.002, R * 0.0004);
+    if (Math.abs(this.camera.far - R * 8) > 1 || this.camera.near !== near) {
+      this.camera.near = near;
+      this.camera.far = Math.max(80, R * 8);
+      this.camera.updateProjectionMatrix();
+    }
     const r = Math.max(1e-3, Math.min(sphere.radius, 40));
     const dir = new THREE.Vector3(0.45, 0.8, 0.4).normalize();
     this.key.position.copy(sphere.center).addScaledVector(dir, r * 2);

@@ -3,7 +3,7 @@
  * listing its topics; a topic without `href` is shown as "coming soon".
  */
 export type SubjectIcon = "biology" | "geography" | "history";
-export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "atom" | "tissue" | "bone" | "lungs" | "digest" | "kidney" | "eye" | "hormone" | "health" | "baby" | "genetics" | "evolution" | "plant" | "eco" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
+export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "atom" | "tissue" | "bone" | "lungs" | "digest" | "kidney" | "eye" | "hormone" | "health" | "baby" | "genetics" | "evolution" | "plant" | "eco" | "battle" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
 
 export interface Topic {
   slug: string;
@@ -164,7 +164,17 @@ export const SUBJECTS: Subject[] = [
     description: "საქართველოსა და მსოფლიოს ისტორია — მოვლენები, რუკები და ქრონოლოგია.",
     icon: "history",
     color: "#a0662b",
-    topics: [],
+    href: "/history",
+    facts: ["3D სიმულაციები", "ნამდვილი რელიეფი", "წყაროები"],
+    topics: [
+      {
+        slug: "didgori",
+        name: "დიდგორის ბრძოლა, 1121",
+        description: "3D სიმულაცია ნამდვილ რელიეფზე: ძალები, 200 მხედრის ხრიკი, ფლანგების დარტყმა, დევნა და თბილისის აღება.",
+        icon: "battle",
+        href: "/history/didgori",
+      },
+    ],
   },
 ];
 
