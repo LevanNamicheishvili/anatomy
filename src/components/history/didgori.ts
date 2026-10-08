@@ -398,7 +398,8 @@ export const didgori: Builder = async (k) => {
   battle.add(dayAnchor);
   const dayTag = k.label(dayAnchor, "", { kind: "tag", stages: [6] });
 
-  battle.add(map.group);
+  // The campaign map lives beside the battlefield (the battle group is hidden on the map stages).
+  k.root.add(map.group);
   map.group.visible = false;
 
   // ---- Stage control ----
