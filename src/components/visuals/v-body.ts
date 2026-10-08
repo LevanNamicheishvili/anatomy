@@ -589,8 +589,12 @@ export const respiratoryDisease: Builder = async (k) => {
         cellMat.emissiveIntensity = i === 0 ? 0.5 * ease((u - 0.6) / 0.3) : 0;
         // Asthma: the wall thickens and the lumen narrows, then relaxes.
         const sq = i === 1 ? 0.5 - 0.5 * Math.cos(Math.min(1, u * 1.4) * Math.PI) : 0;
-        asthma.geometry.dispose();
-        asthma.geometry = ringGeo(1.1 - 0.75 * sq);
+        // Rebuild the ring only when its size really changes (not every frame).
+        if (Math.abs(sq - (asthma.userData.sq ?? -1)) > 0.02) {
+          asthma.geometry.dispose();
+          asthma.geometry = ringGeo(1.1 - 0.75 * sq);
+          asthma.userData.sq = sq;
+        }
         mucus.scale.setScalar(0.4 + sq);
         setText(aTag, sq > 0.5 ? "ასთმა — სანათური ვიწროა" : "ასთმა");
         fills.forEach((f, j) => f.scale.set(1, Math.max(0.001, i === 2 ? ease((u - j * 0.08) / 0.5) * 1.6 : 0.001), 1));

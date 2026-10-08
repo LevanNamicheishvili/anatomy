@@ -70,6 +70,18 @@ function addRim(m: THREE.MeshPhysicalMaterial) {
   return m;
 }
 
+/** Software rendering or an old integrated GPU, by the renderer's name. */
+function isLowPowerGpu(r: THREE.WebGLRenderer) {
+  try {
+    const gl = r.getContext();
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    return /swiftshader|llvmpipe|software|basic render|microsoft basic|mesa offscreen|intel\(r\) (hd|gma)|mali-[4t]|adreno \(tm\) [3-5]/i.test(name);
+  } catch {
+    return false;
+  }
+}
+
 export const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
@@ -329,6 +341,10 @@ export class JourneyScene {
   private ao: GTAOPass;
   /** Ambient occlusion is used while the computer keeps up; it switches itself off on slow machines. */
   private aoAllowed = true;
+  /** Software or very old graphics: no occlusion, no shadows, fewer pixels. */
+  private lowPower = false;
+  private onScreen = true;
+  private visibility: IntersectionObserver;
   private slowFrames = 0;
 
   constructor(
@@ -338,9 +354,11 @@ export class JourneyScene {
     private builders: Record<string, Builder>,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.lowPower = isLowPowerGpu(this.renderer);
+    this.aoAllowed = !this.lowPower;
+    this.renderer.setPixelRatio(1);
     this.renderer.toneMapping = THREE.AgXToneMapping;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = !this.lowPower;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.env = pmrem.fromScene(new RoomEnvironment(), 0.04);
@@ -376,6 +394,9 @@ export class JourneyScene {
     overlay.appendChild(this.fade);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
+    // Don't draw while the animation is scrolled out of view.
+    this.visibility = new IntersectionObserver(([e]) => (this.onScreen = e.isIntersecting));
+    this.visibility.observe(canvas);
     this.resize();
     this.loop();
   }
@@ -503,6 +524,9 @@ export class JourneyScene {
     const w = this.canvas.clientWidth;
     const h = this.canvas.clientHeight;
     if (!w || !h) return;
+    // Cap the pixels drawn (big smart-board screens): at most ~2.4 million, never above 1.75× density.
+    const maxRatio = this.lowPower ? 1 : 1.75;
+    this.renderer.setPixelRatio(Math.max(0.75, Math.min(window.devicePixelRatio, maxRatio, Math.sqrt(2.4e6 / (w * h)))));
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
@@ -599,14 +623,25 @@ export class JourneyScene {
       }
     }
     if (!this._playing) this.controls.update();
+    if (!this.onScreen) return;
     // Occlusion needs an opaque background (the composer has none of the page behind it).
     const useAo = this.aoAllowed && !!this.scene.background;
     if (useAo) {
       this.composer.render(dt);
       // Slow machine: after a run of slow frames, drop the occlusion for good.
       this.slowFrames = dt > 1 / 35 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
-      if (this.slowFrames > 90) this.aoAllowed = false;
-    } else this.renderer.render(this.scene, this.camera);
+      if (this.slowFrames > 90) {
+        this.aoAllowed = false;
+        this.slowFrames = 0;
+      }
+    } else {
+      this.renderer.render(this.scene, this.camera);
+      // Still slow without occlusion: drop shadows too.
+      if (!this.aoAllowed && this.renderer.shadowMap.enabled) {
+        this.slowFrames = dt > 1 / 30 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
+        if (this.slowFrames > 90) this.renderer.shadowMap.enabled = false;
+      }
+    }
     this.placeLabels();
   };
 
@@ -614,6 +649,7 @@ export class JourneyScene {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
+    this.visibility.disconnect();
     this.kit.dispose();
     this.fade.remove();
     this.env.dispose();

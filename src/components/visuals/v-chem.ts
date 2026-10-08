@@ -1155,8 +1155,11 @@ export const toxinsCell: Builder = async (k) => {
         nics.forEach((n0, j) => n0.m.position.lerpVectors(n0.to.clone().add(v(0, 2.5, 1)), n0.to, ease((u - j * 0.05) / 0.3)));
         recs.forEach((rc) => ((rc.material as THREE.MeshPhysicalMaterial).emissiveIntensity = i === 1 && u > 0.3 ? 0.8 : 0.2));
         const narrow = i === 1 ? 1 - 0.45 * ease((u - 0.4) / 0.4) : 1;
-        vessel.mesh.geometry.dispose();
-        vessel.mesh.geometry = new THREE.TubeGeometry(vesselCurve, 40, narrow, 24);
+        if (Math.abs(narrow - (vessel.mesh.userData.r ?? -1)) > 0.02) {
+          vessel.mesh.geometry.dispose();
+          vessel.mesh.geometry = new THREE.TubeGeometry(vesselCurve, 40, narrow, 24);
+          vessel.mesh.userData.r = narrow;
+        }
         setText(vt, narrow < 0.8 ? "სისხლძარღვი ვიწროვდება" : "სისხლძარღვი");
         mitos.forEach((m) => m.scale.set(0.6 + 0.4 * (i === 2 ? ease(u / 0.6) : 0), 0.28 + 0.3 * (i === 2 ? ease(u / 0.6) : 0), 0.28 + 0.3 * (i === 2 ? ease(u / 0.6) : 0)));
         breaks.forEach((b, j) => (b.visible = i === 2 && u > 0.3 + j * 0.15));
