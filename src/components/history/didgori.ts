@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ARMY_TOTALS, COMMANDERS, DIDGORI_PLACE, type CommanderId } from "./battle/identity";
 import { orbit } from "@/components/journeys/common";
 import { ease, v, type Builder, type Shot, type V3 } from "@/components/journeys/JourneyScene";
 import { campaignMap } from "./battle/campaign";
@@ -38,66 +39,89 @@ interface Unit extends RegimentDef {
   label?: number[];
 }
 
+/** The Georgians on the memorial plateau face west-south-west down the ridge; the coalition faces them. */
+const G = -1.12;
+const C = 2.02;
 const W = -Math.PI / 2;
-const E = Math.PI / 2;
 
 const UNITS: Unit[] = [
-  { id: "gHeavy", name: "ქართველი მძიმე ცხენოსნები", side: 0, type: "gHeavy", n: 600, files: 60, gap: [2.3, 4.2], loose: 0.5, colA: ["#8f1d21", "#7a1a20", "#a3262a"], colB: ["#5e1216", "#8a1c1c"], coats: [0, 1, 2, 3], banner: "georgia", label: [1, 3] },
+  { id: "gHeavy", name: "ქართველი მძიმე ცხენოსნები", side: 0, type: "gHeavy", n: 600, files: 34, gap: [2.3, 4.2], loose: 0.5, colA: ["#8f1d21", "#7a1a20", "#a3262a"], colB: ["#5e1216", "#8a1c1c"], coats: [0, 1, 2, 3], banner: "georgia", label: [1, 3] },
   { id: "franks", name: "ფრანგი რაინდები", side: 0, type: "frank", n: 10, files: 10, gap: [2.6, 4.5], colA: ["#e6e0d0"], colB: ["#ebe5d8"], coats: [4, 3], banner: "frank", label: [1, 3] },
-  { id: "david", name: "მეფე დავითის რაზმი", side: 0, type: "gHeavy", n: 300, files: 30, gap: [2.4, 4.3], loose: 1, colA: ["#6d1424", "#7a1a2a"], colB: ["#b08a3a", "#6d1424"], coats: [0, 1, 3], banner: "royal", label: [1, 4] },
-  { id: "demetre", name: "დემეტრეს რაზმი", side: 0, type: "gHeavy", n: 300, files: 30, gap: [2.4, 4.3], loose: 1, colA: ["#a5321f", "#b8402e"], colB: ["#5a1a12"], coats: [0, 2, 1], banner: "georgia", label: [1, 4] },
-  { id: "kipchak", name: "ყივჩაყები", side: 0, type: "kipchak", n: 700, files: 35, gap: [3, 4.6], loose: 2.5, colA: ["#9a4a24", "#8a5a2a", "#a0522d"], colB: ["#5a3a22", "#7a3a1e"], coats: [5, 0, 2], banner: "kipchak", label: [1, 5] },
+  { id: "david", name: "მეფე დავითის რაზმი", side: 0, type: "gHeavy", n: 300, files: 24, gap: [2.4, 4.3], loose: 1, colA: ["#6d1424", "#7a1a2a"], colB: ["#b08a3a", "#6d1424"], coats: [0, 1, 3], banner: "royal", label: [1, 4] },
+  { id: "demetre", name: "დემეტრეს რაზმი", side: 0, type: "gHeavy", n: 300, files: 24, gap: [2.4, 4.3], loose: 1, colA: ["#a5321f", "#b8402e"], colB: ["#5a1a12"], coats: [0, 2, 1], banner: "georgia", label: [1, 4] },
+  { id: "kipchak", name: "ყივჩაყები", side: 0, type: "kipchak", n: 700, files: 25, gap: [3, 4.6], loose: 2.5, colA: ["#9a4a24", "#8a5a2a", "#a0522d"], colB: ["#5a3a22", "#7a3a1e"], coats: [5, 0, 2], banner: "kipchak", label: [1, 5] },
   { id: "alans", name: "ალანები", side: 0, type: "gHeavy", n: 25, files: 13, gap: [2.5, 4.2], colA: ["#6b2a3a"], colB: ["#3a2a2a"], coats: [0, 3], banner: "georgia" },
   { id: "ruse", name: "200 მხედარი", side: 0, type: "kipchak", n: 10, files: 5, gap: [3, 4.5], colA: ["#9a4a24"], colB: ["#5a3a22"], coats: [5], label: [2] },
   { id: "gSpear", name: "ქართველი ქვეითები", side: 0, type: "gSpear", n: 200, files: 40, gap: [1.0, 1.3], loose: 0.2, colA: ["#8a2a24", "#9a3328"], colB: ["#7a1d1d"], banner: "georgia", label: [1, 4] },
   { id: "gBow", name: "მშვილდოსნები", side: 0, type: "gBow", n: 120, files: 30, gap: [1.2, 1.4], loose: 0.3, colA: ["#8a2a24"], colB: ["#7a1d1d"] },
-  { id: "cVan", name: "მოწინავე რაზმი (მშვილდოსანი ცხენოსნები)", side: 1, type: "turkBow", n: 500, files: 40, gap: [3, 4.5], loose: 2, colA: ["#2c3f6e", "#26406a", "#33507a"], colB: ["#3b5f8a", "#6a7fa8"], coats: [0, 2, 4, 5], banner: "tugh", label: [1, 3] },
-  { id: "cLeft", name: "კოალიციის მარცხენა ფრთა", side: 1, type: "turkBow", n: 450, files: 30, gap: [3, 4.6], loose: 2.5, colA: ["#24365e", "#2a4a6a"], colB: ["#6b7fa8", "#e2dccb"], coats: [0, 1, 4, 5], banner: "tugh", label: [1, 4] },
-  { id: "cRight", name: "კოალიციის მარჯვენა ფრთა", side: 1, type: "turkLance", n: 450, files: 30, gap: [2.8, 4.4], loose: 2, colA: ["#1f3f5f", "#283c66"], colB: ["#4a6a9a"], coats: [0, 2, 3, 4], banner: "tugh", label: [1, 4] },
+  { id: "cVan", name: "მოწინავე რაზმი (მშვილდოსანი ცხენოსნები)", side: 1, type: "turkBow", n: 500, files: 28, gap: [3, 4.5], loose: 2, colA: ["#2c3f6e", "#26406a", "#33507a"], colB: ["#3b5f8a", "#6a7fa8"], coats: [0, 2, 4, 5], banner: "tugh", label: [1, 3] },
+  { id: "cLeft", name: "კოალიციის მარცხენა ფრთა", side: 1, type: "turkBow", n: 450, files: 24, gap: [3, 4.6], loose: 2.5, colA: ["#24365e", "#2a4a6a"], colB: ["#6b7fa8", "#e2dccb"], coats: [0, 1, 4, 5], banner: "tugh", label: [1, 4] },
+  { id: "cRight", name: "კოალიციის მარჯვენა ფრთა", side: 1, type: "turkLance", n: 450, files: 24, gap: [2.8, 4.4], loose: 2, colA: ["#1f3f5f", "#283c66"], colB: ["#4a6a9a"], coats: [0, 2, 3, 4], banner: "tugh", label: [1, 4] },
   { id: "cGuard", name: "მეთაურთა დაცვა", side: 1, type: "turkLance", n: 80, files: 16, gap: [2.6, 4.3], colA: ["#1b2a4a"], colB: ["#c9a54a"], coats: [3, 4], banner: "black" },
   { id: "cCmd", name: "ილღაზი და დუბაისი", side: 1, type: "turkLance", n: 6, files: 6, gap: [3, 4], colA: ["#1b2240"], colB: ["#c9a54a"], coats: [4], banner: "tugh", label: [2, 5] },
-  { id: "cArab", name: "დუბაისის არაბები", side: 1, type: "arab", n: 250, files: 25, gap: [2.7, 4.4], loose: 1.5, colA: ["#2f4f86", "#d8d2c2"], colB: ["#1f3e6e"], coats: [4, 0], banner: "arab", label: [1] },
-  { id: "cInf", name: "კოალიციის ქვეითები", side: 1, type: "cSpear", n: 300, files: 30, gap: [1.1, 1.4], loose: 0.6, colA: ["#34507a", "#4a5a7a"], colB: ["#8a8270"], banner: "tugh" },
+  { id: "cArab", name: "დუბაისის არაბები", side: 1, type: "arab", n: 250, files: 20, gap: [2.7, 4.4], loose: 1.5, colA: ["#2f4f86", "#d8d2c2"], colB: ["#1f3e6e"], coats: [4, 0], banner: "arab", label: [1] },
+  { id: "cInf", name: "კოალიციის ქვეითები", side: 1, type: "cSpear", n: 300, files: 24, gap: [1.1, 1.4], loose: 0.6, colA: ["#34507a", "#4a5a7a"], colB: ["#8a8270"], banner: "tugh" },
   { id: "cRear", name: "ზურგის რაზმები", side: 1, type: "turkBow", n: 300, files: 20, gap: [3, 4.6], loose: 3, colA: ["#2a4060"], colB: ["#7a8aa8"], coats: [0, 1, 2, 5], banner: "tugh", label: [1] },
   { id: "cCamp1", name: "ბანაკი", side: 1, type: "cSpear", n: 300, files: 20, gap: [2.5, 2.5], loose: 6, colA: ["#4a5a7a", "#5a5a6a"], colB: ["#8a8270"], label: [1] },
   { id: "cCamp2", name: "ბანაკები მანგლისისკენ", side: 1, type: "turkBow", n: 250, files: 20, gap: [3.5, 4.5], loose: 6, colA: ["#3a4a6a"], colB: ["#8a8270"], coats: [0, 1, 2, 3, 5], label: [1] },
 ];
 
 // ---- Where, and what happens ---------------------------------------------------------------------------------
+//
+// The terrain window is centred on today's Didgori memorial (identity.ts). The open ground there is a ridge
+// corridor 150–250 m wide running west-south-west from the memorial plateau, with forest on both sides — the
+// "narrow, forested mountains" of the sources, where the coalition could not deploy its whole strength. The
+// positions below sit on that open ground (checked against slope and forest); they are a reconstruction.
 
-/** The road of flight: west and south-west, towards Manglisi and Trialeti. */
+/** The road of flight: back along the ridge, then over the open plateau south-west towards Manglisi. */
 const ROUT: XZ[] = [
-  [4500, 2950],
-  [3900, 3350],
-  [3200, 3900],
-  [2400, 4600],
-  [1400, 5600],
-  [300, 6700],
+  [4650, 3120],
+  [4100, 3200],
+  [3520, 2900],
+  [3270, 3140],
+  [2890, 3610],
+  [2620, 4210],
+  [2080, 4770],
+  [1720, 5190],
+  [900, 6340],
 ];
 
 const BASE: Record<string, Setup> = {
-  gHeavy: { pos: [5650, 2730], face: W },
-  franks: { pos: [5608, 2730], face: W },
-  david: { pos: [4700, 2080], face: 0.53, hidden: true },
-  demetre: { pos: [4990, 3570], face: Math.PI, hidden: true },
-  kipchak: { pos: [5800, 3060], face: W },
-  alans: { pos: [5770, 2440], face: W },
-  ruse: { pos: [5690, 2900], face: W },
-  gSpear: { pos: [5880, 2660], face: W },
-  gBow: { pos: [5885, 2820], face: W },
-  cVan: { pos: [5200, 2750], face: E },
-  cLeft: { pos: [4900, 2420], face: E },
-  cRight: { pos: [4950, 3180], face: E },
-  cGuard: { pos: [4990, 2805], face: E },
-  cCmd: { pos: [4992, 2752], face: E },
-  cArab: { pos: [4720, 2770], face: E },
-  cInf: { pos: [4580, 2820], face: E },
-  cRear: { pos: [4150, 2980], face: E },
-  cCamp1: { pos: [3800, 3260], face: E },
-  cCamp2: { pos: [3330, 3760], face: E },
+  gHeavy: { pos: [5170, 2815], face: G },
+  franks: { pos: [5130, 2835], face: G },
+  david: { pos: [4480, 2930], face: 0.33, hidden: true },
+  demetre: { pos: [4320, 3430], face: Math.PI, hidden: true },
+  kipchak: { pos: [5215, 3150], face: -1.6 },
+  alans: { pos: [5400, 2740], face: G },
+  ruse: { pos: [5040, 2880], face: G },
+  gSpear: { pos: [5330, 2790], face: G },
+  gBow: { pos: [5350, 2860], face: G },
+  cVan: { pos: [4900, 2975], face: C },
+  cLeft: { pos: [4520, 3140], face: C },
+  cRight: { pos: [4320, 3250], face: C },
+  cGuard: { pos: [4630, 3110], face: C },
+  cCmd: { pos: [4650, 3140], face: C },
+  cArab: { pos: [4060, 3185], face: C },
+  cInf: { pos: [3880, 3110], face: C },
+  cRear: { pos: [3600, 2960], face: C },
+  cCamp1: { pos: [3390, 2650], face: C },
+  cCamp2: { pos: [3060, 3420], face: C },
 };
 
-const PAVILION: XZ = [4990, 2785];
+const PAVILION: XZ = [4615, 3178];
+
+/** Open ground of the ridge corridor where the armies stand (x, z, radius). */
+const CLEARINGS: [number, number, number][] = [
+  [5200, 2830, 170],
+  [4960, 2950, 110],
+  [4780, 3040, 100],
+  [4620, 3130, 100],
+  [4470, 3170, 90],
+  [4320, 3240, 90],
+  [4100, 3200, 90],
+  [3900, 3120, 90],
+  [3650, 2980, 90],
+];
 
 function setup(over: Record<string, Partial<Setup>>): Record<string, Setup> {
   const out: Record<string, Setup> = {};
@@ -111,8 +135,8 @@ const SCRIPTS: Record<number, StageScript> = {
   1: {
     timeScale: 1,
     odds: [0, 0],
-    setup: setup({ cRear: { pos: [3700, 3200] } }),
-    cmds: { cRear: [{ at: 0, do: "move", path: [[4150, 2980]], gait: "walk", face: E }] },
+    setup: setup({ cRear: { pos: [3350, 2900] } }),
+    cmds: { cRear: [{ at: 0, do: "move", path: [[3600, 2960]], gait: "walk", face: C }] },
   },
   2: {
     timeScale: 1.5,
@@ -121,12 +145,12 @@ const SCRIPTS: Record<number, StageScript> = {
     cmds: {
       ruse: [
         { at: 0, do: "pose", clip: "humble" },
-        { at: 0, do: "move", path: [[5420, 2880]], gait: "trot" },
-        { at: 0.33, do: "place", pos: [5088, 2878], face: -2.24 },
-        { at: 0.335, do: "move", path: [[5050, 2848]], gait: "walk" },
+        { at: 0, do: "move", path: [[4960, 2925]], gait: "trot" },
+        { at: 0.33, do: "place", pos: [4722, 3080], face: -0.84 },
+        { at: 0.335, do: "move", path: [[4690, 3105]], gait: "walk" },
         { at: 0.43, do: "pose", clip: null },
         { at: 0.44, do: "shoot", target: "cGuard" },
-        { at: 0.7, do: "move", path: [[5070, 2965], [5300, 3030], [5620, 2950]], gait: "gallop" },
+        { at: 0.7, do: "move", path: [[4760, 3030], [4990, 2905], [5110, 2860]], gait: "gallop" },
       ],
       cGuard: [
         { at: 0.56, do: "panic" },
@@ -140,76 +164,77 @@ const SCRIPTS: Record<number, StageScript> = {
         { at: 0.72, do: "shoot", target: "ruse" },
         { at: 0.97, do: "hold" },
       ],
-      gHeavy: [{ at: 0.2, do: "move", path: [[5510, 2730]], gait: "trot", face: W }],
-      franks: [{ at: 0.2, do: "move", path: [[5468, 2730]], gait: "trot", face: W }],
+      gHeavy: [{ at: 0.2, do: "move", path: [[5075, 2860]], gait: "trot", face: G }],
+      franks: [{ at: 0.2, do: "move", path: [[5037, 2878]], gait: "trot", face: G }],
     },
   },
   3: {
     timeScale: 2,
     odds: [0.12, 0.045],
-    setup: setup({ gHeavy: { pos: [5510, 2730] }, franks: { pos: [5468, 2730] }, ruse: { pos: [5640, 2950] }, cGuard: { dead: 0.12, deadAt: [4995, 2800] } }),
+    setup: setup({ gHeavy: { pos: [5075, 2860] }, franks: { pos: [5037, 2878] }, ruse: { pos: [5150, 2950] }, cGuard: { dead: 0.12, deadAt: [4630, 3110] } }),
     cmds: {
       cVan: [{ at: 0, do: "shoot", target: "gHeavy" }],
       gHeavy: [
-        { at: 0.02, do: "move", path: [[5470, 2731]], gait: "trot" },
-        { at: 0.1, do: "charge", target: "cVan", gait: "gallop" },
+        { at: 0.02, do: "move", path: [[5050, 2872]], gait: "walk" },
+        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
       ],
       franks: [
-        { at: 0.02, do: "move", path: [[5428, 2731]], gait: "trot" },
-        { at: 0.1, do: "charge", target: "cVan", gait: "gallop" },
+        { at: 0.02, do: "move", path: [[5012, 2890]], gait: "walk" },
+        { at: 0.14, do: "charge", target: "cVan", gait: "gallop" },
       ],
-      gSpear: [{ at: 0.3, do: "move", path: [[5650, 2690]], gait: "walk" }],
-      gBow: [{ at: 0.3, do: "move", path: [[5660, 2830]], gait: "walk" }],
-      kipchak: [{ at: 0.2, do: "move", path: [[5580, 3080]], gait: "trot", face: W }],
+      gSpear: [{ at: 0.3, do: "move", path: [[5200, 2850]], gait: "walk" }],
+      gBow: [{ at: 0.3, do: "move", path: [[5230, 2890]], gait: "walk" }],
+      kipchak: [{ at: 0.2, do: "move", path: [[5150, 3120]], gait: "trot", face: -1.6 }],
     },
   },
   4: {
     timeScale: 1.8,
     odds: [0.16, 0.04],
     setup: setup({
-      gHeavy: { pos: [5246, 2745], dead: 0.05, deadAt: [5290, 2742] },
-      franks: { pos: [5236, 2742] },
-      cVan: { pos: [5196, 2752], dead: 0.22, deadAt: [5240, 2750] },
-      cGuard: { dead: 0.12, deadAt: [4995, 2800] },
-      ruse: { pos: [5640, 2950] },
-      gSpear: { pos: [5650, 2690] },
-      gBow: { pos: [5660, 2830] },
-      kipchak: { pos: [5580, 3080] },
+      gHeavy: { pos: [4945, 2952], dead: 0.05, deadAt: [4990, 2930] },
+      franks: { pos: [4938, 2956] },
+      cVan: { pos: [4895, 2978], dead: 0.22, deadAt: [4930, 2965] },
+      cGuard: { dead: 0.12, deadAt: [4630, 3110] },
+      ruse: { pos: [5100, 2950] },
+      gSpear: { pos: [5200, 2850] },
+      gBow: { pos: [5230, 2890] },
+      kipchak: { pos: [5150, 3120] },
+      alans: { pos: [5060, 2880] },
     }),
     cmds: {
       david: [
-        { at: 0.02, do: "move", path: [[4760, 2200]], gait: "walk" },
+        { at: 0.02, do: "move", path: [[4500, 3010]], gait: "walk" },
         { at: 0.1, do: "charge", target: "cLeft", gait: "gallop" },
       ],
       demetre: [
-        { at: 0.03, do: "move", path: [[4980, 3440]], gait: "walk" },
+        { at: 0.03, do: "move", path: [[4320, 3360]], gait: "walk" },
         { at: 0.11, do: "charge", target: "cRight", gait: "gallop" },
       ],
-      alans: [{ at: 0.15, do: "charge", target: "cLeft", gait: "gallop" }],
+      alans: [{ at: 0.15, do: "charge", target: "cGuard", gait: "gallop" }],
       gSpear: [{ at: 0.05, do: "charge", target: "cVan", gait: "trot" }],
       gBow: [{ at: 0.05, do: "shoot", target: "cVan", advance: true }],
-      kipchak: [{ at: 0.1, do: "shoot", target: "cRight", advance: true }],
-      cArab: [{ at: 0.4, do: "charge", target: "gHeavy", gait: "gallop" }],
+      kipchak: [{ at: 0.1, do: "shoot", target: "cVan", advance: true }],
+      cArab: [{ at: 0.4, do: "charge", target: "david", gait: "gallop" }],
     },
   },
   5: {
     timeScale: 2,
     odds: [0.2, 0.02],
     setup: setup({
-      gHeavy: { pos: [5140, 2755], dead: 0.08, deadAt: [5250, 2745] },
-      franks: { pos: [5132, 2752] },
-      cVan: { pos: [5098, 2760], dead: 0.45, deadAt: [5190, 2755] },
-      david: { pos: [4890, 2405], hidden: false, dead: 0.06, deadAt: [4880, 2390] },
-      cLeft: { pos: [4858, 2442], dead: 0.35, deadAt: [4880, 2420] },
-      demetre: { pos: [4955, 3215], hidden: false, dead: 0.06, deadAt: [4960, 3230] },
-      cRight: { pos: [4948, 3172], dead: 0.35, deadAt: [4950, 3190] },
-      cGuard: { dead: 0.15, deadAt: [4995, 2800] },
-      cArab: { pos: [5070, 2800], dead: 0.25, deadAt: [5100, 2790] },
-      gSpear: { pos: [5190, 2700], dead: 0.05, deadAt: [5230, 2720] },
-      gBow: { pos: [5380, 2830] },
-      kipchak: { pos: [5150, 3120] },
-      alans: { pos: [4930, 2430] },
-      ruse: { pos: [5600, 2950] },
+      gHeavy: { pos: [4840, 3005], dead: 0.08, deadAt: [4920, 2970] },
+      franks: { pos: [4832, 3008] },
+      cVan: { pos: [4800, 3020], dead: 0.45, deadAt: [4880, 2985] },
+      david: { pos: [4540, 3110], hidden: false, dead: 0.06, deadAt: [4530, 3080] },
+      cLeft: { pos: [4530, 3150], dead: 0.35, deadAt: [4530, 3140] },
+      demetre: { pos: [4330, 3290], hidden: false, dead: 0.06, deadAt: [4330, 3300] },
+      cRight: { pos: [4320, 3255], dead: 0.35, deadAt: [4320, 3250] },
+      cGuard: { dead: 0.15, deadAt: [4630, 3110] },
+      cArab: { pos: [4300, 3215], dead: 0.25, deadAt: [4400, 3190] },
+      gSpear: { pos: [4950, 2955], dead: 0.05, deadAt: [4960, 2950] },
+      gBow: { pos: [5060, 2900] },
+      kipchak: { pos: [5000, 3040] },
+      alans: { pos: [4600, 3090] },
+      ruse: { pos: [5100, 2950] },
     }),
     cmds: {
       ...routAll([
@@ -231,33 +256,33 @@ const SCRIPTS: Record<number, StageScript> = {
       demetre: [{ at: 0.3, do: "pursue", path: ROUT }],
       alans: [{ at: 0.3, do: "pursue", path: ROUT }],
       ruse: [{ at: 0.2, do: "pursue", path: ROUT }],
-      gSpear: [{ at: 0.3, do: "move", path: [[5000, 2800]], gait: "walk" }],
-      gBow: [{ at: 0.3, do: "move", path: [[5050, 2850]], gait: "walk" }],
+      gSpear: [{ at: 0.3, do: "move", path: [[4880, 2990]], gait: "walk" }],
+      gBow: [{ at: 0.3, do: "move", path: [[4960, 2950]], gait: "walk" }],
     },
   },
   6: {
     timeScale: 3,
     odds: [0.25, 0.01],
     setup: setup({
-      cCmd: { pos: [1500, 5500], face: W, rout: ROUT },
-      cGuard: { pos: [2000, 5000], face: W, rout: ROUT, dead: 0.2, deadAt: [4995, 2800] },
-      cVan: { pos: [3000, 4050], face: W, rout: ROUT, dead: 0.6, deadAt: [4950, 2840] },
-      cLeft: { pos: [3300, 3800], face: W, rout: ROUT, dead: 0.55, deadAt: [4800, 2550] },
-      cRight: { pos: [2800, 4300], face: W, rout: ROUT, dead: 0.5, deadAt: [4900, 3100] },
-      cArab: { pos: [2500, 4500], face: W, rout: ROUT, dead: 0.45, deadAt: [4700, 2900] },
-      cInf: { pos: [3700, 3450], face: W, rout: ROUT, dead: 0.5, deadAt: [4400, 3000] },
-      cRear: { pos: [2300, 4700], face: W, rout: ROUT, dead: 0.3, deadAt: [3900, 3300] },
-      cCamp1: { pos: [3400, 3700], face: W, rout: ROUT, dead: 0.3, deadAt: [3800, 3260] },
-      cCamp2: { pos: [2100, 4900], face: W, rout: ROUT, dead: 0.2, deadAt: [3300, 3760] },
-      kipchak: { pos: [3450, 3620], face: W },
-      gHeavy: { pos: [3900, 3300], face: W, dead: 0.1, deadAt: [5200, 2750] },
-      franks: { pos: [3880, 3290], face: W },
-      david: { pos: [3700, 3420], face: W, hidden: false, dead: 0.08, deadAt: [4880, 2400] },
-      demetre: { pos: [3600, 3500], face: W, hidden: false, dead: 0.08, deadAt: [4950, 3200] },
-      alans: { pos: [3650, 3450], face: W },
-      ruse: { pos: [3300, 3750], face: W },
-      gSpear: { pos: [5000, 2800], dead: 0.06, deadAt: [5200, 2720] },
-      gBow: { pos: [5050, 2850] },
+      cCmd: { pos: [1720, 5190], face: W, rout: ROUT },
+      cGuard: { pos: [2080, 4770], face: W, rout: ROUT, dead: 0.2, deadAt: [4630, 3110] },
+      cVan: { pos: [2890, 3610], face: W, rout: ROUT, dead: 0.6, deadAt: [4880, 2985] },
+      cLeft: { pos: [3270, 3140], face: W, rout: ROUT, dead: 0.55, deadAt: [4530, 3140] },
+      cRight: { pos: [2620, 4210], face: W, rout: ROUT, dead: 0.5, deadAt: [4320, 3250] },
+      cArab: { pos: [2400, 4450], face: W, rout: ROUT, dead: 0.45, deadAt: [4380, 3200] },
+      cInf: { pos: [3520, 2900], face: W, rout: ROUT, dead: 0.5, deadAt: [3950, 3130] },
+      cRear: { pos: [2300, 4550], face: W, rout: ROUT, dead: 0.3, deadAt: [3620, 2960] },
+      cCamp1: { pos: [3350, 2950], face: W, rout: ROUT, dead: 0.3, deadAt: [3390, 2650] },
+      cCamp2: { pos: [2200, 4650], face: W, rout: ROUT, dead: 0.2, deadAt: [3060, 3420] },
+      kipchak: { pos: [3420, 2950], face: W },
+      gHeavy: { pos: [3700, 2980], face: W, dead: 0.1, deadAt: [4900, 2970] },
+      franks: { pos: [3690, 2985], face: W },
+      david: { pos: [3640, 3000], face: W, hidden: false, dead: 0.08, deadAt: [4520, 3100] },
+      demetre: { pos: [3600, 3020], face: W, hidden: false, dead: 0.08, deadAt: [4320, 3270] },
+      alans: { pos: [3560, 2990], face: W },
+      ruse: { pos: [3380, 3000], face: W },
+      gSpear: { pos: [4950, 2955], dead: 0.06, deadAt: [4960, 2950] },
+      gBow: { pos: [5060, 2900] },
     }),
     cmds: Object.fromEntries(["kipchak", "gHeavy", "franks", "david", "demetre", "alans", "ruse"].map((id) => [id, [{ at: 0, do: "pursue", path: ROUT } as Cmd]])),
   },
@@ -288,11 +313,18 @@ interface Beat {
 const SUN = new THREE.Vector3(0.88, 0.42, 0.2).normalize();
 const HAZE = "#b9cde0";
 
-export const didgori: Builder = async (k) => {
+export interface BattleView {
+  camera: "cinematic" | "tactical";
+  commander?: CommanderId | null;
+  portrait?: boolean;
+}
+
+export const createDidgori = (view: BattleView): Builder => async (k) => {
   const low = k.lowPower;
   const [terrain, horse, map] = await Promise.all([loadTerrain(k), loadHorse(), campaignMap(k)]);
   const { field, marks } = terrain;
-  const forest = await buildForest(k, field, low ? 3 : 9);
+  // The corridor's open ground is kept clear of the odd tree the forest map puts at its edges.
+  const forest = await buildForest(k, field, low ? 3 : 9, CLEARINGS);
   const battle = new THREE.Group();
   k.root.add(battle);
   battle.add(terrain.group, forest.group);
@@ -325,6 +357,30 @@ export const didgori: Builder = async (k) => {
     );
   }
 
+  // Four individual rigged figures, sharing the troop animation but retaining their own geometry.
+  const heroes = new Map<CommanderId, number>();
+  for (const commander of COMMANDERS) {
+    const reg = sim.byId.get(commander.regiment)!;
+    const index = reg.first + Math.min(commander.offset, reg.count - 1);
+    heroes.set(commander.id, index);
+    const source = commander.id === "ilghazi" ? LOOKS.turkLance : commander.id === "dubays" ? LOOKS.arab : LOOKS.gHeavy;
+    const id = `hero-${commander.id}`;
+    const type = figureType(id, { ...source.look, beard: commander.beard, commander }, "lancer", horse, commander.side);
+    const material = crowdMaterial(k, cavB, 4, true);
+    layers.set(id, type.lods.map((geometry) => {
+      const layer = new CrowdLayer(k, geometry, material, 1);
+      layer.mesh.castShadow = true;
+      layer.mesh.receiveShadow = true;
+      battle.add(layer.mesh);
+      return layer;
+    }));
+    sim.featured.set(index, id);
+    for (const [slot, color] of [[0, commander.color], [3, commander.trim]] as const) {
+      const c = new THREE.Color(color);
+      sim.colors.set([c.r, c.g, c.b], index * 12 + slot);
+    }
+  }
+
   // Banners carried by the first man of each regiment.
   const banners: { b: Banner; reg: number }[] = [];
   units.forEach((u, i) => {
@@ -341,9 +397,9 @@ export const didgori: Builder = async (k) => {
     let s = 9;
     const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
     for (const [cx, cz, n] of [
-      [3760, 3230, 18],
-      [3300, 3740, 16],
-      [4120, 2960, 6],
+      [3390, 2650, 18],
+      [3060, 3420, 14],
+      [3700, 3000, 5],
     ] as const) {
       for (let i = 0; i < n; i++) {
         const a = rnd() * Math.PI * 2;
@@ -365,15 +421,30 @@ export const didgori: Builder = async (k) => {
 
   // Manoeuvres drawn on the ground.
   const moves = [
-    groundArrow(k, field, [[4700, 2080], [4770, 2240], [4870, 2400]], 34, "#c0392b"),
-    groundArrow(k, field, [[4990, 3570], [4975, 3380], [4955, 3215]], 34, "#c0392b"),
-    groundArrow(k, field, [[5650, 2690], [5450, 2710], [5270, 2740]], 28, "#d0563f"),
+    groundArrow(k, field, [[4480, 2930], [4500, 3030], [4520, 3125]], 34, "#c0392b"),
+    groundArrow(k, field, [[4320, 3430], [4320, 3340], [4320, 3265]], 34, "#c0392b"),
+    groundArrow(k, field, [[5200, 2850], [5060, 2905], [4935, 2960]], 28, "#d0563f"),
   ];
-  const flight = groundArrow(k, field, [[4700, 2850], [4300, 3050], [3700, 3450], [3000, 4050]], 60, "#2f5fd0");
+  const flight = groundArrow(k, field, [[4700, 3090], [4100, 3200], [3520, 2900], [3270, 3140], [2890, 3610]], 60, "#2f5fd0");
   for (const m of [...moves, flight]) {
     m.set(0, 0);
     battle.add(m.mesh);
   }
+
+  // Totals stay attached to the two armies, independent of rendering density or simulated casualties.
+  const armyAnchors = ([ARMY_TOTALS.georgia, ARMY_TOTALS.coalition] as const).map((army) => {
+    const anchor = new THREE.Object3D();
+    battle.add(anchor);
+    const label = k.label(anchor, `${army.name} · ${army.count}\n${army.note}`, { kind: "tag", stages: [1, 2, 3, 4, 5, 6] });
+    label.classList.add("battle-army-label");
+    return anchor;
+  });
+  const heroAnchors = COMMANDERS.map((commander) => {
+    const anchor = new THREE.Object3D();
+    battle.add(anchor);
+    k.label(anchor, commander.name, { kind: "tag", stages: [1, 2, 3, 4, 5, 6] });
+    return { anchor, id: commander.id };
+  });
 
   // Labels: regiments (they follow them) and places.
   const regAnchors = units.map((u) => {
@@ -391,7 +462,8 @@ export const didgori: Builder = async (k) => {
     placeLabels.add(a);
     k.label(a, text, { stages });
   };
-  place(5420, 2560, "დიდგორის ველი", [1, 3, 4, 6]);
+  const [memorialX, memorialZ] = field.xz(DIDGORI_PLACE.lon, DIDGORI_PLACE.lat);
+  place(memorialX, memorialZ, "დიდგორის ველი · დღევანდელი მემორიალის მიდამოები", [1, 3, 4, 6]);
   place(1300, 5700, "მანგლისისკენ", [5, 6]);
   place(8800, 1600, "თბილისისკენ", [1]);
   const dayAnchor = new THREE.Object3D();
@@ -425,7 +497,7 @@ export const didgori: Builder = async (k) => {
         sz += r.mz * r.alive;
         n += r.alive;
       }
-    return n ? ground(sx / n, sz / n, 0) : ground(3000, 4000, 0);
+    return n ? ground(sx / n, sz / n, 0) : ground(2890, 3610, 0);
   };
   const keepAbove = (p: V3) => {
     const y = field.y(p.x, p.z) + 2.2;
@@ -438,6 +510,7 @@ export const didgori: Builder = async (k) => {
     battle.visible = true;
     map.group.visible = false;
     k.mood(HAZE, 3500, 40000, true, HAZE);
+    // 1 m keeps the depth buffer sharp over 40 km; the face close-ups lower it (see frame()).
     k.clip = [1, 40000];
     k.noAO = true;
     k.ground = (x, z) => field.y(x, z);
@@ -499,12 +572,26 @@ export const didgori: Builder = async (k) => {
     if (b < 0) b = beats.length - 1;
     const from = b > 0 ? beats[b - 1].to : 0;
     const beat = beats[b];
-    const cam = beat.cam((u - from) / Math.max(1e-3, beat.to - from), u);
+    const tactical = view.camera === "tactical";
+    let cam = tactical
+      ? { pos: ground(4750, 4500, 1900), target: ground(4250, 3050, 0), fov: 48 }
+      : beat.cam((u - from) / Math.max(1e-3, beat.to - from), u);
+    if (view.commander) {
+      const index = heroes.get(view.commander)!;
+      const h = sim.head[index];
+      const p = ground(sim.x[index], sim.z[index], 0);
+      const distance = view.portrait ? 1.0 : 5.0;
+      const angle = h + 0.35;
+      const target = p.clone().add(v(0, view.portrait ? 2.30 : 1.8, view.portrait ? 0 : 0));
+      // The rider sits slightly behind the horse's origin.
+      if (view.portrait) target.add(v(-Math.sin(h) * 0.11, 0, -Math.cos(h) * 0.11));
+      cam = { pos: target.clone().add(v(Math.sin(angle) * distance, view.portrait ? 0.06 : 0.6, Math.cos(angle) * distance)), target, fov: view.portrait ? 30 : 38 };
+    }
     const cut = b !== beatIdx;
     beatIdx = b;
-    labelsOn = !!beat.map;
-    marks.overlay.value += ((beat.map ? 1 : 0) - marks.overlay.value) * (cut ? 1 : Math.min(1, dt * 3));
-    shadowR = beat.shadow ?? 220;
+    labelsOn = !view.commander && (tactical || !!beat.map);
+    marks.overlay.value += ((tactical || beat.map ? 1 : 0) - marks.overlay.value) * (cut ? 1 : Math.min(1, dt * 3));
+    shadowR = view.commander ? 12 : tactical ? 700 : beat.shadow ?? 220;
     focus.copy(cam.target);
     if (k.sun) k.sun.radius = shadowR;
     return { pos: keepAbove(cam.pos), target: cam.target, fov: cam.fov ?? 35, cut };
@@ -514,10 +601,29 @@ export const didgori: Builder = async (k) => {
   const markColor = [new THREE.Color("#e0392b"), new THREE.Color("#2f62d6")];
   const frame = (camera: THREE.PerspectiveCamera) => {
     if (showMap) return;
+    const near = view.commander ? 0.05 : 1;
+    if (camera.near !== near) {
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
     sky.position.copy(camera.position);
     forest.update(camera, focus, shadowR);
     sim.draw(camera, layers, low ? [35, 170] : [110, 620]);
     waveBanners(performance.now() / 1000);
+    armyAnchors.forEach((anchor, side) => {
+      let x = 0, z = 0, weight = 0;
+      for (const reg of sim.regs) if (reg.def.side === side && reg.alive > 0) {
+        x += reg.mx * reg.alive; z += reg.mz * reg.alive; weight += reg.alive;
+      }
+      // Only in the overview shots (in close-ups the totals panel beside the scene says it).
+      anchor.visible = labelsOn && !view.commander && weight > 0;
+      if (weight) anchor.position.copy(ground(x / weight, z / weight, 90));
+    });
+    for (const { anchor, id } of heroAnchors) {
+      const index = heroes.get(id)!;
+      anchor.visible = labelsOn && sim.isAlive(index);
+      anchor.position.copy(ground(sim.x[index], sim.z[index], 6));
+    }
     // Banners with their bearers.
     for (const { b, reg } of banners) {
       const r = sim.regs[reg];
@@ -559,13 +665,17 @@ export const didgori: Builder = async (k) => {
     frame,
     stages: [
       {
-        duration: 16,
+        duration: 24,
         cut: true,
         enter: () => enterMap(0),
         update: (u, s, t) => {
           map.routes.forEach((b) => b.update(t));
           map.flag.visible = false;
-          return orbit(map.at(44.3, 41.6, 0), 34 - 10 * ease(u), s, { start: 0.15, speed: 0.01, height: 0.7 });
+          const zoom = ease((u - 0.2) / 0.72);
+          const target = v(0, 0, 0).lerp(map.battleAt, zoom);
+          const distance = 80 * Math.pow(5 / 80, zoom);
+          map.ring.scale.setScalar(1 + 0.18 * Math.sin(s * 3));
+          return { pos: target.clone().add(v(0, distance * 0.9, distance * 0.45)), target, fov: 42 };
         },
       },
       {
@@ -576,7 +686,7 @@ export const didgori: Builder = async (k) => {
           run(
             1,
             [
-              { to: 0.4, map: true, shadow: 450, cam: (b) => ({ pos: ground(2900 + 1400 * b, 3750 - 600 * b, 480 - 160 * b), target: ground(5250, 2780, 0), fov: 38 }) },
+              { to: 0.4, map: true, shadow: 450, cam: (b) => ({ pos: ground(2500 + 1400 * b, 3800 - 450 * b, 480 - 160 * b), target: ground(4850, 3000, 0), fov: 38 }) },
               {
                 to: 0.72,
                 shadow: 110,
@@ -585,7 +695,7 @@ export const didgori: Builder = async (k) => {
                   return { pos: c.clone().add(v(-70 + 25 * b, 7, -95 + 40 * b)), target: c.clone().add(v(10, 2.5, 0)), fov: 30 };
                 },
               },
-              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(6350 - 150 * b, 4350 - 150 * b, 950), target: ground(5000, 2800, 0), fov: 36 }) },
+              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(5750 - 150 * b, 4250 - 150 * b, 900), target: ground(4500, 3050, 0), fov: 36 }) },
             ],
             u,
             dt,
@@ -614,7 +724,7 @@ export const didgori: Builder = async (k) => {
                   return { pos: p.clone().add(v(-42 + 12 * b, 8, -58 + 8 * b)), target: p.clone().lerp(at("ruse"), 0.6).add(v(0, 3, 0)), fov: 36 };
                 },
               },
-              { to: 1, shadow: 260, map: true, cam: (b) => ({ pos: ground(5420 + 40 * b, 3200, 190), target: ground(5150, 2830, 0), fov: 36 }) },
+              { to: 1, shadow: 260, map: true, cam: (b) => ({ pos: ground(5060 + 40 * b, 3420, 190), target: ground(4760, 3050, 0), fov: 36 }) },
             ],
             u,
             dt,
@@ -629,27 +739,30 @@ export const didgori: Builder = async (k) => {
             3,
             [
               {
-                to: 0.2,
+                to: 0.16,
                 shadow: 120,
                 cam: () => {
+                  // Behind the Georgian lancers, looking down the ridge at the vanguard.
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(48, 5, 18)), target: at("cVan", 3), fov: 30 };
+                  return { pos: c.clone().add(v(43, 5, -21)), target: at("cVan", 3), fov: 30 };
                 },
               },
               {
-                to: 0.5,
+                to: 0.38,
                 shadow: 110,
                 cam: () => {
+                  // Beside the charge (on its right, the north edge of the plateau).
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(-12, 3.5, -98)), target: c.clone().add(v(-38, 2, -42)), fov: 30 };
+                  return { pos: c.clone().add(v(-46, 3.5, -61)), target: c.clone().add(v(-45, 2, -1)), fov: 30 };
                 },
               },
               {
-                to: 0.82,
+                to: 0.8,
                 shadow: 90,
                 cam: (b) => {
+                  // At the clash, low, from the north side of the corridor.
                   const p = clash();
-                  return { pos: p.clone().add(v(18 - 8 * b, 2.6, -92 + 6 * b)), target: p.clone().add(v(-4, 1.8, -38)), fov: 32 };
+                  return { pos: p.clone().add(v(-26 + 8 * b, 2.6, -54 + 6 * b)), target: p.clone().add(v(-6, 1.8, -13)), fov: 32 };
                 },
               },
               {
@@ -673,13 +786,14 @@ export const didgori: Builder = async (k) => {
           run(
             4,
             [
-              { to: 0.3, map: true, shadow: 450, cam: (b) => ({ pos: ground(6200 - 60 * b, 2950, 820), target: ground(4950, 2800, 0), fov: 36 }) },
+              { to: 0.3, map: true, shadow: 450, cam: (b) => ({ pos: ground(5350 - 60 * b, 3850, 780), target: ground(4550, 3100, 0), fov: 36 }) },
               {
                 to: 0.6,
                 shadow: 120,
                 cam: () => {
-                  const c = at("david");
-                  return { pos: c.clone().add(v(70, 12, -40)), target: at("cLeft", 2), fov: 32 };
+                  // From the open ridge, looking north at the forest edge David's riders burst out of.
+                  const c = at("cLeft");
+                  return { pos: c.clone().add(v(38, 5, 28)), target: at("david", 3), fov: 34 };
                 },
               },
               {
@@ -690,7 +804,7 @@ export const didgori: Builder = async (k) => {
                   return { pos: p.clone().add(v(62 - 10 * b, 3, 52)), target: p.clone().add(v(-5, 2, -22)), fov: 32 };
                 },
               },
-              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(5560 - 40 * b, 3420, 430), target: ground(4930, 2820, 0), fov: 36 }) },
+              { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(5000 - 40 * b, 3750, 450), target: ground(4450, 3150, 0), fov: 36 }) },
             ],
             u,
             dt,
@@ -712,7 +826,7 @@ export const didgori: Builder = async (k) => {
                   return { pos: c.clone().add(v(32, 7, -22)), target: c.clone().add(v(-40, 1.5, 18)), fov: 32 };
                 },
               },
-              { to: 0.65, map: true, shadow: 450, cam: (b) => ({ pos: ground(5650 - 100 * b, 3900, 620), target: ground(4550, 3000, 0), fov: 38 }) },
+              { to: 0.65, map: true, shadow: 450, cam: (b) => ({ pos: ground(4900 - 100 * b, 3950, 650), target: ground(3950, 3150, 0), fov: 38 }) },
               {
                 to: 1,
                 shadow: 130,
@@ -740,7 +854,7 @@ export const didgori: Builder = async (k) => {
             6,
             [
               { to: 0.62, shadow: 300, map: true, cam: () => ({ pos: c.clone().add(v(240, 150, 170)), target: c, fov: 36 }) },
-              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(5290 - 20 * b, 2712, 7), target: ground(5200, 2756, 1.5), fov: 34 }) },
+              { to: 1, shadow: 120, cam: (b) => ({ pos: ground(4995 - 20 * b, 2905, 7), target: ground(4890, 2975, 1.5), fov: 34 }) },
             ],
             u,
             dt,
@@ -762,3 +876,5 @@ export const didgori: Builder = async (k) => {
     ],
   };
 };
+
+export const didgori = createDidgori({ camera: "cinematic" });

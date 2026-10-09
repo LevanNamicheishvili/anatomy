@@ -105,6 +105,8 @@ export interface Shot {
 export class BattleSim {
   readonly regs: Regiment[] = [];
   readonly byId = new Map<string, Regiment>();
+  /** Named commanders replace individual crowd instances, never the entire regiment. */
+  readonly featured = new Map<number, string>();
   n = 0;
   // Figures, structure of arrays.
   x: Float32Array;
@@ -215,6 +217,8 @@ export class BattleSim {
   reset(script: StageScript, stage: number) {
     this.r = rng(1121 + stage * 17);
     this.shots = [];
+    this.dust = [];
+    this.time = 0;
     for (const reg of this.regs) {
       const s = script.setup[reg.def.id];
       if (!s) continue;
@@ -252,8 +256,9 @@ export class BattleSim {
         for (let i = reg.first; i < reg.first + reg.count; i++) {
           if (this.r() < s.dead) {
             this.state[i] = ST.dead;
-            this.x[i] = dx + (this.r() - 0.5) * 140;
-            this.z[i] = dz + (this.r() - 0.5) * 110;
+            // The fallen lie where the fighting was: a narrow strip on this ridge.
+            this.x[i] = dx + (this.r() - 0.5) * 100;
+            this.z[i] = dz + (this.r() - 0.5) * 70;
             this.head[i] = this.r() * Math.PI * 2;
             this.frame[i] = 1000;
           }
@@ -586,7 +591,11 @@ export class BattleSim {
       const turn = (cav ? 1.9 : 5) * dt;
       h += Math.max(-turn, Math.min(turn, diff));
       this.head[i] = h;
-      const target = want * Math.max(0, Math.cos(Math.min(Math.PI / 2, Math.abs(diff))));
+      // The height field affects locomotion, not just the drawn feet. Steep terrain
+      // slows both climbing and descending; these coefficients are teaching assumptions.
+      const slope = Math.abs(this.ground.y(this.x[i] + Math.sin(h) * 4, this.z[i] + Math.cos(h) * 4) - this.ground.y(this.x[i], this.z[i])) / 4;
+      const terrainSpeed = Math.max(0.3, 1 / (1 + slope * (cav ? 3 : 1.8)));
+      const target = want * terrainSpeed * Math.max(0, Math.cos(Math.min(Math.PI / 2, Math.abs(diff))));
       const s = this.speed[i];
       const acc = (target > s ? (cav ? 3.2 : 3.5) : cav ? 6 : 7) * dt;
       const ns = s + Math.max(-acc, Math.min(acc, target - s));
@@ -852,7 +861,7 @@ export class BattleSim {
       m[14] = z;
       m[15] = 1;
       const [clip] = this.clipOf[i] ? [this.clipOf[i]!] : this.animFor(i);
-      layers.get(reg.type.id)?.[level].push(m, clip, this.frame[i], this.colors, i * 12);
+      layers.get(this.featured.get(i) ?? reg.type.id)?.[level].push(m, clip, this.frame[i], this.colors, i * 12);
     }
     for (const ls of layers.values()) for (const l of ls) l.end();
   }

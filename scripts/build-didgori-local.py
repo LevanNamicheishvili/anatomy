@@ -14,7 +14,8 @@ import colorsys, concurrent.futures, gzip, json, math, os, random, struct, sys, 
 from PIL import Image, ImageFilter
 
 CACHE = sys.argv[1]
-LON0, LON1, LAT_N, LAT_S = 44.455, 44.59, 41.722, 41.655
+# Window around the memorial (44.508121 E, 41.760839 N), not the village to the south.
+LON0, LON1, LAT_N, LAT_S = 44.445, 44.58, 41.786, 41.719
 STEP_M = 15
 MID = math.radians((LAT_N + LAT_S) / 2)
 W_M = (LON1 - LON0) * 111320 * math.cos(MID)

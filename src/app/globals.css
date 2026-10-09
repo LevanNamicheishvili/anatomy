@@ -374,3 +374,17 @@ body {
   background: rgba(255, 255, 255, 0.93);
   color: #111a18;
 }
+
+/* Readable initial army estimates attached to the battlefield, independent of crowd LOD. */
+.battle-army-label {
+  white-space: pre-line;
+  max-width: 220px;
+  text-align: center;
+  line-height: 1.6;
+  padding: 8px 12px;
+  color: #fff7e9;
+  background: rgb(24 33 32 / 92%);
+  border: 1px solid rgb(232 198 141 / 60%);
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 15%);
+}

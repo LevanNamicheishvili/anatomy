@@ -446,6 +446,26 @@ export class JourneyScene {
     return this._playing;
   }
 
+  private playbackRate = 1;
+
+  zoomBy(factor: number) {
+    if (!this.plan || !Number.isFinite(factor) || factor <= 0) return;
+    this.setPlaying(false);
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const distance = THREE.MathUtils.clamp(offset.length() * factor, 0.35, 50000);
+    this.camera.position.copy(this.controls.target).add(offset.setLength(distance));
+    this.controls.update();
+  }
+
+  refreshView() {
+    this.dirty = true;
+    this.snap = true;
+  }
+
+  setPlaybackRate(rate: number) {
+    if (Number.isFinite(rate)) this.playbackRate = Math.max(0.25, Math.min(2, rate));
+  }
+
   setPlaying(p: boolean) {
     if (!this.plan) return;
     // Pressing play at the very end starts the journey again.
@@ -683,11 +703,11 @@ export class JourneyScene {
       const stage = plan.stages[this.stage];
       const run = this._playing && this.pending === null;
       if (run) {
-        this.stageTime += dt;
-        this.time += dt;
+        this.stageTime += dt * this.playbackRate;
+        this.time += dt * this.playbackRate;
       }
       if (run || this.dirty) {
-        const shot = this.fit(stage.update(Math.min(1, this.stageTime / stage.duration), this.stageTime, this.time, run ? dt : 0));
+        const shot = this.fit(stage.update(Math.min(1, this.stageTime / stage.duration), this.stageTime, this.time, run ? dt * this.playbackRate : 0));
         if (shot.cut && this._playing) this.snap = true;
         const fov = shot.fov ?? 35;
         if (this.camera.fov !== fov && (this._playing || this.snap)) {

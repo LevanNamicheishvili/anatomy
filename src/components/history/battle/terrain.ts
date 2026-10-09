@@ -9,7 +9,7 @@ import type { Ground } from "./sim";
  * and a sky with the morning sun. Scene units are metres: x east, z south, y = height above 1000 m.
  */
 
-const VERSION = "2026-10-08c";
+const VERSION = "2026-10-09-location";
 
 interface LocalMeta {
   width: number;

@@ -135,8 +135,9 @@ interface Tile {
   total: number;
 }
 
-export async function buildForest(k: Kit, field: LocalField, perRecord: number) {
-  const raw = await fetch("/history/didgori-trees.bin.gz?v=2026-10-08c").then((r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+/** `clear`: circles (x, z, radius) kept free of trees — open ground where the armies stand. */
+export async function buildForest(k: Kit, field: LocalField, perRecord: number, clear: [number, number, number][] = []) {
+  const raw = await fetch("/history/didgori-trees.bin.gz?v=2026-10-09-location").then((r) => new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
   const dv = new DataView(raw);
   const count = Math.floor(raw.byteLength / 6);
   const [WM, DM] = field.meta.metres;
@@ -167,6 +168,7 @@ export async function buildForest(k: Kit, field: LocalField, perRecord: number) 
       const x = x0 + (r() - 0.5) * cell * 1.1;
       const z = z0 + (r() - 0.5) * cell * 1.1;
       if (x < 2 || z < 2 || x > field.W - 2 || z > field.D - 2) continue;
+      if (clear.some(([cx, cz, r]) => (x - cx) ** 2 + (z - cz) ** 2 < r * r)) continue;
       const b = Math.floor(z / TILE) * nx + Math.floor(x / TILE);
       bins[b].push(x, z, s0 * (0.75 + r() * 0.5), shade * 0.6 + r() * 0.4);
     }

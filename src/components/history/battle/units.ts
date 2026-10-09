@@ -162,10 +162,11 @@ export interface Look {
   beard?: string;
   /** A rider (true) or a man on foot. */
   mounted: boolean;
+  commander?: { age: number; color: string; trim: string };
 }
 
 const SKIN = ["#c69676", "#b9876a", "#d2a585", "#a97a5c"];
-const MAIL = "#8a9096";
+const MAIL = "#767c82";
 const IRON = "#5d6167";
 const LEATHER = "#4a3424";
 const WOOD = "#7a5838";
@@ -177,7 +178,7 @@ const GOLD = "#c8a24a";
  */
 function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: string) {
   const P = look.mounted ? SEATED : STANDING;
-  const seg = [10, 6, 3][lod];
+  const seg = [look.commander ? 28 : 12, 6, 3][lod];
   const jb = (j: number) => j + jointBase;
   const near = lod === 0;
   // Far away a soldier is a few dozen faces: no hands, feet, neck, mail curtain or second layers.
@@ -270,9 +271,21 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
   // Neck and head.
   if (!far) parts.add(limb(P.neck.clone().add(v(0, -0.04, 0)), P.headC.clone().add(v(0, -0.07, 0)), 0.055, 0.05, seg), skin, jb(J.head), "skin");
   const hc = P.headC;
-  parts.add(blob(hc, v(0.092, 0.112, 0.102), seg, Math.max(4, seg - 2)), skin, jb(J.head), "skin");
+  const head = blob(hc, v(0.092, 0.112, 0.102), seg, Math.max(4, seg - 2));
+  if (near && look.commander) {
+    const position = head.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < position.count; i++) {
+      const y = (position.getY(i) - hc.y) / 0.112;
+      // A tapered jaw and broader cheekbones instead of a spherical face.
+      const taper = y < -0.15 ? 0.78 + 0.22 * (y + 1) / 0.85 : 1;
+      position.setX(i, hc.x + (position.getX(i) - hc.x) * taper);
+    }
+    head.computeVertexNormals();
+  }
+  parts.add(head, skin, jb(J.head), "skin");
   if (lod < 2 && look.beard) parts.add(blob(hc.clone().add(v(0, -0.07, 0.045)), v(0.078, 0.07, 0.065), seg, Math.max(3, seg / 2)), look.beard, jb(J.head), "hair");
-  if (near) parts.add(box(hc.clone().add(v(0, -0.005, 0.1)), v(0.025, 0.05, 0.03)), skin, jb(J.head), "skin");
+  if (near && !look.commander) parts.add(blob(hc.clone().add(v(0, -0.005, 0.1)), v(0.013, 0.025, 0.022), 10, 8), skin, jb(J.head), "skin");
+  if (near && look.commander) commanderDetails(parts, P, look, jointBase, skin);
   const top = hc.y + 0.06;
   if (look.head === "nasal" || look.head === "spiked") {
     const h = look.head === "nasal" ? 0.2 : 0.26;
@@ -386,6 +399,78 @@ function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: 
       parts.add(limb(s0, s0.clone().add(v(0.06, -0.7, -0.32)), 0.024, 0.02, 4), LEATHER, jb(J.pelvis), "leather");
     }
   }
+}
+
+/** Higher resolution details are created only for the four named commanders. */
+function commanderDetails(parts: Parts, P: BodyPoints, look: Look, base: number, skin: string) {
+  const identity = look.commander!;
+  const headJoint = base + J.head;
+  const torsoJoint = base + J.torso;
+  const hc = P.headC;
+  const face = (offset: V3, scale: V3, color: string, mat: "skin" | "eye" | "hair" = "skin") =>
+    parts.add(blob(hc.clone().add(offset), scale, 20, 14), color, headJoint, mat);
+  for (const side of [-1, 1]) {
+    face(v(side * 0.086, -0.005, 0), v(0.012, 0.025, 0.014), skin); // ears
+    // Deep-set eyes under a brow ridge, the upper lid half over the iris — not round, staring eyes.
+    face(v(side * 0.035, 0.039, 0.093), v(0.03, 0.011, 0.014), skin); // brow ridge
+    face(v(side * 0.035, 0.022, 0.093), v(0.014, 0.0058, 0.004), "#b3a28d", "eye");
+    face(v(side * 0.035, 0.0215, 0.0965), v(0.0052, 0.0052, 0.0018), "#3a291c", "eye");
+    face(v(side * 0.035, 0.0215, 0.0982), v(0.0024, 0.0024, 0.0008), "#120f0d", "eye");
+    face(v(side * 0.035, 0.0272, 0.0955), v(0.0155, 0.0042, 0.0052), skin); // upper lid
+    face(v(side * 0.035, 0.0165, 0.0945), v(0.0135, 0.0026, 0.0038), skin); // lower lid
+    face(v(side * 0.036, 0.047, 0.1), v(0.022, 0.0042, 0.0055), look.beard ?? "#33231c", "hair"); // eyebrow
+    face(v(side * 0.049, -0.006, 0.073), v(0.026, 0.016, 0.012), skin); // cheekbones
+    face(v(side * 0.012, -0.019, 0.106), v(0.0085, 0.008, 0.009), skin); // nostril wings
+    if (identity.age >= 45) {
+      parts.add(limb(hc.clone().add(v(side * 0.047, 0.016, 0.098)), hc.clone().add(v(side * 0.06, 0.012, 0.088)), 0.0012, 0.0012, 4), "#8c6251", headJoint, "skin");
+    }
+  }
+  face(v(0, 0.006, 0.099), v(0.0105, 0.03, 0.016), skin); // bridge of the nose
+  face(v(0, -0.016, 0.113), v(0.0125, 0.0095, 0.011), skin); // tip
+  face(v(0, -0.045, 0.097), v(0.021, 0.0045, 0.0055), "#8a5446"); // lips
+  // Individual beard locks break up the silhouette and catch the side light.
+  for (let row = 0; row < 4; row++) for (let col = -4; col <= 4; col++) {
+    const x = col * 0.013;
+    const y = -0.057 - row * 0.012;
+    const z = 0.087 - Math.abs(col) * 0.004 - row * 0.002;
+    face(v(x, y, z), v(0.009, 0.022, 0.009), look.beard ?? "#33231c", "hair");
+  }
+  // Gilded helmet rivets; no invented modern national emblems or ceremonial crown.
+  if (look.head !== "turban") for (let i = 0; i < 16; i++) {
+    const a = i / 16 * Math.PI * 2;
+    parts.add(blob(hc.clone().add(v(Math.sin(a) * 0.117, 0.077, Math.cos(a) * 0.117)), v(0.006, 0.006, 0.006), 8, 6), identity.trim, headJoint, "gold");
+  }
+  // Interlinked mail around the neck, explicit geometry in the hero model.
+  if (look.armour === "mail") for (let row = 0; row < 4; row++) for (let col = 0; col < 30; col++) {
+    const a = (col + (row % 2) * 0.5) / 30 * Math.PI * 2;
+    const radius = 0.087 + row * 0.021;
+    const ring = new THREE.TorusGeometry(0.009, 0.002, 4, 8).rotateX(0.25).rotateY(a);
+    ring.translate(P.neck.x + Math.sin(a) * radius, P.neck.y - 0.025 - row * 0.015, P.neck.z + Math.cos(a) * radius);
+    parts.add(ring, MAIL, torsoJoint, "mail");
+  }
+  // A folded wool/silk mantle, sewn at the shoulders and falling behind the saddle.
+  const cols = 24, rows = 22;
+  const cape = new THREE.PlaneGeometry(1, 1, cols, rows);
+  const cp = cape.attributes.position as THREE.BufferAttribute;
+  const edge: V3[][] = [[], []];
+  for (let row = 0; row <= rows; row++) for (let col = 0; col <= cols; col++) {
+    const t = row / rows, q = col / cols * 2 - 1;
+    const x = q * (0.22 + 0.18 * t);
+    const y = P.neck.y - 0.08 - t * 0.78;
+    const z = P.neck.z - 0.11 - 0.40 * t - 0.025 * Math.cos(q * Math.PI * 5) * Math.sin(t * Math.PI * 0.8);
+    cp.setXYZ(row * (cols + 1) + col, x, y, z);
+    if (col === 0 || col === cols) edge[col === 0 ? 0 : 1].push(v(x, y, z));
+  }
+  cape.computeVertexNormals();
+  const back = cape.clone();
+  const indices = back.index!;
+  for (let i = 0; i < indices.count; i += 3) { const a = indices.getX(i); indices.setX(i, indices.getX(i + 2)); indices.setX(i + 2, a); }
+  back.computeVertexNormals();
+  parts.add(cape, identity.color, torsoJoint, "cloth");
+  parts.add(back, identity.color, torsoJoint, "cloth");
+  for (const points of edge) parts.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 24, 0.007, 6, false), identity.trim, torsoJoint, "gold");
+  for (const side of [-1, 1]) parts.add(blob(P.neck.clone().add(v(side * 0.15, -0.07, 0.07)), v(0.028, 0.028, 0.009), 16, 10), identity.trim, torsoJoint, "gold");
+  parts.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([P.neck.clone().add(v(-0.15, -0.07, 0.09)), P.neck.clone().add(v(0, -0.13, 0.16)), P.neck.clone().add(v(0.15, -0.07, 0.09))]), 24, 0.005, 6), identity.trim, torsoJoint, "gold");
 }
 
 // ---- Horse tack ----------------------------------------------------------------------------------------------

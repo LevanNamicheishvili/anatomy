@@ -277,7 +277,8 @@ export const MAT = {
   cloth: [0, 0.88],
   felt: [0, 0.95],
   leather: [0, 0.68],
-  mail: [0.9, 0.42],
+  // Mail is thousands of small rings: it glints but never mirrors the sky like plate.
+  mail: [0.75, 0.58],
   iron: [0.85, 0.36],
   skin: [0, 0.55],
   hair: [0, 0.8],
