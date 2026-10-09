@@ -76,15 +76,20 @@ function addRim(m: THREE.MeshPhysicalMaterial) {
   return m;
 }
 
-/** Software rendering or an old integrated GPU, by the renderer's name. */
-function isLowPowerGpu(r: THREE.WebGLRenderer) {
+/**
+ * How much the graphics can do, by the renderer's name: "low" — software rendering or an old integrated GPU;
+ * "mid" — other integrated GPUs (Intel UHD/Iris, most school laptops, older Macs) and mid-range phones.
+ */
+function gpuTier(r: THREE.WebGLRenderer): "low" | "mid" | "high" {
   try {
     const gl = r.getContext();
     const ext = gl.getExtension("WEBGL_debug_renderer_info");
     const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    return /swiftshader|llvmpipe|software|basic render|microsoft basic|mesa offscreen|intel\(r\) (hd|gma)|mali-[4t]|adreno \(tm\) [3-5]/i.test(name);
+    if (/swiftshader|llvmpipe|software|basic render|microsoft basic|mesa offscreen|intel\(r\) (hd|gma)|mali-[4t]|adreno \(tm\) [3-5]/i.test(name)) return "low";
+    if (/intel(?!.*\barc\b)|mali-g[0-7]\d\b|adreno \(tm\) 6|powervr/i.test(name)) return "mid";
+    return "high";
   } catch {
-    return false;
+    return "high";
   }
 }
 
@@ -111,6 +116,8 @@ export class Kit {
   noAO = false;
   /** Set by the engine: software or very old graphics — scenes should draw less. */
   lowPower = false;
+  /** Set by the engine: integrated graphics — big scenes should draw somewhat less. */
+  midPower = false;
   /** Height of the ground under x, z (outdoor scenes): the camera is kept above it. */
   ground: ((x: number, z: number) => number) | null = null;
   private normals = new Map<string, THREE.Texture>();
@@ -365,9 +372,14 @@ export class JourneyScene {
   private aoAllowed = true;
   /** Software or very old graphics: no occlusion, no shadows, fewer pixels. */
   private lowPower = false;
+  /** Integrated graphics: full features, fewer pixels and a smaller shadow map. */
+  private midPower = false;
   private onScreen = true;
   private visibility: IntersectionObserver;
-  private slowFrames = 0;
+  /** Seconds spent in slow frames lately (decays while frames are fast). */
+  private slowTime = 0;
+  /** Drawing resolution relative to normal (lowered on slow machines). */
+  private resScale = 1;
   /** Seconds before slow frames count (loading and shader compiling make the first frames slow). */
   private warmup = 3;
 
@@ -378,7 +390,9 @@ export class JourneyScene {
     private builders: Record<string, Builder>,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    this.lowPower = isLowPowerGpu(this.renderer);
+    const tier = gpuTier(this.renderer);
+    this.lowPower = tier === "low";
+    this.midPower = tier === "mid";
     this.aoAllowed = !this.lowPower;
     this.renderer.setPixelRatio(1);
     this.renderer.toneMapping = THREE.AgXToneMapping;
@@ -401,6 +415,7 @@ export class JourneyScene {
     this.fill = fill;
     this.kit = new Kit(overlay);
     this.kit.lowPower = this.lowPower;
+    this.kit.midPower = this.midPower;
     this.hemi = new THREE.HemisphereLight("#ffffff", "#d9e2df", 0.6);
     this.scene.add(this.hemi, key, key.target, fill, this.kit.root);
     this.composer = new EffectComposer(this.renderer);
@@ -547,7 +562,7 @@ export class JourneyScene {
     this.renderer.toneMapping = sun ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
     if (sun?.exposure) this.renderer.toneMappingExposure = sun.exposure;
     // A sharper shadow map for a sun over a wide landscape.
-    const size = sun && !this.lowPower ? 2048 : 1024;
+    const size = sun && !this.lowPower && !this.midPower ? 2048 : 1024;
     if (this.key.shadow.mapSize.x !== size) {
       this.key.shadow.mapSize.set(size, size);
       this.key.shadow.map?.dispose();
@@ -630,8 +645,8 @@ export class JourneyScene {
     if (!w || !h) return;
     // Cap the pixels drawn (big smart-board screens): at most ~2.4 million, never above 1.75× density.
     // Big outdoor scenes (a sun over a landscape) draw a little coarser: far more geometry per pixel.
-    const maxRatio = this.lowPower ? 1 : this.kit.sun ? 1.5 : 1.75;
-    this.renderer.setPixelRatio(Math.max(0.75, Math.min(window.devicePixelRatio, maxRatio, Math.sqrt(2.4e6 / (w * h)))));
+    const maxRatio = this.lowPower ? 1 : this.midPower ? (this.kit.sun ? 1 : 1.25) : this.kit.sun ? 1.5 : 1.75;
+    this.renderer.setPixelRatio(Math.max(0.6, Math.min(window.devicePixelRatio, maxRatio, Math.sqrt(2.4e6 / (w * h))) * this.resScale));
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
@@ -688,7 +703,8 @@ export class JourneyScene {
   private loop = () => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.loop);
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = Math.min(0.5, this.clock.getDelta());
+    const dt = Math.min(0.05, raw);
     const plan = this.plan;
     // Fade through the background when the scene changes.
     if (this.pending !== null) {
@@ -743,25 +759,28 @@ export class JourneyScene {
     plan?.frame?.(this.camera, dt, !!plan && this._playing && this.pending === null);
     // Occlusion needs an opaque background (the composer has none of the page behind it).
     const useAo = this.aoAllowed && !!this.scene.background && !this.kit.noAO;
-    this.warmup -= dt;
+    this.warmup -= raw;
     const counts = this.warmup <= 0 && !!this.plan;
-    if (useAo) {
-      this.composer.render(dt);
-      // Slow machine: after a run of slow frames, drop the occlusion for good.
-      if (counts) this.slowFrames = dt > 1 / 35 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
-      if (this.slowFrames > 90) {
-        this.aoAllowed = false;
-        this.slowFrames = 0;
-        console.info("3D: slow frames — ambient occlusion off");
-      }
-    } else {
-      this.renderer.render(this.scene, this.camera);
-      // Still slow without occlusion: drop shadows too.
-      if (counts && !this.aoAllowed && this.renderer.shadowMap.enabled) {
-        this.slowFrames = dt > 1 / 30 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1);
-        if (this.slowFrames > 90) {
+    if (useAo) this.composer.render(dt);
+    else this.renderer.render(this.scene, this.camera);
+    // Slow machine: after a run of slow frames, step the quality down — occlusion (if this scene uses it),
+    // then shadows, then fewer pixels — and give each step a moment to show its effect.
+    if (counts) {
+      // Measured in real time, so a very slow machine steps down as soon as a fast one would.
+      this.slowTime = raw > 1 / 32 ? this.slowTime + raw : Math.max(0, this.slowTime - raw * 0.5);
+      if (this.slowTime > 2.5) {
+        this.slowTime = 0;
+        this.warmup = 2;
+        if (useAo) {
+          this.aoAllowed = false;
+          console.info("3D: slow frames — ambient occlusion off");
+        } else if (this.renderer.shadowMap.enabled) {
           this.renderer.shadowMap.enabled = false;
           console.info("3D: slow frames — shadows off");
+        } else if (this.resScale > 0.7) {
+          this.resScale = 0.7;
+          this.resize();
+          console.info("3D: slow frames — lower resolution");
         }
       }
     }

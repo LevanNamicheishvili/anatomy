@@ -322,10 +322,11 @@ export interface BattleView {
 
 export const createDidgori = (view: BattleView): Builder => async (k) => {
   const low = k.lowPower;
+  const mid = k.midPower;
   const [terrain, horse, map] = await Promise.all([loadTerrain(k), loadHorse(), campaignMap(k)]);
   const { field, marks } = terrain;
   // The corridor's open ground is kept clear of the odd tree the forest map puts at its edges.
-  const forest = await buildForest(k, field, low ? 3 : 9, CLEARINGS);
+  const forest = await buildForest(k, field, low ? 3 : mid ? 6 : 9, CLEARINGS);
   const battle = new THREE.Group();
   k.root.add(battle);
   battle.add(terrain.group, forest.group);
@@ -337,7 +338,9 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
   const footB = infantryBones(k);
   const types = new Map<string, FigureType>();
   Object.entries(LOOKS).forEach(([id, d], i) => types.set(id, figureType(id, d.look, d.role, d.look.mounted ? horse : null, i)));
-  const units: Unit[] = UNITS.map((u) => (low ? { ...u, n: Math.max(4, Math.round(u.n / 4)), files: Math.max(3, Math.round(u.files / 2)) } : u));
+  // Fewer figures on weaker graphics (a quarter on the weakest, half on integrated GPUs).
+  const thin = low ? 4 : mid ? 2 : 1;
+  const units: Unit[] = UNITS.map((u) => (thin > 1 ? { ...u, n: Math.max(4, Math.round(u.n / thin)), files: Math.max(3, Math.round(u.files / Math.sqrt(thin))) } : u));
   const sim = new BattleSim(field, units, types, cavB, footB);
   const mats = new Map<BoneSet, ReturnType<typeof crowdMaterial>[]>();
   for (const b of [cavB, footB]) mats.set(b, [crowdMaterial(k, b, low ? 2 : 4, !low, low), crowdMaterial(k, b, 2, false, low), crowdMaterial(k, b, 1, false, low)]);
@@ -612,7 +615,7 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
     sky.position.copy(camera.position);
     forest.update(camera, focus, shadowR);
     // Full detail only close to the camera: a melee shot can have hundreds of riders within 100 m.
-    sim.draw(camera, layers, low ? [35, 170] : [60, 380]);
+    sim.draw(camera, layers, low ? [35, 170] : mid ? [45, 280] : [60, 380]);
     waveBanners(performance.now() / 1000);
     armyAnchors.forEach((anchor, side) => {
       let x = 0, z = 0, weight = 0;

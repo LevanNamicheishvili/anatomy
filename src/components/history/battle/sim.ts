@@ -70,6 +70,9 @@ const SPEED = {
 };
 
 interface Regiment {
+  /** sin/cos of `face`, refreshed each step. */
+  fs: number;
+  fc: number;
   def: RegimentDef;
   type: FigureType;
   first: number;
@@ -139,11 +142,25 @@ export class BattleSim {
   /** Galloping horses kick up dust here (x, z, strength). */
   dust: number[] = [];
 
-  // Spatial hash.
-  private cell = 6;
-  private hsize = 1 << 15;
-  private headH = new Int32Array(this.hsize);
-  private next: Int32Array;
+  // Neighbours: a uniform grid over the living figures, filled by counting sort each step. Every cell is a
+  // contiguous run of `order`; unlike a hashed grid, no figure from a far-away cell lands in a neighbour's list.
+  private gcell = 6;
+  private gx0 = 0;
+  private gz0 = 0;
+  private gw = 0;
+  private gh = 0;
+  private cellStart = new Int32Array(1);
+  private order: Int32Array;
+  private cellOf: Int32Array;
+  /** Side of each figure (0 Georgian, 1 coalition). */
+  private sideOf: Uint8Array;
+  /** Speed factor from the slope under each figure, and the slope's pitch along its heading (for drawing
+   * horses on hills); both refreshed when it looks round. */
+  private terrain: Float32Array;
+  private pitch: Float32Array;
+  /** Slot position written by slotPos (no allocation per call). */
+  private sx = 0;
+  private sz = 0;
 
   constructor(
     readonly ground: Ground,
@@ -174,12 +191,16 @@ export class BattleSim {
     this.colors = new Float32Array(n * 12);
     this.mounted = new Uint8Array(n);
     this.archer = new Uint8Array(n);
-    this.next = new Int32Array(n);
+    this.order = new Int32Array(n);
+    this.cellOf = new Int32Array(n);
+    this.sideOf = new Uint8Array(n);
+    this.terrain = new Float32Array(n).fill(1);
+    this.pitch = new Float32Array(n);
     let i = 0;
     const c = new THREE.Color();
     defs.forEach((d, ri) => {
       const type = types.get(d.type)!;
-      const reg: Regiment = { def: d, type, first: i, count: d.n, cx: 0, cz: 0, face: 0, cmd: null, pathI: 0, alive: d.n, mx: 0, mz: 0, hidden: false, routed: false, shooting: false, pose: null, ext: [10, 10] };
+      const reg: Regiment = { fs: 0, fc: 1, def: d, type, first: i, count: d.n, cx: 0, cz: 0, face: 0, cmd: null, pathI: 0, alive: d.n, mx: 0, mz: 0, hidden: false, routed: false, shooting: false, pose: null, ext: [10, 10] };
       this.regs.push(reg);
       this.byId.set(d.id, reg);
       const ranks = Math.ceil(d.n / d.files);
@@ -192,6 +213,7 @@ export class BattleSim {
         this.slotX[i] = off * d.gap[0] + (this.r() - 0.5) * loose;
         this.slotZ[i] = -rank * d.gap[1] + (ranks - 1) * d.gap[1] * 0.5 + (this.r() - 0.5) * loose;
         this.reg[i] = ri;
+        this.sideOf[i] = d.side;
         this.seed[i] = this.r();
         this.mounted[i] = type.mounted ? 1 : 0;
         this.archer[i] = type.role === "archer" || type.role === "bowman" ? 1 : 0;
@@ -219,6 +241,8 @@ export class BattleSim {
     this.shots = [];
     this.dust = [];
     this.time = 0;
+    this.terrain.fill(1);
+    this.pitch.fill(0);
     for (const reg of this.regs) {
       const s = script.setup[reg.def.id];
       if (!s) continue;
@@ -314,13 +338,14 @@ export class BattleSim {
       while (k < list.length && list[k].at <= u) this.apply(reg, list[k++]);
       this.cmdIndex.set(reg.def.id, k);
     }
-    let dt = dtScreen * script.timeScale;
-    // Small steps keep the steering stable.
-    while (dt > 1e-4) {
-      const h = Math.min(dt, 1 / 30);
-      this.tick(h, script);
-      dt -= h;
-    }
+    // One step per frame (two when a frame covers more than 0.1 s of battle), each up to 1/8 s: a slow frame
+    // takes bigger steps rather than more of
+    // them (more steps would make the next frame slower still). Beyond that the battle simply runs slower.
+    const dt = dtScreen * script.timeScale;
+    const steps = dt > 0.1 ? 2 : 1;
+    const h = Math.min(1 / 8, dt / steps);
+    for (let k = 0; k < steps; k++) this.tick(h, script);
+    for (const reg of this.regs) this.measure(reg);
   }
 
   private apply(reg: Regiment, c: Cmd) {
@@ -389,40 +414,93 @@ export class BattleSim {
     return this.state[i] !== ST.dead && this.state[i] !== ST.gone;
   }
 
-  private hashKey(x: number, z: number) {
-    return ((Math.floor(x / this.cell) * 73856093) ^ (Math.floor(z / this.cell) * 19349663)) & (this.hsize - 1);
-  }
-
-  private buildHash() {
-    this.headH.fill(-1);
-    for (let i = 0; i < this.n; i++) {
-      if (!this.isAlive(i)) continue;
-      const k = this.hashKey(this.x[i], this.z[i]);
-      this.next[i] = this.headH[k];
-      this.headH[k] = i;
+  private buildGrid() {
+    const n = this.n;
+    const st = this.state;
+    let minX = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxZ = -Infinity;
+    for (let i = 0; i < n; i++) {
+      if (st[i] === ST.dead || st[i] === ST.gone) continue;
+      const x = this.x[i];
+      const z = this.z[i];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z;
+      if (z > maxZ) maxZ = z;
+    }
+    if (minX === Infinity) {
+      this.gw = this.gh = 0;
+      return;
+    }
+    // 6 m cells; coarser when the armies are spread over the whole valley (pursuit).
+    let c = 6;
+    let gw = Math.floor((maxX - minX) / c) + 1;
+    let gh = Math.floor((maxZ - minZ) / c) + 1;
+    while (gw * gh > 200000) {
+      c *= 1.5;
+      gw = Math.floor((maxX - minX) / c) + 1;
+      gh = Math.floor((maxZ - minZ) / c) + 1;
+    }
+    this.gcell = c;
+    this.gx0 = minX;
+    this.gz0 = minZ;
+    this.gw = gw;
+    this.gh = gh;
+    const cells = gw * gh;
+    if (this.cellStart.length < cells + 1) this.cellStart = new Int32Array(Math.max(cells + 1, this.cellStart.length * 2));
+    const cs = this.cellStart;
+    cs.fill(0, 0, cells + 1);
+    const cellOf = this.cellOf;
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      if (st[i] === ST.dead || st[i] === ST.gone) continue;
+      const k = Math.floor((this.x[i] - minX) / c) + Math.floor((this.z[i] - minZ) / c) * gw;
+      cellOf[i] = k;
+      cs[k]++;
+      total++;
+    }
+    let sum = 0;
+    for (let k = 0; k < cells; k++) {
+      sum += cs[k];
+      cs[k] = sum;
+    }
+    cs[cells] = total;
+    // Placing backwards leaves cs[k] at the start of cell k; cs[k + 1] is its end.
+    const order = this.order;
+    for (let i = n - 1; i >= 0; i--) {
+      if (st[i] === ST.dead || st[i] === ST.gone) continue;
+      order[--cs[cellOf[i]]] = i;
     }
   }
 
   /** Nearest living enemy of figure i within r metres (or -1). */
   private nearestEnemy(i: number, r: number, routedOnly = false) {
-    const side = this.regs[this.reg[i]].def.side;
+    if (!this.gw) return -1;
+    const side = this.sideOf[i];
     const x = this.x[i];
     const z = this.z[i];
     let best = -1;
     let bd = r * r;
-    const c = this.cell;
-    const n = Math.ceil(r / c);
-    const visited = new Set<number>();
-    for (let gx = -n; gx <= n; gx++)
-      for (let gz = -n; gz <= n; gz++) {
-        const k = this.hashKey(x + gx * c, z + gz * c);
-        if (visited.has(k)) continue;
-        visited.add(k);
-        for (let j = this.headH[k]; j >= 0; j = this.next[j]) {
-          const rj = this.regs[this.reg[j]];
-          if (rj.def.side === side || rj.hidden) continue;
-          if (routedOnly && this.state[j] !== ST.rout) continue;
-          const d = (this.x[j] - x) ** 2 + (this.z[j] - z) ** 2;
+    const c = this.gcell;
+    const i0 = Math.max(0, Math.floor((x - r - this.gx0) / c));
+    const i1 = Math.min(this.gw - 1, Math.floor((x + r - this.gx0) / c));
+    const j0 = Math.max(0, Math.floor((z - r - this.gz0) / c));
+    const j1 = Math.min(this.gh - 1, Math.floor((z + r - this.gz0) / c));
+    const cs = this.cellStart;
+    const order = this.order;
+    for (let gj = j0; gj <= j1; gj++)
+      for (let gi = i0; gi <= i1; gi++) {
+        const k = gi + gj * this.gw;
+        for (let p = cs[k], e = cs[k + 1]; p < e; p++) {
+          const j = order[p];
+          if (this.sideOf[j] === side) continue;
+          if (routedOnly ? this.state[j] !== ST.rout : this.state[j] === ST.dead || this.state[j] === ST.gone) continue;
+          if (this.regs[this.reg[j]].hidden) continue;
+          const dx = this.x[j] - x;
+          const dz = this.z[j] - z;
+          const d = dx * dx + dz * dz;
           if (d < bd) {
             bd = d;
             best = j;
@@ -434,9 +512,13 @@ export class BattleSim {
 
   private tick(dt: number, script: StageScript) {
     this.time += dt;
-    this.buildHash();
+    this.buildGrid();
     // Regiment anchors.
-    for (const reg of this.regs) this.moveAnchor(reg, dt);
+    for (const reg of this.regs) {
+      this.moveAnchor(reg, dt);
+      reg.fs = Math.sin(reg.face);
+      reg.fc = Math.cos(reg.face);
+    }
     const n = this.n;
     const W = this.ground.W;
     const D = this.ground.D;
@@ -491,15 +573,15 @@ export class BattleSim {
               this.shots.push({ from: i, to: t });
             }
           } else {
-            const f = this.slotPos(reg, i);
-            tx = f[0];
-            tz = f[1];
+            this.slotPos(reg, i);
+            tx = this.sx;
+            tz = this.sz;
             want = this.dist(i, tx, tz) > 3 ? sp.gallop * 0.8 : 0;
           }
         } else {
-          const f = this.slotPos(reg, i);
-          tx = f[0];
-          tz = f[1];
+          this.slotPos(reg, i);
+          tx = this.sx;
+          tz = this.sz;
           const d = this.dist(i, tx, tz);
           const g = this.regGait(reg);
           // Catch up a little faster than the regiment moves; slow down on arrival.
@@ -528,7 +610,7 @@ export class BattleSim {
         if (t >= 0) {
           const dx = this.x[i] - this.x[t];
           const dz = this.z[i] - this.z[t];
-          const d = Math.hypot(dx, dz) || 1;
+          const d = Math.sqrt(dx * dx + dz * dz) || 1;
           const contact = (cav ? 1.4 : 0.7) + (this.mounted[t] ? 1.3 : 0.6);
           tx = this.x[t] + (dx / d) * contact;
           tz = this.z[t] + (dz / d) * contact;
@@ -581,7 +663,7 @@ export class BattleSim {
       // Turn and accelerate like an animal: horses turn before they can speed up.
       const dx = tx - this.x[i];
       const dz = tz - this.z[i];
-      const dl = Math.hypot(dx, dz);
+      const dl = Math.sqrt(dx * dx + dz * dz);
       let h = this.head[i];
       let wantHead = h;
       if (want > 0.15 && dl > 0.3) wantHead = Math.atan2(dx, dz);
@@ -593,52 +675,84 @@ export class BattleSim {
       this.head[i] = h;
       // The height field affects locomotion, not just the drawn feet. Steep terrain
       // slows both climbing and descending; these coefficients are teaching assumptions.
-      const slope = Math.abs(this.ground.y(this.x[i] + Math.sin(h) * 4, this.z[i] + Math.cos(h) * 4) - this.ground.y(this.x[i], this.z[i])) / 4;
-      const terrainSpeed = Math.max(0.3, 1 / (1 + slope * (cav ? 3 : 1.8)));
+      // (Looked up a few times a second, not every step: the ground changes slowly under a rider.)
+      const sh = Math.sin(h);
+      const ch = Math.cos(h);
+      if (looks) {
+        const rise = this.ground.y(this.x[i] + sh * 2, this.z[i] + ch * 2) - this.ground.y(this.x[i] - sh * 2, this.z[i] - ch * 2);
+        this.terrain[i] = Math.max(0.3, 1 / (1 + (Math.abs(rise) / 4) * (cav ? 3 : 1.8)));
+        this.pitch[i] = Math.atan(rise / 4);
+      }
+      const terrainSpeed = this.terrain[i];
       const target = want * terrainSpeed * Math.max(0, Math.cos(Math.min(Math.PI / 2, Math.abs(diff))));
       const s = this.speed[i];
       const acc = (target > s ? (cav ? 3.2 : 3.5) : cav ? 6 : 7) * dt;
       const ns = s + Math.max(-acc, Math.min(acc, target - s));
       this.speed[i] = ns;
-      this.x[i] = Math.min(W - 5, Math.max(5, this.x[i] + Math.sin(h) * ns * dt));
-      this.z[i] = Math.min(D - 5, Math.max(5, this.z[i] + Math.cos(h) * ns * dt));
-      if (cav && ns > 6 && this.seed[i] < 0.5 && Math.random() < dt * 4) this.dust.push(this.x[i] - Math.sin(h) * 1.5, this.z[i] - Math.cos(h) * 1.5, ns);
+      this.x[i] = Math.min(W - 5, Math.max(5, this.x[i] + sh * ns * dt));
+      this.z[i] = Math.min(D - 5, Math.max(5, this.z[i] + ch * ns * dt));
+      if (cav && ns > 6 && this.seed[i] < 0.5 && Math.random() < dt * 4) this.dust.push(this.x[i] - sh * 1.5, this.z[i] - ch * 1.5, ns);
     }
     this.separate();
-    for (const reg of this.regs) this.measure(reg);
   }
 
-  /** Keep figures from walking through each other. */
+  /** Keep figures from walking through each other: pairs within a cell and with four of its neighbours. */
   private separate() {
-    const c = this.cell;
-    for (let i = 0; i < this.n; i++) {
-      if (!this.isAlive(i)) continue;
-      const ri = this.mounted[i] ? 1.15 : 0.42;
-      const x = this.x[i];
-      const z = this.z[i];
-      for (let gx = -1; gx <= 1; gx++)
-        for (let gz = -1; gz <= 1; gz++) {
-          const k = this.hashKey(x + gx * c, z + gz * c);
-          for (let j = this.headH[k]; j >= 0; j = this.next[j]) {
-            if (j <= i) continue;
-            const rr = ri + (this.mounted[j] ? 1.15 : 0.42);
-            const dx = this.x[j] - this.x[i];
-            const dz = this.z[j] - this.z[i];
-            const d2 = dx * dx + dz * dz;
-            if (d2 >= rr * rr || d2 < 1e-6) continue;
-            const d = Math.sqrt(d2);
-            const push = ((rr - d) / d) * 0.5;
-            this.x[i] -= dx * push;
-            this.z[i] -= dz * push;
-            this.x[j] += dx * push;
-            this.z[j] += dz * push;
-          }
+    const gw = this.gw;
+    const gh = this.gh;
+    if (!gw) return;
+    const cs = this.cellStart;
+    const total = cs[gw * gh];
+    // `order` is sorted by cell, so walking it visits only the occupied cells.
+    for (let a0 = 0; a0 < total; ) {
+      const k = this.cellOf[this.order[a0]];
+      const a1 = cs[k + 1];
+      const gi = k % gw;
+      const gj = (k - gi) / gw;
+      {
+        this.pairs(a0, a1, a0, a1, true);
+        if (gi + 1 < gw) this.pairs(a0, a1, cs[k + 1], cs[k + 2], false);
+        if (gj + 1 < gh) {
+          const b = k + gw;
+          if (gi > 0) this.pairs(a0, a1, cs[b - 1], cs[b], false);
+          this.pairs(a0, a1, cs[b], cs[b + 1], false);
+          if (gi + 1 < gw) this.pairs(a0, a1, cs[b + 1], cs[b + 2], false);
         }
+      }
+      a0 = a1;
+    }
+  }
+
+  /** Push apart overlapping figures between two runs of `order` (within one run when `same`). */
+  private pairs(a0: number, a1: number, b0: number, b1: number, same: boolean) {
+    if (b0 === b1) return;
+    const order = this.order;
+    const X = this.x;
+    const Z = this.z;
+    for (let p = a0; p < a1; p++) {
+      const i = order[p];
+      const ri = this.mounted[i] ? 1.15 : 0.42;
+      for (let q = same ? p + 1 : b0; q < b1; q++) {
+        const j = order[q];
+        const rr = ri + (this.mounted[j] ? 1.15 : 0.42);
+        const dx = X[j] - X[i];
+        const dz = Z[j] - Z[i];
+        const d2 = dx * dx + dz * dz;
+        if (d2 >= rr * rr || d2 < 1e-6) continue;
+        const d = Math.sqrt(d2);
+        const push = ((rr - d) / d) * 0.5;
+        X[i] -= dx * push;
+        Z[i] -= dz * push;
+        X[j] += dx * push;
+        Z[j] += dz * push;
+      }
     }
   }
 
   private dist(i: number, x: number, z: number) {
-    return Math.hypot(x - this.x[i], z - this.z[i]);
+    const dx = x - this.x[i];
+    const dz = z - this.z[i];
+    return Math.sqrt(dx * dx + dz * dz);
   }
 
   private randomAlive(reg: Regiment) {
@@ -649,12 +763,14 @@ export class BattleSim {
     return -1;
   }
 
-  private slotPos(reg: Regiment, i: number): XZ {
-    const sf = Math.sin(reg.face);
-    const cf = Math.cos(reg.face);
+  /** Figure i's place in its regiment's formation, into (sx, sz). */
+  private slotPos(reg: Regiment, i: number) {
+    const sf = reg.fs;
+    const cf = reg.fc;
     const ox = this.slotX[i];
     const oz = this.slotZ[i];
-    return [reg.cx + ox * cf + oz * sf, reg.cz - ox * sf + oz * cf];
+    this.sx = reg.cx + ox * cf + oz * sf;
+    this.sz = reg.cz - ox * sf + oz * cf;
   }
 
   private regGait(reg: Regiment): Gait {
@@ -757,29 +873,36 @@ export class BattleSim {
   // ---- Drawing ----
 
   /** The clip each figure shows now, and how fast it plays. */
-  private animFor(i: number): [ClipInfo, number] {
+  /** Clip-playback rate chosen by the last animFor call. */
+  private rate = 1;
+  private pick(clip: ClipInfo, rate: number) {
+    this.rate = rate;
+    return clip;
+  }
+
+  private animFor(i: number): ClipInfo {
     const reg = this.regs[this.reg[i]];
     const st = this.state[i];
     const s = this.speed[i];
     if (this.mounted[i]) {
       const b = this.cav;
       const lancer = reg.type.role === "lancer";
-      if (st === ST.dead) return [b.clip("death"), 0];
-      if (st === ST.melee) return s < 1.2 ? [b.clip("melee"), 1] : [b.clip("melee_walk"), s / 1.8];
-      if (s < 0.25) return [b.clip(reg.shooting && !lancer ? "idle_shoot" : lancer ? "idle_l" : "idle_b"), 1];
-      if (s < 3.2) return [b.clip(reg.pose === "humble" ? "humble" : lancer ? "walk_l" : "walk_b"), Math.max(0.5, s / 1.8)];
+      if (st === ST.dead) return this.pick(b.clip("death"), 0);
+      if (st === ST.melee) return s < 1.2 ? this.pick(b.clip("melee"), 1) : this.pick(b.clip("melee_walk"), s / 1.8);
+      if (s < 0.25) return this.pick(b.clip(reg.shooting && !lancer ? "idle_shoot" : lancer ? "idle_l" : "idle_b"), 1);
+      if (s < 3.2) return this.pick(b.clip(reg.pose === "humble" ? "humble" : lancer ? "walk_l" : "walk_b"), Math.max(0.5, s / 1.8));
       const rate = Math.min(1.25, Math.max(0.55, s / 11));
       const cmd = reg.cmd?.do;
-      if (lancer) return [b.clip(cmd === "pursue" || st === ST.rout || cmd === "move" ? "gallop_s" : "gallop_l"), rate];
-      return [b.clip((reg.shooting || cmd === "pursue") && st !== ST.rout ? "gallop_shoot" : "gallop_b"), rate];
+      if (lancer) return this.pick(b.clip(cmd === "pursue" || st === ST.rout || cmd === "move" ? "gallop_s" : "gallop_l"), rate);
+      return this.pick(b.clip((reg.shooting || cmd === "pursue") && st !== ST.rout ? "gallop_shoot" : "gallop_b"), rate);
     }
     const b = this.foot;
     const bow = reg.type.role === "bowman";
-    if (st === ST.dead) return [b.clip("death"), 0];
-    if (st === ST.melee) return [b.clip(bow ? "melee_sw" : "melee_sp"), 1];
-    if (s < 0.2) return [b.clip(bow ? (reg.shooting ? "shoot_bw" : "idle_bw") : "idle_sp"), 1];
-    if (s < 2.2) return [b.clip(bow ? "walk_bw" : "walk_sp"), Math.max(0.5, s / 1.4)];
-    return [b.clip(bow ? "run_bw" : "run_sp"), Math.max(0.6, s / 3.6)];
+    if (st === ST.dead) return this.pick(b.clip("death"), 0);
+    if (st === ST.melee) return this.pick(b.clip(bow ? "melee_sw" : "melee_sp"), 1);
+    if (s < 0.2) return this.pick(b.clip(bow ? (reg.shooting ? "shoot_bw" : "idle_bw") : "idle_sp"), 1);
+    if (s < 2.2) return this.pick(b.clip(bow ? "walk_bw" : "walk_sp"), Math.max(0.5, s / 1.4));
+    return this.pick(b.clip(bow ? "run_bw" : "run_sp"), Math.max(0.6, s / 3.6));
   }
 
   /** Advance the animation clocks (screen time). */
@@ -788,7 +911,8 @@ export class BattleSim {
     for (let i = 0; i < this.n; i++) {
       const st = this.state[i];
       if (st === ST.gone) continue;
-      const [clip, rate] = this.animFor(i);
+      const clip = this.animFor(i);
+      const rate = this.rate;
       if (this.clipOf[i] !== clip) {
         if (clip.loop === false) this.frame[i] = st === ST.dead && this.frame[i] >= 999 ? 1000 : 0;
         this.clipOf[i] = clip;
@@ -839,7 +963,7 @@ export class BattleSim {
       let sp = 0;
       let cp = 1;
       if (this.mounted[i] && st !== ST.dead) {
-        const pitch = Math.atan2(g.y(x + s * 1.1, z + c * 1.1) - g.y(x - s * 1.1, z - c * 1.1), 2.2);
+        const pitch = this.pitch[i];
         sp = Math.sin(-pitch);
         cp = Math.cos(-pitch);
       }
@@ -860,7 +984,7 @@ export class BattleSim {
       m[13] = y;
       m[14] = z;
       m[15] = 1;
-      const [clip] = this.clipOf[i] ? [this.clipOf[i]!] : this.animFor(i);
+      const clip = this.clipOf[i] ?? this.animFor(i);
       layers.get(this.featured.get(i) ?? reg.type.id)?.[level].push(m, clip, this.frame[i], this.colors, i * 12);
     }
     for (const ls of layers.values()) for (const l of ls) l.end();
