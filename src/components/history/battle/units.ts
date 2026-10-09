@@ -178,7 +178,7 @@ const GOLD = "#c8a24a";
  */
 function person(parts: Parts, look: Look, lod: number, jointBase: number, skin: string) {
   const P = look.mounted ? SEATED : STANDING;
-  const seg = [look.commander ? 28 : 12, 6, 3][lod];
+  const seg = [look.commander ? 28 : 8, 5, 3][lod];
   const jb = (j: number) => j + jointBase;
   const near = lod === 0;
   // Far away a soldier is a few dozen faces: no hands, feet, neck, mail curtain or second layers.

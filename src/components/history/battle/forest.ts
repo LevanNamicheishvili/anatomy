@@ -206,7 +206,7 @@ export async function buildForest(k: Kit, field: LocalField, perRecord: number, 
       crown.setMatrixAt(i, m4);
       trunk?.setMatrixAt(i, m4);
       // Beech (fresh green), hornbeam and oak (darker) mixed.
-      col.setHSL(0.22 + r() * 0.08, 0.32 + r() * 0.18, 0.2 + shade * 0.14);
+      col.setHSL(0.22 + r() * 0.08, 0.34 + r() * 0.18, 0.27 + shade * 0.16);
       crown.setColorAt(i, col);
     }
     const tx = (b % nx) * TILE + TILE / 2;
@@ -229,12 +229,12 @@ export async function buildForest(k: Kit, field: LocalField, perRecord: number, 
     const cp = camera.position;
     for (const t of tiles) {
       const d = Math.hypot(t.cx - cp.x, t.cz - cp.z);
-      const near = d < 1500;
+      const near = d < 1100;
       const frac = near ? 1 : d < 3200 ? 0.6 : d < 6000 ? 0.4 : 0.25;
       t.crown.geometry = near ? hi.crown : lo.crown;
       t.crown.count = Math.max(1, Math.floor(t.total * frac));
       if (t.trunk) {
-        t.trunk.visible = d < 1100;
+        t.trunk.visible = d < 800;
         t.trunk.count = t.crown.count;
       }
       t.crown.castShadow = !!focus && Math.hypot(t.cx - focus.x, t.cz - focus.z) < shadowR + TILE * 0.75;

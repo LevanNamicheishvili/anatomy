@@ -493,6 +493,7 @@ export class JourneyScene {
     plan.stages[i].enter?.();
     this.applyAtmosphere();
     this.fitShadows();
+    this.resize();
     if (cut) this.snap = true;
     this.dirty = true;
     this.cb.onStage(i);
@@ -628,7 +629,8 @@ export class JourneyScene {
     const h = this.canvas.clientHeight;
     if (!w || !h) return;
     // Cap the pixels drawn (big smart-board screens): at most ~2.4 million, never above 1.75× density.
-    const maxRatio = this.lowPower ? 1 : 1.75;
+    // Big outdoor scenes (a sun over a landscape) draw a little coarser: far more geometry per pixel.
+    const maxRatio = this.lowPower ? 1 : this.kit.sun ? 1.5 : 1.75;
     this.renderer.setPixelRatio(Math.max(0.75, Math.min(window.devicePixelRatio, maxRatio, Math.sqrt(2.4e6 / (w * h)))));
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);

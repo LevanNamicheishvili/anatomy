@@ -115,7 +115,8 @@ export async function loadTerrain(k: Kit) {
   }
   for (const t of [sat, detail, detailNor, wsat]) k.track(t);
 
-  const field = new LocalField(meta, new Int16Array(buf), k.lowPower ? 3 : 1);
+  // A 30 m mesh (15 m data): the relief reads the same, at a quarter of the triangles.
+  const field = new LocalField(meta, new Int16Array(buf), k.lowPower ? 3 : 2);
   const group = new THREE.Group();
 
   // ---- The close-up ground ----
@@ -183,7 +184,7 @@ export async function loadTerrain(k: Kit) {
         `#include <map_fragment>
         {
           // The mosaic is dark: lift it to a summer meadow, then add the photo's grain near the camera.
-          vec3 c = diffuseColor.rgb * 1.6;
+          vec3 c = diffuseColor.rgb * 1.85;
           float l = dot(c, vec3(0.3, 0.55, 0.15));
           c = mix(vec3(l), c, 1.25);
           float dist = length(vWPos - cameraPosition);

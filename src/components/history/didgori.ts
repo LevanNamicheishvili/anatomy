@@ -350,7 +350,8 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
       id,
       t.lods.map((g, lod) => {
         const l = new CrowdLayer(k, g, ms[lod], cap);
-        l.mesh.castShadow = lod < 2;
+        // Only the nearest figures cast shadows (the shadow map covers a few hundred metres anyway).
+        l.mesh.castShadow = lod === 0;
         l.mesh.receiveShadow = lod === 0;
         battle.add(l.mesh);
         return l;
@@ -515,7 +516,7 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
     k.clip = [1, 40000];
     k.noAO = true;
     k.ground = (x, z) => field.y(x, z);
-    k.sun = { dir: SUN, focus, radius: shadowR, color: "#ffe2bf", intensity: 3.4, ambient: 0.22, exposure: 1.15 };
+    k.sun = { dir: SUN, focus, radius: shadowR, color: "#ffe2bf", intensity: 3.2, ambient: 0.48, exposure: 1.32 };
     // Playing on from the previous stage continues the fight; a jump sets the stage up afresh.
     const natural = lastStage === stage - 1 && lastU > 0.97 && stage > 1;
     if (natural) sim.begin(SCRIPTS[stage], stage);
@@ -532,9 +533,10 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
     showMap = true;
     battle.visible = false;
     map.group.visible = true;
-    k.mood("#c8d4da", 80, 300, true);
+    // A sea-coloured sky behind the relief model (not the meadow photo), no screen-space occlusion.
+    k.mood("#9fbfd3", 60, 260, false, "#9fbfd3");
     k.clip = null;
-    k.noAO = false;
+    k.noAO = true;
     k.sun = null;
     k.ground = null;
     lastStage = stage;
@@ -609,7 +611,8 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
     }
     sky.position.copy(camera.position);
     forest.update(camera, focus, shadowR);
-    sim.draw(camera, layers, low ? [35, 170] : [110, 620]);
+    // Full detail only close to the camera: a melee shot can have hundreds of riders within 100 m.
+    sim.draw(camera, layers, low ? [35, 170] : [60, 380]);
     waveBanners(performance.now() / 1000);
     armyAnchors.forEach((anchor, side) => {
       let x = 0, z = 0, weight = 0;
@@ -693,7 +696,8 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
                 shadow: 110,
                 cam: (b) => {
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(-70 + 25 * b, 7, -95 + 40 * b)), target: c.clone().add(v(10, 2.5, 0)), fov: 30 };
+                  // From the south-east, with the morning sun behind the camera (not into it).
+                  return { pos: c.clone().add(v(52 - 12 * b, 7, 72 - 20 * b)), target: c.clone().add(v(-12, 2.5, -6)), fov: 30 };
                 },
               },
               { to: 1, map: true, shadow: 450, cam: (b) => ({ pos: ground(5750 - 150 * b, 4250 - 150 * b, 900), target: ground(4500, 3050, 0), fov: 36 }) },

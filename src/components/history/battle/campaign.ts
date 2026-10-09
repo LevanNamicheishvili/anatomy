@@ -47,8 +47,16 @@ export async function campaignMap(k: Kit) {
   for (let i = 0; i < p.count; i++) p.setY(i, Math.max(0, h[i]) * 0.0009);
   geo.computeVertexNormals();
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(geo, k.material({ map: sat, roughness: 0.95, clearcoat: 0 })));
-  const sea = new THREE.Mesh(k.track(new THREE.PlaneGeometry(SIZE * 1.6, SIZE * 1.4).rotateX(-Math.PI / 2)), k.material({ color: "#2f6f95", roughness: 0.1, clearcoat: 1 }));
+  // The relief is lit by its own normals; it casts no shadows (long shadow streaks fell across the sea).
+  const land = new THREE.Mesh(geo, k.material({ map: sat, roughness: 0.95, clearcoat: 0 }));
+  land.userData.noShadowFit = true;
+  land.castShadow = false;
+  land.receiveShadow = false;
+  g.add(land);
+  const sea = new THREE.Mesh(k.track(new THREE.PlaneGeometry(SIZE * 4, SIZE * 3).rotateX(-Math.PI / 2)), k.material({ color: "#3d7aa0", roughness: 0.35, clearcoat: 0.4 }));
+  sea.userData.noShadowFit = true;
+  sea.castShadow = false;
+  sea.receiveShadow = false;
   sea.position.y = 0.02;
   g.add(sea);
   const at = (lon: number, lat: number, lift = 0.5) => {
