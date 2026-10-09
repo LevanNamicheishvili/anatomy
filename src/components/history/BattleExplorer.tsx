@@ -155,10 +155,10 @@ export function BattleExplorer() {
             <button type="button" aria-pressed={portrait} onClick={() => { setPortrait(true); viewRef.current.portrait = true; sceneRef.current?.refreshView(); }} className={cn("rounded px-3 py-2", portrait && "bg-white/20")}>სახის ახლო ხედი</button>
             <button type="button" onClick={clearCommander} className="flex items-center gap-1 rounded px-3 py-2"><X className="size-3" />ბრძოლაზე დაბრუნება</button>
           </div>}
-          {!commander && stage !== 0 && stage !== 7 && <div className="pointer-events-none absolute right-3 top-40 space-y-1 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm">
+          {!commander && stage !== 0 && stage !== 7 && <div className="pointer-events-none absolute right-3 top-40 space-y-1 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm max-md:hidden">
             <p className="text-[#a92e26]">საქართველო · {ARMY_TOTALS.georgia.count}</p><p className="text-[#2b3a6b]">კოალიცია · {ARMY_TOTALS.coalition.count}*</p><p className="text-[10px] text-[#66736f]">*რაოდენობა სადავოა; საწყისი შეფასებები</p>
           </div>}
-          <div className="pointer-events-none absolute bottom-16 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs text-[#33413e]">
+          <div className="pointer-events-none absolute bottom-16 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs text-[#33413e] max-md:hidden">
             <span className="text-[#a92e26]">● საქართველო</span> · <span className="text-[#2b3a6b]">● კოალიცია</span>
             <p className="mt-1">პაუზაზე: გადაათრიე ხედის მოსაბრუნებლად; გაადიდე ბორბლით.</p>
           </div>

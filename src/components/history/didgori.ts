@@ -112,7 +112,8 @@ const PAVILION: XZ = [4615, 3178];
 
 /** Open ground of the ridge corridor where the armies stand (x, z, radius). */
 const CLEARINGS: [number, number, number][] = [
-  [5200, 2830, 170],
+  [5200, 2830, 200],
+  [5020, 2800, 80],
   [4960, 2950, 110],
   [4780, 3040, 100],
   [4620, 3130, 100],
@@ -753,7 +754,7 @@ export const createDidgori = (view: BattleView): Builder => async (k) => {
                 cam: () => {
                   // Beside the charge (on its right, the north edge of the plateau).
                   const c = at("gHeavy");
-                  return { pos: c.clone().add(v(-46, 3.5, -61)), target: c.clone().add(v(-45, 2, -1)), fov: 30 };
+                  return { pos: c.clone().add(v(-34, 3.5, -46)), target: c.clone().add(v(-42, 2, 0)), fov: 32 };
                 },
               },
               {
