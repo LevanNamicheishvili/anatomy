@@ -74,7 +74,12 @@ console.log("rest box", box.min.toArray().map((x) => x.toFixed(3)), box.max.toAr
 // Head direction: centroid of Eye vertices.
 const eye = new THREE.Vector3();
 let ne = 0;
-for (const p of prims) if (p.name.startsWith("Eye")) for (const v of p.P) (eye.add(v), ne++);
+for (const p of prims)
+  if (p.name.startsWith("Eye"))
+    for (const v of p.P) {
+      eye.add(v);
+      ne++;
+    }
 eye.divideScalar(ne);
 const ctr = box.getCenter(new THREE.Vector3());
 console.log("eye", eye.toArray().map((x) => x.toFixed(3)), "centre", ctr.toArray().map((x) => x.toFixed(3)));
@@ -87,7 +92,12 @@ const fAxis = axes.reduce((a, b) => (Math.abs(fwd.dot(b)) > Math.abs(fwd.dot(a))
 // Up: hooves are the lowest part. Use Hooves centroid relative to centre.
 const hoof = new THREE.Vector3();
 let nh = 0;
-for (const p of prims) if (p.name === "Hooves") for (const v of p.P) (hoof.add(v), nh++);
+for (const p of prims)
+  if (p.name === "Hooves")
+    for (const v of p.P) {
+      hoof.add(v);
+      nh++;
+    }
 hoof.divideScalar(nh);
 const down = hoof.clone().sub(ctr);
 const uAxis = axes.reduce((a, b) => (Math.abs(down.dot(b)) > Math.abs(down.dot(a)) ? b : a)).clone();
@@ -286,7 +296,6 @@ const meta = { joints: usedList.length, jointNames: usedList.map((j) => joints[j
   for (const f of [0, Math.floor(d.frames / 2), d.frames - 1]) {
     const o = ((d.row + f) * usedList.length + attach) * 12;
     const m = mats.slice(o, o + 12);
-    const sp = [-0.12, 1.55, -0.12].map((_, i) => 0);
     const p = [0, 1.55, -0.12];
     const q = [0, 1, 2].map((r) => m[r * 4] * p[0] + m[r * 4 + 1] * p[1] + m[r * 4 + 2] * p[2] + m[r * 4 + 3]);
     const up = [0, 1, 2].map((r) => m[r * 4 + 1]);
@@ -305,7 +314,10 @@ let offset = 0;
 function add(name, arr) {
   const buf = Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength);
   const pad = (4 - (offset % 4)) % 4;
-  if (pad) (parts.push(Buffer.alloc(pad)), (offset += pad));
+  if (pad) {
+    parts.push(Buffer.alloc(pad));
+    offset += pad;
+  }
   meta.arrays[name] = { offset, length: arr.length };
   parts.push(buf);
   offset += buf.byteLength;
