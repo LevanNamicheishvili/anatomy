@@ -48,10 +48,12 @@ ${GLSL_NOISE}
 void main() {
   vec2 q = (vP - uCenter) / uRadius;
   float d = length(q);
-  float churn = fbm2(vP * 2.2 + vec2(uTime * 0.25, -uTime * 0.4));
-  float heat = clamp((1.15 - d) * (0.75 + 0.5 * churn) * uStrength, 0.0, 1.0);
+  float churn = fbm2(vP * 2.2 + vec2(uTime * 0.45, -uTime * 0.7) + fbm2(vP * 1.1 - uTime * 0.2) * 1.5);
+  float pulse = 0.92 + 0.14 * sin(uTime * 2.3 + churn * 6.0);
+  float heat = clamp((1.2 - d) * (0.8 + 0.6 * churn) * uStrength * pulse, 0.0, 1.0);
   vec3 col = mix(vec3(0.45, 0.04, 0.0), vec3(1.0, 0.35, 0.02), smoothstep(0.1, 0.55, heat));
-  col = mix(col, vec3(1.0, 0.9, 0.45), smoothstep(0.65, 1.0, heat));
+  col = mix(col, vec3(1.0, 0.93, 0.55), smoothstep(0.55, 0.95, heat));
+  col *= 1.0 + 0.25 * smoothstep(0.7, 1.0, heat);
   float a = smoothstep(1.25, 0.85, d);
   gl_FragColor = vec4(col, a);
   #include <colorspace_fragment>
@@ -80,11 +82,12 @@ void main() {
   // A hot channel stays open in the middle; the edges and the old parts crust over first.
   float cool = age * (1.0 - vent) * (0.45 + 0.55 * abs(vUv.y - 0.5) * 2.0);
   float flow = fbm2(vec2(along * 26.0 - uTime * 0.7, vUv.y * 3.0));
-  float crack = 1.0 - smoothstep(0.0, 0.07, abs(fbm2(vec2(along * 40.0, vUv.y * 5.0 + 2.0)) - 0.5));
+  float crack = 1.0 - smoothstep(0.0, 0.1, abs(fbm2(vec2(along * 40.0, vUv.y * 5.0 + 2.0)) - 0.5));
+  crack = max(crack, 1.0 - smoothstep(0.0, 0.06, abs(fbm2(vec2(along * 70.0 + 9.0, vUv.y * 9.0)) - 0.5)));
   vec3 hot = mix(vec3(1.0, 0.32, 0.02), vec3(1.0, 0.82, 0.3), flow);
   vec3 crust = mix(vec3(0.07, 0.06, 0.06), vec3(0.18, 0.14, 0.13), flow);
   vec3 col = mix(hot, crust, smoothstep(0.15, 0.85, cool));
-  col = mix(col, hot, crack * cool * 0.9);
+  col = mix(col, hot * 1.15, crack * cool);
   float edge = smoothstep(0.0, 0.18, vUv.y) * smoothstep(1.0, 0.82, vUv.y);
   col *= 0.75 + 0.25 * edge;
   gl_FragColor = vec4(col, 1.0);
@@ -383,13 +386,13 @@ export class VolcanoScene {
     const bombMat = new THREE.MeshBasicMaterial({ color: "#ffffff" });
     this.bombs = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.085, 0), bombMat, 70);
     this.bombs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(70 * 3).fill(1), 3);
-    this.ash = new ParticleCloud(520, { soft: 1, order: 3 });
+    this.ash = new ParticleCloud(820, { soft: 1, order: 3 });
     this.embers = new ParticleCloud(220, { soft: 0.45, additive: true, order: 4 });
-    this.crest = new ParticleCloud(180, { soft: 0.55, order: 5 });
+    this.crest = new ParticleCloud(320, { soft: 0.55, order: 5 });
     for (let i = 0; i < 70; i++) this.bombP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.5 });
-    for (let i = 0; i < 520; i++) this.ashP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 7 });
+    for (let i = 0; i < 820; i++) this.ashP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 7 });
     for (let i = 0; i < 220; i++) this.emberP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.2 });
-    for (let i = 0; i < 180; i++) this.crestP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 9, life: 0 });
+    for (let i = 0; i < 320; i++) this.crestP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 9, life: 0 });
     this.craterLight.position.set(VX, PEAK + 0.6, FZ + 1.2);
     this.groups.eruption.add(this.bombs, this.ash.points, this.embers.points, this.craterLight);
     this.scene.add(this.crest.points);
@@ -516,14 +519,14 @@ export class VolcanoScene {
         const width = Math.max(0.28, 0.85 * Math.sqrt(d / d0));
         const inland = side > 0 && c > COAST ? Math.max(0, 1 - (c - COAST) / 2.2) : 1;
         const fade = side < 0 ? Math.max(0, 1 - (QX - c) / 18) : 1;
-        const amp = 0.17 * grow * inland * fade * Math.min(1, age * 2);
+        const amp = 0.21 * grow * inland * fade * Math.min(1, age * 2);
         // In shallow water the front steepens and the back stretches: the wave leans forward.
         const steep = Math.min(1, Math.max(0, (grow - 1.15) / 1.3));
         const xi = (x - c) * side;
         const w = xi > 0 ? width * (1 - 0.65 * steep) : width * (1 + 0.6 * steep);
         h += amp * Math.exp(-((xi / w) ** 2));
         // Toward the coast a trough runs ahead of the crest: the sea first draws back from the shore.
-        if (side > 0) h -= amp * 0.55 * Math.exp(-(((xi - width * 1.7) / (width * 0.9)) ** 2));
+        if (side > 0) h -= amp * 0.95 * Math.exp(-(((xi - width * 1.7) / (width * 0.9)) ** 2));
       }
       return h;
     };
@@ -599,7 +602,7 @@ export class VolcanoScene {
       this.embers.set(i, e.p, 0.22 * (1 - k * 0.5), 0.9 * (1 - k), this.c.setRGB(1, 0.55 - 0.35 * k, 0.12 * (1 - k)));
     });
     // Ash column: a fast jet, then buoyant rise, then the umbrella cloud spreads and drifts with the wind.
-    const top = PEAK + 2;
+    const top = PEAK + 2.6;
     this.ashP.forEach((a, i) => {
       a.life += dt;
       if (a.life < 0) return this.ash.hide(i);
@@ -616,7 +619,8 @@ export class VolcanoScene {
       } else {
         // Umbrella: stops rising (neutral buoyancy) and spreads sideways, wind pushes it right.
         a.v.y *= 1 - 2.5 * dt;
-        a.v.x += (Math.sign(a.v.x || 1) * 0.5 + 0.35) * dt;
+        a.v.x += (Math.sign(a.v.x || 1) * 0.85 + 0.35) * dt;
+        a.v.y += (Math.random() - 0.5) * 0.6 * dt;
       }
       a.v.z += (Math.random() - 0.5) * 0.4 * dt;
       a.p.addScaledVector(a.v, dt);
@@ -624,7 +628,7 @@ export class VolcanoScene {
       const k = a.age / 7.5;
       // Lit orange from below near the vent, grey and lighter higher up.
       this.c.copy(this.ashLit).lerp(this.ashLow, Math.min(1, h / 1.2)).lerp(this.ashHigh, Math.min(1, Math.max(0, h - 1) / 3));
-      this.ash.set(i, a.p, 0.6 + Math.min(2.8, h * 0.5 + a.age * 0.3), 0.62 * Math.min(1, a.age * 4) * (1 - k * k), this.c);
+      this.ash.set(i, a.p, 0.7 + Math.min(3.6, h * 0.6 + a.age * 0.38), 0.74 * Math.min(1, a.age * 4) * (1 - k * k), this.c);
     });
     this.ash.commit();
     this.embers.commit();
@@ -636,7 +640,7 @@ export class VolcanoScene {
 
   /** White water thrown off the steepening crest of the tsunami. */
   private updateCrest(dt: number, x: number, y: number, steep: number) {
-    let spawn = this.step === "tsunami" && steep > 0.25 ? Math.ceil(steep * 4) : 0;
+    let spawn = this.step === "tsunami" && steep > 0.15 ? Math.ceil(steep * 8) : 0;
     this.crestP.forEach((p, i) => {
       p.age += dt;
       if (p.age > p.life && spawn > 0) {
@@ -649,7 +653,7 @@ export class VolcanoScene {
       if (p.age > p.life) return this.crest.hide(i);
       p.v.y -= 6 * dt;
       p.p.addScaledVector(p.v, dt);
-      this.crest.set(i, p.p, 0.12 + 0.12 * (p.age / p.life), 0.9 * (1 - p.age / p.life), this.c.set("#f4f8fb"));
+      this.crest.set(i, p.p, 0.14 + 0.2 * (p.age / p.life), 0.95 * (1 - p.age / p.life), this.c.set("#f4f8fb"));
     });
     this.crest.commit();
   }

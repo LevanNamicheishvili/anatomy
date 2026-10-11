@@ -63,7 +63,7 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
     const start = performance.now();
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const tick = () => {
-      const k = reduce ? 1 : Math.min(1, (performance.now() - start) / 3400);
+      const k = reduce ? 1 : Math.min(1, (performance.now() - start) / 3000);
       setAnim(k);
       if (k < 1) frame.current = requestAnimationFrame(tick);
     };
@@ -76,12 +76,13 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   const thick = kind === "avalanche" ? 4 + input.snow / 7 : kind === "mudflow" ? 12 : 16;
   const go = res.triggered;
   // Stage 1 (0–18%): cracks open at the head. Stage 2: the mass starts slowly, speeds up, then stops.
-  const crack = go ? Math.min(1, anim / 0.18) : 0;
-  const x = go ? Math.max(0, (anim - 0.15) / 0.85) : 0;
-  const m = x * x * (3 - 2 * x);
+  const crack = go ? Math.min(1, anim / 0.11) : 0;
+  const x = go ? Math.max(0, (anim - 0.1) / 0.9) : 0;
+  // Snappier release: the mass breaks away fast once the cracks are through.
+  const m = 1 - Math.pow(1 - x * x * (3 - 2 * x), 1.6);
   const reach = g.len * (1 - u2) + (kind === "landslide" ? 30 : kind === "mudflow" ? 110 : 140);
   // Mudflow comes in surges: the front jerks forward in pulses.
-  const surge = kind === "mudflow" && go ? 4 * Math.sin(anim * 34) * Math.sin(m * Math.PI) : 0;
+  const surge = kind === "mudflow" && go ? 7 * Math.sin(anim * 34) * Math.sin(m * Math.PI) : 0;
   const travel = go ? m * reach + surge : 0;
   const shake = !go && ran && anim < 1 ? Math.sin(anim * 60) * 1.6 * (1 - anim) : 0;
   const steps = 40;
@@ -141,7 +142,7 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   // Debris: clods, boulders or snow blocks riding in the mass, bouncing and tumbling; some run out ahead.
   const debris =
     go && m > 0.01
-      ? Array.from({ length: kind === "mudflow" ? 30 : 24 }, (_, i) => {
+      ? Array.from({ length: kind === "mudflow" ? 50 : kind === "avalanche" ? 44 : 40 }, (_, i) => {
           const a = hash01(i, 1);
           const b = hash01(i, 2);
           const c = hash01(i, 3);
@@ -164,18 +165,18 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   // Avalanche powder cloud: snow dust thrown up by the front, billowing and growing as it runs.
   const powder =
     kind === "avalanche" && go && m > 0.05
-      ? Array.from({ length: 14 }, (_, i) => {
-          const back = i * 9 * (0.4 + m);
+      ? Array.from({ length: 24 }, (_, i) => {
+          const back = i * 6.5 * (0.4 + m);
           const p = g.along(g.len * u2 + travel * 1.45 - back, 0);
           const r = (8 + i * 2.2 + hash01(i, 5) * 8) * Math.min(1, m * 1.8) * (anim < 1 ? 1 : 1.25);
-          return { x: p.x + Math.sin(anim * 9 + i) * 2, y: p.y - r * (0.55 + 0.25 * hash01(i, 6)) - thick, r, o: (0.88 - i * 0.035) * (anim < 1 ? 1 : 0.55) };
+          return { x: p.x + Math.sin(anim * 9 + i) * 2, y: p.y - r * (0.55 + 0.25 * hash01(i, 6)) - thick, r, o: (0.92 - i * 0.025) * (anim < 1 ? 1 : 0.55) };
         })
       : [];
 
   // Mud splashes thrown off the snout.
   const splash =
     kind === "mudflow" && go && m > 0.05 && m < 0.98
-      ? Array.from({ length: 10 }, (_, i) => {
+      ? Array.from({ length: 20 }, (_, i) => {
           const ph = (anim * 6 + hash01(i, 7)) % 1;
           return { x: front.x + ph * (6 + hash01(i, 8) * 10), y: front.y - Math.sin(ph * Math.PI) * (6 + hash01(i, 9) * 8), r: 1 + hash01(i, 10) * 1.4 };
         })
@@ -195,12 +196,12 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
               <stop offset="1" stopColor="#5e3b1c" />
             </linearGradient>
             <linearGradient id="mud" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#8a7864" />
+              <stop offset="0" stopColor="#7d6a55" />
               <stop offset="0.6" stopColor="#6b5a48" />
-              <stop offset="1" stopColor="#4a3c30" />
+              <stop offset="1" stopColor="#3b2e22" />
             </linearGradient>
             <filter id="powder" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3.2" />
+              <feGaussianBlur stdDeviation="4.2" />
             </filter>
           </defs>
           {/* Rain or snow */}

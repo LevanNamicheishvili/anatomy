@@ -111,11 +111,13 @@ void main() {
     q.y -= max(0.0, q.y) * 0.45; // the foam patch is dragged downstream
     float d = length(q) / max(0.01, rr);
     float churn = fbm2(p * 2.2 + vec2(float(i) * 7.3, -uTime * 1.6));
-    foam += smoothstep(1.15, 0.0, d) * smoothstep(0.28, 0.62, churn + (1.0 - d) * 0.45);
+    foam += smoothstep(1.4, 0.0, d) * smoothstep(0.24, 0.58, churn + (1.0 - d) * 0.55);
+    // A bright boil ring where the plunging water resurfaces.
+    foam += 0.55 * smoothstep(0.22, 0.0, abs(d - 0.6)) * smoothstep(0.3, 0.7, churn);
   }
   float streaks = smoothstep(0.62, 0.8, fbm2(vec2(p.x * 3.0, p.y * 0.6 - uTime * 0.9 * uFlow)));
-  foam = clamp(foam + streaks * 0.35, 0.0, 1.0);
-  col = mix(col, vec3(0.93, 0.96, 0.98), foam * 0.92);
+  foam = clamp(foam + streaks * 0.45, 0.0, 1.0);
+  col = mix(col, vec3(0.95, 0.97, 0.99), foam * 0.97);
   gl_FragColor = vec4(col, 0.86 + foam * 0.12);
   #include <colorspace_fragment>
 }`;
@@ -190,7 +192,7 @@ export class WaterfallScene {
     // Water: the stream above the first fall, then one pool / bench per tier.
     const foam = [0, 1, 2].map((i) => {
       const f = this.falls[i];
-      return f ? new THREE.Vector3(0, f.landZ, f.poolR) : new THREE.Vector3(999, 999, 0.01);
+      return f ? new THREE.Vector3(0, f.landZ, f.poolR * 1.2) : new THREE.Vector3(999, 999, 0.01);
     });
     this.poolMat = new THREE.ShaderMaterial({
       vertexShader: POOL_VERT,
@@ -217,9 +219,9 @@ export class WaterfallScene {
     // Particles. Each fall gets a share by its size.
     const flow = preset.flow;
     this.drops = new ParticleCloud(Math.round(220 + 160 * flow), { soft: 0.2, order: 3 });
-    this.spray = new ParticleCloud(Math.round(240 + 260 * flow), { soft: 0.5, order: 4 });
-    this.mist = new ParticleCloud(Math.round(80 + 110 * flow), { soft: 1, order: 5 });
-    this.foam = new ParticleCloud(220, { soft: 0.7, order: 2 });
+    this.spray = new ParticleCloud(Math.round(380 + 420 * flow), { soft: 0.5, order: 4 });
+    this.mist = new ParticleCloud(Math.round(140 + 180 * flow), { soft: 1, order: 5 });
+    this.foam = new ParticleCloud(420, { soft: 0.7, order: 2 });
     const mk = (n: number, life: number): P[] =>
       Array.from({ length: n }, (_, i) => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: life * (0.6 + 0.8 * hash01(i, 3)), fall: this.pickFall(hash01(i, 7)), size: 0.5 + hash01(i, 9), seed: hash01(i, 11) }));
     this.dropP = mk(this.drops.count, 1);
@@ -378,7 +380,7 @@ export class WaterfallScene {
     const pr = this.preset;
     const width = (f === this.falls[0] ? this.upstreamHalf : pr.halfValley) * 2 + 1.2;
     const depth = 1.6 + f.lipZ - f.face;
-    const thick = 0.95;
+    const thick = 1.25;
     const lip = f.lipZ - f.face;
     const geo = new THREE.BoxGeometry(width, thick, depth, 36, 4, 10);
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
@@ -397,9 +399,9 @@ export class WaterfallScene {
       const recede = lip * (0.15 + 0.85 * smooth(f.width * 0.35 / (width / 2), 1, side)) + 0.25 * side;
       const zz = -depth / 2 + u * (depth - recede);
       // The underside is ragged where blocks have already broken off.
-      const yy = y < 0 ? y - 0.18 * Math.max(0, fbm(x * 2.1, f.face + 4, 2)) * (1 - side) : y;
+      const yy = y < 0 ? y - 0.34 * Math.max(0, fbm(x * 2.1, f.face + 4, 2)) * (1 - side) : y;
       pos.setXYZ(i, x + 0.05 * n, yy + 0.08 * n, zz + (u > 0.99 ? 0.16 * fbm(x * 1.1, f.face, 3) : 0.05 * n));
-      c.copy(cap).lerp(dark, Math.max(0, 0.25 + 0.5 * n) * (y < 0 ? 1.3 : 0.7));
+      c.copy(cap).lerp(dark, Math.max(0, 0.25 + 0.5 * n) * (y < 0 ? 1.75 : 0.7));
       c.toArray(colors, i * 3);
     }
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
@@ -521,12 +523,12 @@ export class WaterfallScene {
     } else if (kind === "spray") {
       p.p.set(across * 1.15, f.bottom + 0.15, f.landZ + (r(2) - 0.5) * 0.6);
       const a = r(3) * Math.PI * 2;
-      const sp = 1 + r(4) * 2.4 * (0.6 + this.preset.flow * 0.6);
-      p.v.set(Math.cos(a) * sp * 0.8, 1.4 + r(5) * 3.2, Math.abs(Math.sin(a)) * sp * 0.9 - 0.3);
+      const sp = 1.2 + r(4) * 3 * (0.6 + this.preset.flow * 0.6);
+      p.v.set(Math.cos(a) * sp * 0.9, 1.8 + r(5) * 4, Math.abs(Math.sin(a)) * sp * 0.9 - 0.3);
       p.life = 0.6 + r(6) * 0.8;
     } else if (kind === "mist") {
       p.p.set(across * 1.3, f.bottom + 0.3 + r(2) * 0.5, f.landZ + (r(3) - 0.3) * 1.2);
-      p.v.set((r(4) - 0.5) * 0.7, 0.35 + r(5) * 0.7, 0.25 + r(6) * 0.6);
+      p.v.set((r(4) - 0.5) * 1.1, 0.5 + r(5) * 0.9, 0.3 + r(6) * 0.8);
       p.life = 3 + r(7) * 2.5;
     } else {
       const a = r(2) * Math.PI * 2;
@@ -560,7 +562,7 @@ export class WaterfallScene {
       p.v.multiplyScalar(1 - 0.6 * dt);
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      this.spray.set(i, p.p, 0.1 + 0.18 * p.size, 0.6 * (1 - k), this.white);
+      this.spray.set(i, p.p, 0.12 + 0.26 * p.size, 0.78 * (1 - k), this.white);
     });
     // Mist: tiny droplets rise in the air pushed out by the fall, drift downstream and evaporate.
     this.mistP.forEach((p, i) => {
@@ -570,7 +572,7 @@ export class WaterfallScene {
       p.v.y *= 1 - 0.25 * dt;
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      const a = 0.16 * Math.sin(Math.PI * Math.min(1, k * 1.4 + 0.05)) * (0.5 + this.preset.flow * 0.6);
+      const a = 0.27 * Math.sin(Math.PI * Math.min(1, k * 1.4 + 0.05)) * (0.5 + this.preset.flow * 0.6);
       const f = this.falls[p.fall];
       this.mist.set(i, p.p, (0.8 + 3 * k * (0.6 + p.size * 0.6)) * (0.45 + f.width * 0.18), Math.max(0, a), this.mistC);
     });
@@ -582,7 +584,7 @@ export class WaterfallScene {
       p.v.x *= 1 - 0.8 * dt;
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      this.foam.set(i, p.p, 0.22 + 0.3 * p.size, 0.8 * (1 - k), this.tmpC.copy(this.foamC));
+      this.foam.set(i, p.p, 0.28 + 0.4 * p.size, 0.92 * (1 - k * k), this.tmpC.copy(this.foamC));
     });
     this.drops.commit();
     this.spray.commit();
