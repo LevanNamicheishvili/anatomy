@@ -48,6 +48,7 @@ export default async function AdminPage() {
           title="ახალი განაცხადები"
           description={pending?.length ? `${pending.length} განაცხადი ელოდება განხილვას` : "ახალი განაცხადი არ არის"}
         />
+        {pending.length === 0 && <p className="px-5 py-8 text-center text-sm text-[#66736f]">ახალი განაცხადი არ არის.</p>}
         <ul className="divide-y divide-[#e2e7e5]">
           {(pending ?? []).map((r) => (
             <li key={r.id} className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,1fr)_auto]">

@@ -48,6 +48,30 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Portal tokens — the same palette the pages already use, named once so primitives stop repeating hex.
+ * Usage: text-ink, text-copy, text-mute, text-faint, bg-page, bg-subtle, border-line, border-line-strong, bg-brand…
+ */
+@theme {
+  --color-ink: #111a18;
+  --color-copy: #33413e;
+  --color-mute: #66736f;
+  --color-faint: #97a29e;
+  --color-line: #e2e7e5;
+  --color-line-strong: #d5dcd9;
+  --color-page: #f4f6f5;
+  --color-subtle: #f5f7f6;
+  --color-chip: #eef2f0;
+  --color-brand: #0f8a74;
+  --color-brand-strong: #0c7563;
+  --color-brand-soft: #e6f3ef;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdf3f2;
+  --shadow-card: 0 1px 2px rgba(17, 26, 24, 0.04);
+  --shadow-card-hover: 0 14px 32px -18px rgba(17, 26, 24, 0.28);
+  --shadow-panel: 0 4px 18px -6px rgba(17, 26, 24, 0.22);
+}
+
 :root {
   --background: #f4f6f5;
   --foreground: #20242b;
@@ -135,6 +159,30 @@
     font-family: var(--font-heading);
     letter-spacing: 0.005em;
     font-synthesis-weight: none;
+    text-wrap: balance;
+  }
+  h1 {
+    line-height: 1.25;
+  }
+  h2,
+  h3 {
+    line-height: 1.35;
+  }
+  p,
+  li {
+    text-wrap: pretty;
+  }
+  /* One visible keyboard focus ring everywhere; controls with their own ring (outline-none) keep it. */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  input[type="range"] {
+    accent-color: var(--color-brand);
   }
 }
 /* The atlas itself is a fixed full-viewport studio; other pages (e.g. /qr) scroll normally. */

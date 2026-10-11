@@ -14,8 +14,8 @@ export default async function PasswordPage() {
 
   const form = (
     <Card className="w-full max-w-md p-6 sm:p-8">
-      <h1 className="text-2xl font-semibold">{user.mustChangePassword ? "შექმენი საკუთარი პაროლი" : "პაროლის შეცვლა"}</h1>
-      <p className="mt-2 text-[15px] leading-7 text-[#66736f]">
+      <h1 className="text-2xl">{user.mustChangePassword ? "შექმენი საკუთარი პაროლი" : "პაროლის შეცვლა"}</h1>
+      <p className="mt-2 text-base leading-7 text-[#66736f]">
         {user.mustChangePassword
           ? `გამარჯობა, ${user.fullName}! დროებითი პაროლი შეცვალე ისეთით, რომელსაც მხოლოდ შენ გეცოდინება.`
           : "ახალი პაროლი ძველის ნაცვლად იმოქმედებს."}

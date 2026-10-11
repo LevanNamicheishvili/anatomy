@@ -38,7 +38,7 @@ export default async function QrPage() {
               <ArrowLeft className="size-4" />
               {t.title}
             </Link>
-            <h1 className="mt-2 text-2xl font-semibold">{t.qrPageTitle}</h1>
+            <h1 className="mt-2 text-2xl sm:text-3xl">{t.qrPageTitle}</h1>
             <p className="mt-2 max-w-2xl text-[15px] leading-7 text-[#33413e]">{t.qrPageLead}</p>
           </div>
           <PrintButton label={t.printQr} />
@@ -68,13 +68,13 @@ export default async function QrPage() {
               <div className="mt-3 flex gap-2 print:hidden">
                 <Link
                   href={`/topic/${topic.slug}`}
-                  className="inline-flex h-9 items-center rounded-md border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                  className="inline-flex h-10 items-center rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
                 >
                   {t.openTopic}
                 </Link>
                 <a
                   href={`/qr/${topic.slug}`}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
                 >
                   <Download className="size-4" />
                   SVG

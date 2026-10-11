@@ -23,14 +23,17 @@ const initials = (name: string) =>
 /** Signed-in portal page frame: top bar with navigation, school and user menu. */
 export function PortalShell({ user, active, children }: { user: CurrentUser; active?: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
-      <header className="sticky top-0 z-20 border-b border-[#e2e7e5] bg-white [view-transition-name:site-header]">
+    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        გადასვლა შინაარსზე
+      </a>
+      <header className="sticky top-0 z-20 border-b border-line bg-white [view-transition-name:site-header]">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
-          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3 rounded-lg">
             <Logo />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-[15px] font-heading">{PORTAL_NAME}</span>
-              <span className="block truncate text-xs text-[#66736f]">{user.school ? `${user.school.name} · ${user.school.city}` : "სისტემის მართვა"}</span>
+              <span className="block truncate text-xs text-mute">{user.school ? `${user.school.name} · ${user.school.city}` : "სისტემის მართვა"}</span>
             </span>
           </Link>
 
@@ -46,31 +49,33 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
               {initials(user.fullName)}
             </span>
             <form action={signOut}>
-              <button type="submit" title="გასვლა" aria-label="გასვლა" className="flex size-9 items-center justify-center rounded-md text-[#33413e] hover:bg-[#eef2f0]">
+              <button type="submit" title="გასვლა" aria-label="გასვლა" className="flex size-10 items-center justify-center rounded-lg text-copy transition-colors hover:bg-chip">
                 <LogOut className="size-[18px]" />
               </button>
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 sm:px-4" aria-label="ნავიგაცია">
+        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden" aria-label="ნავიგაცია">
           {navFor(user).map((item) => (
             <Link
               key={item.href}
               href={item.href}
               aria-current={active === item.href ? "page" : undefined}
-              className={`relative px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
-                active === item.href ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]"
+              className={`relative flex min-h-11 items-center px-3 text-sm whitespace-nowrap transition-colors ${
+                active === item.href ? "font-semibold text-ink" : "text-mute hover:text-ink"
               }`}
             >
               {item.label}
-              {active === item.href && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#0f8a74]" />}
+              {active === item.href && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand" />}
             </Link>
           ))}
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
-      <footer className="border-t border-[#e2e7e5]">
-        <div className="mx-auto max-w-6xl px-4 py-5 text-xs leading-5 text-[#66736f] sm:px-6">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        {children}
+      </main>
+      <footer className="border-t border-line">
+        <div className="mx-auto max-w-6xl px-4 py-5 text-xs leading-5 text-mute sm:px-6">
           მხოლოდ საგანმანათლებლო დაწესებულებებისთვის · 3D მოდელები: BodyParts3D, © The Database Center for Life Science, CC BY 4.0 · ფილტვები: Z-Anatomy, CC BY-SA 4.0
         </div>
       </footer>

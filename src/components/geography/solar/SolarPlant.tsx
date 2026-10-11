@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Sun, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { SEASONS, solarReading, trackerTilt } from "./solar-math";
 import { SolarScene } from "./SolarScene";
 
@@ -13,16 +13,10 @@ import { SolarScene } from "./SolarScene";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("ka-GE");
 
+const COLOR = "#2f6fb0";
+
 function Slider({ label, value, min, max, onChange, disabled }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
-  return (
-    <label className={cn("block", disabled && "opacity-50")}>
-      <span className="flex justify-between text-sm">
-        <span className="font-semibold">{label}</span>
-        <span className="tabular-nums text-[#33413e]">{value}°</span>
-      </span>
-      <input type="range" min={min} max={max} value={value} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-    </label>
-  );
+  return <LabeledSlider label={label} value={value} display={`${value}°`} min={min} max={max} onChange={onChange} disabled={disabled} color={COLOR} />;
 }
 
 export function SolarPlant() {
@@ -62,8 +56,8 @@ export function SolarPlant() {
   }, [elevation, tilt, share]);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="მზის ელექტროსადგური" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold">
           <span data-at="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
@@ -95,8 +89,8 @@ export function SolarPlant() {
         <div className="flex flex-col gap-4">
           <Slider label="მზის სიმაღლე შუადღისას" value={elevation} min={0} max={90} onChange={setElevation} />
           <Slider label="პანელის დახრა" value={tilt} min={0} max={90} onChange={setTilt} disabled={tracker} />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={tracker} onChange={(e) => setTracker(e.target.checked)} className="size-4 accent-[#2f6fb0]" />
+          <label className="flex min-h-10 cursor-pointer items-center gap-3 text-sm">
+            <input type="checkbox" checked={tracker} onChange={(e) => setTracker(e.target.checked)} className="size-5 shrink-0 accent-[#2f6fb0]" />
             მზის მიმდევარი (ტრეკერი): პანელი ყოველთვის მზისკენ ტრიალდება
           </label>
           <div>
@@ -104,17 +98,11 @@ export function SolarPlant() {
               <Sun className="size-4 text-[#c08a00]" />
               თბილისი, შუადღე (41,7° ჩ. გ.)
             </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-2">
               {SEASONS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setElevation(s.elevation)}
-                  aria-pressed={elevation === s.elevation}
-                  className={cn("h-9 rounded-full px-3 text-sm", elevation === s.elevation ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
-                >
+                <PillButton key={s.id} onClick={() => setElevation(s.elevation)} pressed={elevation === s.elevation} color={COLOR}>
                   {s.name} · {s.elevation}°
-                </button>
+                </PillButton>
               ))}
             </div>
           </div>

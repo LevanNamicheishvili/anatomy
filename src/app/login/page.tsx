@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
       <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-[#33413e] transition-colors hover:bg-white hover:text-[#111a18]">
+        <Link href="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-[#33413e] transition-colors hover:bg-white hover:text-[#111a18]">
           <ArrowLeft className="size-4" />
           მთავარი გვერდი
         </Link>
@@ -47,7 +47,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
             {/* Accounts are managed by schools, so "forgot password" is a person, not a link. */}
             <details className="group mt-6 border-t border-[#e2e7e5] pt-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-[#33413e] [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-md text-sm font-medium text-[#33413e] [&::-webkit-details-marker]:hidden">
                 დაგავიწყდა პაროლი?
                 <ChevronDown className="size-4 text-[#97a29e] transition-transform group-open:rotate-180" />
               </summary>

@@ -59,8 +59,8 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
   const last = stage === stages.length - 1;
 
   return (
-    <section ref={boxRef} className={cn("mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white", full && "flex flex-col rounded-none border-0")}>
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : "aspect-[16/10] max-h-[68vh] w-full")}>
+    <section ref={boxRef} className={cn("mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card", full && "flex flex-col rounded-none border-0")}>
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : "h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[70dvh]")}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ანიმაცია: ${current.title}`} />
         <div ref={overlayRef} className="lesson-visual pointer-events-none absolute inset-0 overflow-hidden" />
         {loading && (
@@ -87,7 +87,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
       <div className="h-1 bg-[#eef2f0]">
         <div ref={barRef} className="h-full w-0 bg-[#0f8a74]" />
       </div>
-      <div className={cn("px-5 py-4", full && "max-h-[30vh] overflow-y-auto")}>
+      <div className={cn("px-4 py-4 sm:px-6", full && "max-h-[30dvh] overflow-y-auto")}>
         <ol className="flex flex-wrap gap-1.5">
           {stages.map((s, i) => (
             <li key={s.title}>
@@ -95,7 +95,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
                 type="button"
                 onClick={() => go(i)}
                 aria-current={i === stage ? "step" : undefined}
-                className={cn("flex h-9 items-center gap-2 rounded-full px-3 text-sm transition-colors", i === stage ? "bg-[#0f8a74] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                className={cn("flex h-10 items-center gap-2 rounded-full px-3.5 text-sm transition-colors", i === stage ? "bg-brand font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
               >
                 <span className="tabular-nums">{i + 1}</span>
                 <span className="max-sm:hidden">{s.title}</span>
@@ -103,8 +103,10 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
             </li>
           ))}
         </ol>
-        <h2 className="mt-3 text-lg">{current.title}</h2>
-        <p className="mt-1 text-[15px] leading-7 text-[#33413e]">{current.text}</p>
+        <h2 className="mt-4 text-lg" aria-live="polite">
+          {current.title}
+        </h2>
+        <p className="mt-1 text-base leading-7 text-copy">{current.text}</p>
         <p className="mt-3 text-[11px] leading-4 text-[#97a29e]">
           3D: BodyParts3D © DBCLS (CC BY 4.0); Poly Haven (CC0); Fox — PixelMannen, @tomkranis (CC BY 4.0). უჯრედები და მოლეკულები სქემატურია.
         </p>

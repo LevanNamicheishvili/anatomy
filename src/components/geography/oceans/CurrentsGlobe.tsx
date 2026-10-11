@@ -84,7 +84,7 @@ export function CurrentsGlobe() {
 
   return (
     <div>
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ოკეანის თბილი და ცივი დინებები გლობუსზე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {CURRENTS.map((c) => {

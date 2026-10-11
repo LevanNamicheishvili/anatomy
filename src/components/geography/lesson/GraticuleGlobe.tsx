@@ -124,8 +124,8 @@ export function GraticuleGlobe() {
   const found = picked && Math.abs(picked.lat - TBILISI.lat) < 1.5 && Math.abs(picked.lon - TBILISI.lon) < 1.5;
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-crosshair touch-none" aria-label="გლობუსი გრადუსთა ბადით" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {PARALLELS.map((v) => (

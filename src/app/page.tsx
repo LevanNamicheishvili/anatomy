@@ -94,18 +94,18 @@ export default async function LandingPage() {
               ["#roles", "ვისთვის"],
               ["#join", "ჩართვა"],
             ].map(([href, label]) => (
-              <a key={href} href={href} className="rounded-md px-3 py-1.5 transition-colors hover:bg-[#f5f7f6] hover:text-[#111a18]">
+              <a key={href} href={href} className="rounded-lg px-3 py-2 transition-colors hover:bg-[#f5f7f6] hover:text-[#111a18]">
                 {label}
               </a>
             ))}
           </nav>
           <div className="ms-auto flex items-center gap-2">
             {!user && (
-              <Link href="/request" className="hidden h-9 items-center rounded-md px-3 text-sm font-semibold text-[#33413e] transition-colors hover:bg-[#f5f7f6] sm:inline-flex">
+              <Link href="/request" className="hidden h-10 items-center rounded-lg px-3 text-sm font-semibold text-[#33413e] transition-colors hover:bg-[#f5f7f6] sm:inline-flex">
                 სკოლის განაცხადი
               </Link>
             )}
-            <Link href={cta.href} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#111a18] px-4 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#2a3532]">
+            <Link href={cta.href} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[#111a18] px-4 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#2a3532]">
               {cta.label}
               <ArrowRight className="size-4" />
             </Link>

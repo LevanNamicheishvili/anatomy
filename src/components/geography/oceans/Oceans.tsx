@@ -21,7 +21,7 @@ type Tab = (typeof TABS)[number]["id"];
 export function Oceans() {
   const [tab, setTab] = useState<Tab>("currents");
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
       <div className="flex flex-wrap gap-1.5 border-b border-[#e2e7e5] bg-[#f5f7f6] px-3 py-2" role="tablist">
         {TABS.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={cn("h-9 rounded-lg px-3 text-sm font-semibold", tab === t.id ? "bg-[#1f5f99] text-white" : "text-[#33413e] hover:bg-[#e6ecea]")}>

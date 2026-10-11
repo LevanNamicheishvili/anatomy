@@ -67,8 +67,8 @@ export function SeaBreeze() {
   const showP = pressure && b.kind !== "calm" ? "0" : "1";
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">

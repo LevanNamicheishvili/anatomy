@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
 import { VolcanoScene, type VolcanoAnchor, type VolcanoStep } from "./VolcanoScene";
 
@@ -117,8 +118,8 @@ export function Volcanoes() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full bg-[#a9d4f0]">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[#a9d4f0]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ფილების საზღვრის ჭრილი: ვულკანი, მიწისძვრა, ცუნამი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
@@ -129,15 +130,13 @@ export function Volcanoes() {
         </div>
         <div className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5">
           {STEPS.map((s) => (
-            <button key={s.id} type="button" onClick={() => choose(s.id)} aria-pressed={step === s.id} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", step === s.id ? "bg-[#c2410c] text-white" : "bg-white/92 text-[#111a18]")}>
+            <PillButton key={s.id} onClick={() => choose(s.id)} pressed={step === s.id} color="#c2410c" className="shadow-sm">
               {s.name}
-            </button>
+            </PillButton>
           ))}
         </div>
         {(step === "eruption" || step === "quake" || step === "tsunami") && (
-          <button type="button" onClick={() => sceneRef.current?.restart()} title="თავიდან" aria-label="თავიდან" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-white/92 text-[#111a18] shadow-sm">
-            <RotateCcw className="size-5" />
-          </button>
+          <PillButton onClick={() => sceneRef.current?.restart()} title="თავიდან" aria-label="თავიდან" icon={RotateCcw} className="absolute top-3 right-3 shadow-sm" />
         )}
       </div>
 
@@ -154,20 +153,8 @@ export function Volcanoes() {
           {step === "tsunami" || step === "quake" ? (
             <div className="rounded-lg border border-[#e2e7e5] p-3">
               <p className="text-sm font-semibold">ცუნამის სიჩქარე: v = √(g · h)</p>
-              <label className="mt-2 block text-sm">
-                <span className="flex justify-between">
-                  <span>ოკეანის სიღრმე</span>
-                  <span className="tabular-nums">{nf(depth)} მ</span>
-                </span>
-                <input type="range" min={10} max={7000} step={10} value={depth} onChange={(e) => setDepth(Number(e.target.value))} className="w-full accent-[#1d5f99]" />
-              </label>
-              <label className="mt-1 block text-sm">
-                <span className="flex justify-between">
-                  <span>მანძილი ნაპირამდე</span>
-                  <span className="tabular-nums">{nf(distance)} კმ</span>
-                </span>
-                <input type="range" min={10} max={3000} step={10} value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="w-full accent-[#1d5f99]" />
-              </label>
+              <LabeledSlider className="mt-2" label="ოკეანის სიღრმე" value={depth} display={`${nf(depth)} მ`} min={10} max={7000} step={10} onChange={setDepth} color="#1d5f99" />
+              <LabeledSlider className="mt-1" label="მანძილი ნაპირამდე" value={distance} display={`${nf(distance)} კმ`} min={10} max={3000} step={10} onChange={setDistance} color="#1d5f99" />
               <p className="mt-2 text-[14px] leading-6 text-[#33413e] tabular-nums">
                 v = √(9,8 × {nf(depth)}) ≈ <b>{nf(v)} მ/წმ</b> ≈ <b>{nf(kmh)} კმ/სთ</b>
                 <br />

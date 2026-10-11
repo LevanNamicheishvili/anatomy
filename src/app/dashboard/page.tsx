@@ -3,8 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, Users, type LucideIcon } from "lucide-react";
 import { PortalShell } from "@/components/portal/Shell";
+import { Chip, SectionTitle, cardLink } from "@/components/portal/ui";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { collections } from "@/lib/db";
+import { cn } from "@/lib/utils";
 import { SUBJECTS, type Subject, type SubjectIcon } from "@/lib/subjects";
 
 export const metadata: Metadata = { title: "მთავარი — სასწავლო პორტალი" };
@@ -19,10 +21,10 @@ function SubjectMark({ subject, size = "md" }: { subject: Subject; size?: "md" |
   const Icon = ICONS[subject.icon];
   return (
     <span
-      className={size === "lg" ? "flex size-11 shrink-0 items-center justify-center rounded-lg text-white" : "flex size-9 shrink-0 items-center justify-center rounded-md text-white"}
+      className={size === "lg" ? "flex size-14 shrink-0 items-center justify-center rounded-xl text-white" : "flex size-10 shrink-0 items-center justify-center rounded-lg text-white"}
       style={{ backgroundColor: subject.color }}
     >
-      <Icon className={size === "lg" ? "size-6" : "size-5"} strokeWidth={2} />
+      <Icon className={size === "lg" ? "size-7" : "size-5"} strokeWidth={2} aria-hidden />
     </span>
   );
 }
@@ -34,45 +36,54 @@ function SubjectCard({ subject }: { subject: Subject }) {
   const body = (
     <>
       {subject.image ? (
-        <span className="relative block aspect-[16/9] border-b border-[#e2e7e5] bg-[#eef2f0]">
-          <Image src={subject.image} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover object-top" />
+        <span className="relative block aspect-[16/9] border-b border-line bg-chip">
+          <Image src={subject.image} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" />
         </span>
       ) : (
-        <span className="flex aspect-[16/9] items-center justify-center border-b border-[#e2e7e5]" style={{ background: `linear-gradient(135deg, ${subject.color}14, ${subject.color}33)` }}>
+        <span className="flex aspect-[16/9] items-center justify-center border-b border-line" style={{ background: `linear-gradient(135deg, ${subject.color}14, ${subject.color}33)` }}>
           <SubjectMark subject={subject} size="lg" />
         </span>
       )}
       <span className="flex flex-1 flex-col p-5">
-        <span className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2.5">
+        <span className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-3">
             <SubjectMark subject={subject} />
-            <span className="text-lg font-semibold">{subject.name}</span>
+            <span className="truncate text-xl font-heading">{subject.name}</span>
           </span>
-          {ready ? (
-            <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs font-medium text-[#33413e]">{topics} თემა</span>
-          ) : (
-            <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs font-medium text-[#66736f]">მალე</span>
-          )}
+          {ready ? <Chip>{topics} თემა</Chip> : <Chip>მალე</Chip>}
         </span>
-        <span className={`mt-3 text-sm leading-6 ${ready ? "text-[#33413e]" : "text-[#97a29e]"}`}>{subject.description}</span>
+        <span className={`mt-3 line-clamp-3 text-[15px] leading-7 ${ready ? "text-copy" : "text-faint"}`}>{subject.description}</span>
         {ready && (
           <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold" style={{ color: subject.color }}>
             გახსნა
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </span>
         )}
       </span>
     </>
   );
   return ready ? (
-    <Link
-      href={subject.href!}
-      className="group flex flex-col overflow-hidden rounded-xl border border-[#d5dcd9] bg-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]"
-    >
+    <Link href={subject.href!} className={`${cardLink} h-full`}>
       {body}
     </Link>
   ) : (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-dashed border-[#d5dcd9] bg-white/60">{body}</div>
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-dashed border-line-strong bg-white/60">{body}</div>
+  );
+}
+
+/** One management shortcut tile: icon, title and the numbers that matter to the person. */
+function ManagementTile({ href, icon: Icon, title, meta }: { href: string; icon: LucideIcon; title: string; meta: string }) {
+  return (
+    <Link href={href} className={cn(cardLink, "flex-row items-center gap-4 p-5 hover:border-brand")}>
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-ink text-white">
+        <Icon className="size-6" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold">{title}</span>
+        <span className="block text-sm text-mute">{meta}</span>
+      </span>
+      <ArrowRight className="size-5 shrink-0 text-faint transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
+    </Link>
   );
 }
 
@@ -81,20 +92,7 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
   const db = await collections();
   if (user.role === "super_admin") {
     const [pending, schools] = await Promise.all([db.requests.countDocuments({ status: "pending" }), db.schools.countDocuments()]);
-    return (
-      <Link href="/admin" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
-          <ClipboardList className="size-6" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold">სკოლები და განაცხადები</span>
-          <span className="block text-sm text-[#66736f]">
-            {schools ?? 0} სკოლა · {pending ? `${pending} ახალი განაცხადი` : "ახალი განაცხადი არ არის"}
-          </span>
-        </span>
-        <ArrowRight className="size-5 text-[#97a29e] transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-[#0f8a74]" />
-      </Link>
-    );
+    return <ManagementTile href="/admin" icon={ClipboardList} title="სკოლები და განაცხადები" meta={`${schools ?? 0} სკოლა · ${pending ? `${pending} ახალი განაცხადი` : "ახალი განაცხადი არ არის"}`} />;
   }
   if (user.role !== "school_admin" && user.role !== "teacher") return null;
   const schoolId = user.school?.id ?? "";
@@ -103,18 +101,12 @@ async function ManagementCard({ user }: { user: CurrentUser }) {
     db.users.countDocuments({ school_id: schoolId, role: "student" }),
   ]);
   return (
-    <Link href="/school" className="group flex items-center gap-4 rounded-xl border border-[#d5dcd9] bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#0f8a74] hover:shadow-[0_14px_32px_-18px_rgba(17,26,24,0.25)]">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#111a18] text-white">
-        {user.role === "school_admin" ? <Building2 className="size-6" /> : <Users className="size-6" />}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold">{user.role === "school_admin" ? "სკოლის მართვა" : "მოსწავლეების ანგარიშები"}</span>
-        <span className="block text-sm text-[#66736f]">
-          {teachers} მასწავლებელი · {students} მოსწავლე
-        </span>
-      </span>
-      <ArrowRight className="size-5 text-[#97a29e] transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-[#0f8a74]" />
-    </Link>
+    <ManagementTile
+      href="/school"
+      icon={user.role === "school_admin" ? Building2 : Users}
+      title={user.role === "school_admin" ? "სკოლის მართვა" : "მოსწავლეების ანგარიშები"}
+      meta={`${teachers} მასწავლებელი · ${students} მოსწავლე`}
+    />
   );
 }
 
@@ -131,19 +123,23 @@ export default async function PortalPage() {
 
   return (
     <PortalShell user={user} active="/dashboard">
-      <h1 className="text-2xl font-semibold sm:text-3xl">გამარჯობა, {firstName}</h1>
-      <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{GREETING[user.role]}</p>
+      <header>
+        <h1 className="text-3xl sm:text-4xl">გამარჯობა, {firstName}</h1>
+        <p className="mt-2 max-w-2xl text-base leading-7 text-copy">{GREETING[user.role]}</p>
+      </header>
 
-      <div className="mt-6 empty:hidden">
+      <div className="mt-6 max-w-xl empty:hidden">
         <ManagementCard user={user} />
       </div>
 
-      <h2 className="mt-10 text-sm font-semibold text-[#66736f]">საგნები</h2>
-      <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {SUBJECTS.map((s) => (
-          <SubjectCard key={s.slug} subject={s} />
-        ))}
-      </div>
+      <section className="mt-10">
+        <SectionTitle>საგნები</SectionTitle>
+        <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {SUBJECTS.map((s) => (
+            <SubjectCard key={s.slug} subject={s} />
+          ))}
+        </div>
+      </section>
     </PortalShell>
   );
 }

@@ -72,8 +72,8 @@ export function GeorgiaHazards() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-[#d5dcd9] bg-white">
-      <div className="relative aspect-[16/10] max-h-[70vh] min-h-80 w-full bg-[#dfe7ea]">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[#dfe7ea]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რუკა: მეწყრის, ღვარცოფისა და ზვავის საშიში ზონები" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
           {HAZARD_ZONES.map((z) => (
