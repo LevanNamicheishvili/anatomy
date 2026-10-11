@@ -28,7 +28,8 @@ export const SPECIAL_LINES: SpecialLine[] = [
   { id: "antimeridian", name: "180-ე მერიდიანი", kind: "meridian", value: 180, color: "#c084fc", note: "180° გრძედი. მის გასწვრივ დაახლოებით გადის თარიღის საერთაშორისო ცვლის ხაზი." },
 ];
 
-function parallel(radius: number, lat: number, tube: number, material: THREE.Material) {
+/** A parallel (circle of latitude) as a thin torus. */
+export function parallel(radius: number, lat: number, tube: number, material: THREE.Material) {
   const r = radius * Math.cos(THREE.MathUtils.degToRad(lat));
   const mesh = new THREE.Mesh(new THREE.TorusGeometry(Math.max(r, 1e-4), tube, 4, 160), material);
   mesh.rotation.x = Math.PI / 2;
@@ -37,7 +38,7 @@ function parallel(radius: number, lat: number, tube: number, material: THREE.Mat
 }
 
 /** Half circle from pole to pole at longitude `lon`. */
-function meridian(radius: number, lon: number, tube: number, material: THREE.Material) {
+export function meridian(radius: number, lon: number, tube: number, material: THREE.Material) {
   const arc = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 4, 96, Math.PI), material);
   arc.rotation.z = -Math.PI / 2;
   const g = new THREE.Group();

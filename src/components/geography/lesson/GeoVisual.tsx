@@ -16,9 +16,15 @@ function Loading() {
 const GraticuleGlobe = dynamic(() => import("./GraticuleGlobe").then((m) => m.GraticuleGlobe), { ssr: false, loading: Loading });
 const GeorgiaLandforms = dynamic(() => import("./GeorgiaLandforms").then((m) => m.GeorgiaLandforms), { ssr: false, loading: Loading });
 const SolarPlant = dynamic(() => import("../solar/SolarPlant").then((m) => m.SolarPlant), { ssr: false, loading: Loading });
+const SeasonsGlobe = dynamic(() => import("../seasons/SeasonsGlobe").then((m) => m.SeasonsGlobe), { ssr: false, loading: Loading });
+const PolarisSky = dynamic(() => import("../polaris/PolarisSky").then((m) => m.PolarisSky), { ssr: false, loading: Loading });
+const SeaBreeze = dynamic(() => import("../atmosphere/SeaBreeze").then((m) => m.SeaBreeze), { ssr: false, loading: Loading });
 
 export function GeoVisual({ kind }: { kind: GeoVisualKind }) {
   if (kind === "graticule") return <GraticuleGlobe />;
   if (kind === "georgia-landforms") return <GeorgiaLandforms />;
+  if (kind === "seasons") return <SeasonsGlobe />;
+  if (kind === "polaris") return <PolarisSky />;
+  if (kind === "atmosphere") return <SeaBreeze />;
   return <SolarPlant />;
 }
