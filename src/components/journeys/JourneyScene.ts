@@ -461,6 +461,16 @@ export class JourneyScene {
     return this._playing;
   }
 
+  /** The stage on screen (or about to be, after a fade). */
+  get currentStage() {
+    return this.pending ?? this.stage;
+  }
+
+  /** Length of stage i in seconds at normal speed (0 before the journey has loaded). */
+  stageDuration(i: number) {
+    return this.plan?.stages[i]?.duration ?? 0;
+  }
+
   private playbackRate = 1;
 
   zoomBy(factor: number) {

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Crown, MapPin, Plus, Minus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Crown, MapPin, Plus, Minus, X, Headphones } from "lucide-react";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { JourneyScene } from "@/components/journeys/JourneyScene";
 import { cn } from "@/lib/utils";
 import { createDidgori, type BattleView } from "./didgori";
 import { DIDGORI_LEARNING, DIDGORI_QUIZ } from "./didgori-learning";
 import { DIDGORI_FORCES, DIDGORI_SOURCES, DIDGORI_STAGES } from "./didgori-data";
+import { NARRATION_CUES, NarrationBar, NarrationSubtitles, NarrationTranscript, useNarration } from "./narration";
 
 import { ARMY_TOTALS, COMMANDERS, DIDGORI_PLACE, type CommanderId } from "./battle/identity";
 
@@ -65,6 +66,23 @@ export function BattleExplorer() {
     };
   }, [retry]);
 
+  // The spoken story drives the scene: each part of the narration shows its stage, stretched or quickened to
+  // last as long as the voice tells about it.
+  const narration = useNarration({
+    onCue: (cue, seconds, restart) => {
+      const s = sceneRef.current;
+      if (!s) return;
+      viewRef.current.commander = null;
+      setSelectedCommander(null);
+      if (restart || s.currentStage !== cue) s.goTo(cue);
+      const d = s.stageDuration(cue);
+      if (d) s.setPlaybackRate(Math.max(0.5, Math.min(2, d / seconds)));
+      s.setPlaying(true);
+    },
+    onPlaying: (p) => sceneRef.current?.setPlaying(p),
+    onEnd: () => sceneRef.current?.setPlaybackRate(rate),
+  });
+
   const clearCommander = () => {
     viewRef.current.commander = null;
     setSelectedCommander(null);
@@ -72,6 +90,7 @@ export function BattleExplorer() {
   };
   const inspectCommander = (id: CommanderId) => {
     if (loading || error) return;
+    narration.pause();
     viewRef.current.commander = id;
     viewRef.current.portrait = false;
     setSelectedCommander(id);
@@ -82,8 +101,23 @@ export function BattleExplorer() {
   };
   const go = (i: number) => {
     clearCommander();
+    // While the story is told, choosing a stage moves the voice there too.
+    const cue = narration.active ? NARRATION_CUES.find((c) => c.stage === i) : undefined;
+    if (cue) {
+      narration.seek(cue.time);
+      return;
+    }
     sceneRef.current?.goTo(i);
     sceneRef.current?.setPlaying(true);
+  };
+  const togglePlay = () => {
+    if (commander) clearCommander();
+    if (narration.active) {
+      if (narration.playing) narration.pause();
+      else narration.play();
+      return;
+    }
+    sceneRef.current?.setPlaying(!playing);
   };
 
   return (
@@ -141,7 +175,7 @@ export function BattleExplorer() {
               </select>
             </label>
             <label className="flex items-center gap-1">სიჩქარე
-              <select aria-label="სიმულაციის სიჩქარე" value={rate} className="rounded border border-[#d9dfdb] p-1" onChange={(e) => { const value = Number(e.target.value); setRate(value); sceneRef.current?.setPlaybackRate(value); }}>
+              <select aria-label="სიმულაციის სიჩქარე" value={rate} disabled={narration.active} title={narration.active ? "მოყოლისას სიჩქარეს ხმა განსაზღვრავს" : undefined} className="rounded border border-[#d9dfdb] p-1 disabled:opacity-50" onChange={(e) => { const value = Number(e.target.value); setRate(value); sceneRef.current?.setPlaybackRate(value); }}>
                 {[0.5, 1, 1.5, 2].map((n) => <option key={n} value={n}>{n}×</option>)}
               </select>
             </label>
@@ -158,15 +192,27 @@ export function BattleExplorer() {
           {!commander && stage !== 0 && stage !== 7 && <div className="pointer-events-none absolute right-3 top-40 space-y-1 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm max-md:hidden">
             <p className="text-[#a92e26]">საქართველო · {ARMY_TOTALS.georgia.count}</p><p className="text-[#2b3a6b]">კოალიცია · {ARMY_TOTALS.coalition.count}*</p><p className="text-[10px] text-[#66736f]">*რაოდენობა სადავოა; საწყისი შეფასებები</p>
           </div>}
-          <div className="pointer-events-none absolute bottom-16 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs text-[#33413e] max-md:hidden">
+          {!narration.active && <div className="pointer-events-none absolute bottom-16 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs text-[#33413e] max-md:hidden">
             <span className="text-[#a92e26]">● საქართველო</span> · <span className="text-[#2b3a6b]">● კოალიცია</span>
             <p className="mt-1">პაუზაზე: გადაათრიე ხედის მოსაბრუნებლად; გაადიდე ბორბლით.</p>
-          </div>
+          </div>}
+          {!commander && (
+            <div className="absolute inset-x-0 bottom-[4.25rem] flex flex-col items-center gap-2">
+              <NarrationBar n={narration} />
+              <NarrationSubtitles n={narration} />
+            </div>
+          )}
           <div className="absolute inset-x-0 bottom-3 flex justify-center gap-2 px-3">
+            {!narration.active && (
+              <button type="button" onClick={narration.play} disabled={loading || error} aria-label="მოუსმინე ისტორიას" className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111a18]/85 px-3 text-sm font-semibold text-white shadow-sm disabled:opacity-40">
+                <Headphones className="size-4" />
+                <span className="max-sm:hidden">მოსმენა</span>
+              </button>
+            )}
             <button type="button" onClick={() => go(stage - 1)} disabled={stage === 0} aria-label="წინა" className="flex size-11 items-center justify-center rounded-lg bg-white text-[#111a18] shadow-sm disabled:opacity-40">
               <ChevronLeft className="size-5" />
             </button>
-            <button type="button" onClick={() => { if (commander) clearCommander(); sceneRef.current?.setPlaying(!playing); }} className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: ACCENT }}>
+            <button type="button" onClick={togglePlay} className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: ACCENT }}>
               {playing ? <Pause className="size-4" /> : last ? <RotateCcw className="size-4" /> : <Play className="size-4" />}
               {playing ? "პაუზა" : "გაგრძელება"}
             </button>
@@ -177,6 +223,7 @@ export function BattleExplorer() {
         </div>
 
         <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-5 py-5 max-lg:border-s-0 max-lg:border-t">
+          <NarrationTranscript n={narration} accent={ACCENT} />
           <section className="mb-5 rounded-xl border border-[#e5d9c8] bg-[#fbf7ef] p-4" aria-label="ბრძოლის ძველი და დღევანდელი მდებარეობა">
             <p className="flex items-center gap-2 text-xs font-semibold text-[#986627]"><MapPin className="size-4" />სად მოხდა ბრძოლა?</p>
             <dl className="mt-3 space-y-2 text-sm"><div><dt className="text-xs text-[#7b7b70]">1121 წელი</dt><dd className="font-semibold">{DIDGORI_PLACE.historic}</dd></div><div><dt className="text-xs text-[#7b7b70]">დღეს</dt><dd className="font-semibold">{DIDGORI_PLACE.modern}</dd><dd className="mt-1 text-xs leading-5 text-[#66736f]">{DIDGORI_PLACE.region}</dd></div></dl>

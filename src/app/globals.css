@@ -388,3 +388,15 @@ body {
   border-radius: 10px;
   box-shadow: 0 4px 18px rgb(0 0 0 / 15%);
 }
+
+/* Karaoke subtitles of the Didgori narration: the spoken word fills with colour as it is said. */
+.karaoke-word {
+  transition: color 0.15s ease;
+}
+.karaoke-now {
+  --fill: 0%;
+  background: linear-gradient(90deg, #ffd27a var(--fill), rgb(255 255 255 / 0.55) var(--fill));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
