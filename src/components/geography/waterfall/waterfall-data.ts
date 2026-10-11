@@ -16,9 +16,24 @@ export interface WaterfallTier {
   run: number;
 }
 
+/** Shape of the cap-rock lip: a V-notch cut by the stream, a rounded travertine lip, or square basalt blocks. */
+export type LedgeShape = "notched" | "rounded" | "blocky";
+
 export interface WaterfallPreset {
   id: WaterfallId;
   tiers: WaterfallTier[];
+  ledge: LedgeShape;
+  /** Thickness of the hard cap-rock layer. */
+  ledgeThick: number;
+  /** How many hard/soft rock beds show on the cliffs (higher = thinner layers). */
+  beds: number;
+  /** 0…1+ — how much mist hangs in the gorge (confinement matters, not only discharge). */
+  mist: number;
+  /** Plunge-pool radius multiplier and depth of the bowl. */
+  poolScale: number;
+  poolDepth: number;
+  /** How much the falling sheet fans out on the way down. */
+  fan: number;
   /** Half-width of the valley floor below the falls. */
   halfValley: number;
   /** Height of the gorge rim above the top of the falls. */
@@ -48,14 +63,25 @@ export interface WaterfallPreset {
 export const WATERFALLS: Record<WaterfallId, WaterfallPreset> = {
   gveleti: {
     id: "gveleti",
-    tiers: [{ drop: 9, width: 1.5, lip: 0.55, run: 11 }],
-    halfValley: 2.6,
-    wall: 11,
-    wallSteep: 1.6,
-    rock: "#7c7f84",
-    rockDark: "#4e5257",
-    cap: "#9a9da2",
-    soft: "#5f5a55",
+    // A short chute in the notch, then one tall, narrow plunge into a tight slot gorge.
+    tiers: [
+      { drop: 2.2, width: 0.9, lip: 0.2, run: 2.6 },
+      { drop: 12.5, width: 1.15, lip: 0.45, run: 11 },
+    ],
+    ledge: "notched",
+    ledgeThick: 0.9,
+    beds: 0.9,
+    mist: 1.25,
+    poolScale: 0.8,
+    poolDepth: 1.7,
+    fan: 0.14,
+    halfValley: 2.2,
+    wall: 12,
+    wallSteep: 1.3,
+    rock: "#80868e",
+    rockDark: "#474d55",
+    cap: "#a3a8ae",
+    soft: "#6a625c",
     veg: "#6f7f4a",
     vegAmount: 0.3,
     trees: 26,
@@ -73,24 +99,33 @@ export const WATERFALLS: Record<WaterfallId, WaterfallPreset> = {
   },
   kinchkha: {
     id: "kinchkha",
+    // A staircase of low limestone steps; each one is wider and the water spreads out more.
     tiers: [
-      { drop: 6, width: 3.2, lip: 0.8, run: 4 },
-      { drop: 4.5, width: 2.6, lip: 0.6, run: 3.6 },
-      { drop: 3.5, width: 3.8, lip: 0.5, run: 10 },
+      { drop: 4.6, width: 2.6, lip: 0.35, run: 3.8 },
+      { drop: 3.6, width: 3.2, lip: 0.3, run: 3.4 },
+      { drop: 2.8, width: 3.9, lip: 0.28, run: 3.2 },
+      { drop: 2.2, width: 4.6, lip: 0.25, run: 10 },
     ],
-    halfValley: 4.2,
+    ledge: "rounded",
+    ledgeThick: 0.7,
+    beds: 3.4,
+    mist: 0.45,
+    poolScale: 1.25,
+    poolDepth: 0.55,
+    fan: 0.5,
+    halfValley: 4.6,
     wall: 5,
     wallSteep: 6,
-    rock: "#b8ab90",
-    rockDark: "#7d7360",
-    cap: "#d3c8ad",
+    rock: "#c4b796",
+    rockDark: "#857a63",
+    cap: "#e0d6ba",
     soft: "#8f7f66",
     veg: "#3f7a34",
     vegAmount: 0.95,
     trees: 130,
     deep: "#1f6f73",
     shallow: "#5fb7b0",
-    strands: 4,
+    strands: 6,
     flow: 0.55,
     sky: "#c4dcea",
     rockName: "კირქვა",
@@ -102,14 +137,22 @@ export const WATERFALLS: Record<WaterfallId, WaterfallPreset> = {
   },
   makhuntseti: {
     id: "makhuntseti",
-    tiers: [{ drop: 7, width: 4.4, lip: 1.0, run: 11 }],
-    halfValley: 4.8,
+    // One wide, even curtain off a thick, deeply undercut basalt shelf into a big round pool.
+    tiers: [{ drop: 6.5, width: 5.6, lip: 1.4, run: 12 }],
+    ledge: "blocky",
+    ledgeThick: 1.8,
+    beds: 1.6,
+    mist: 0.8,
+    poolScale: 1.55,
+    poolDepth: 1.5,
+    fan: 0.08,
+    halfValley: 5.6,
     wall: 6,
     wallSteep: 4.5,
-    rock: "#4a4542",
-    rockDark: "#2c2927",
-    cap: "#5d5753",
-    soft: "#3a3532",
+    rock: "#3f3b39",
+    rockDark: "#1f1d1c",
+    cap: "#55504c",
+    soft: "#2f2a27",
     veg: "#2f6a2c",
     vegAmount: 0.85,
     trees: 100,

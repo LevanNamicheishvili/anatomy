@@ -93,7 +93,7 @@ const POOL_FRAG = /* glsl */ `
 uniform float uTime;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
-uniform vec3 uFoam[3];
+uniform vec3 uFoam[4];
 uniform float uFlow;
 varying vec3 vWorld;
 ${GLSL_NOISE}
@@ -104,7 +104,7 @@ void main() {
   vec3 col = mix(uDeep, uShallow, clamp(0.15 + 0.7 * r1, 0.0, 1.0));
   col += vec3(0.9, 0.95, 1.0) * pow(r2, 5.0) * 0.9;
   float foam = 0.0;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 4; i++) {
     vec2 c = uFoam[i].xy;
     float rr = uFoam[i].z;
     vec2 q = p - c;
@@ -177,7 +177,7 @@ export class WaterfallScene {
       const vz = 0.9 + preset.flow * 0.9;
       const T = Math.sqrt((2 * (tier.drop + 0.1)) / G);
       const lipZ = z + tier.lip;
-      this.falls.push({ face: z, top, bottom, lipZ, width: tier.width, vz, T, landZ: lipZ + vz * T, poolR: Math.max(1.6, tier.width * 0.65), weight: tier.width * tier.drop });
+      this.falls.push({ face: z, top, bottom, lipZ, width: tier.width, vz, T, landZ: lipZ + vz * T, poolR: Math.max(1.2, tier.width * 0.65) * preset.poolScale, weight: tier.width * tier.drop });
       y = bottom;
       z += tier.run;
     }
@@ -190,7 +190,7 @@ export class WaterfallScene {
     if (preset.trees) this.scene.add(this.buildTrees());
 
     // Water: the stream above the first fall, then one pool / bench per tier.
-    const foam = [0, 1, 2].map((i) => {
+    const foam = [0, 1, 2, 3].map((i) => {
       const f = this.falls[i];
       return f ? new THREE.Vector3(0, f.landZ, f.poolR * 1.2) : new THREE.Vector3(999, 999, 0.01);
     });
@@ -220,7 +220,7 @@ export class WaterfallScene {
     const flow = preset.flow;
     this.drops = new ParticleCloud(Math.round(220 + 160 * flow), { soft: 0.2, order: 3 });
     this.spray = new ParticleCloud(Math.round(380 + 420 * flow), { soft: 0.5, order: 4 });
-    this.mist = new ParticleCloud(Math.round(140 + 180 * flow), { soft: 1, order: 5 });
+    this.mist = new ParticleCloud(Math.round((140 + 180 * flow) * preset.mist), { soft: 1, order: 5 });
     this.foam = new ParticleCloud(420, { soft: 0.7, order: 2 });
     const mk = (n: number, life: number): P[] =>
       Array.from({ length: n }, (_, i) => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: life * (0.6 + 0.8 * hash01(i, 3)), fall: this.pickFall(hash01(i, 7)), size: 0.5 + hash01(i, 9), seed: hash01(i, 11) }));
@@ -237,7 +237,7 @@ export class WaterfallScene {
       });
     this.scene.add(this.foam.points, this.drops.points, this.spray.points, this.mist.points);
 
-    const f0 = this.falls[0];
+    const f0 = this.falls.reduce((a, b) => (b.weight > a.weight ? b : a));
     const last = this.falls[this.falls.length - 1];
     this.anchors = {
       cap: new THREE.Vector3(-f0.width / 2 - 0.6, f0.top - 0.2, f0.lipZ),
@@ -245,13 +245,13 @@ export class WaterfallScene {
       pool: new THREE.Vector3(-f0.poolR * 0.9, f0.bottom + 0.35, f0.landZ + 0.4),
       mist: new THREE.Vector3(f0.width * 0.7 + 0.6, f0.bottom + 2.6, f0.landZ + 1.2),
       river: new THREE.Vector3(0.8, last.bottom + 0.5, this.zEnd - 3),
-      upstream: new THREE.Vector3(0, f0.top + 0.6, -6),
+      upstream: new THREE.Vector3(0, this.falls[0].top + 0.6, -6),
     };
 
     // Warm up so the water is already flowing on the first frame.
     for (let i = 0; i < 120; i++) this.simulate(1 / 30);
 
-    const mid = (f0.landZ + last.landZ) / 2;
+    const mid = (this.falls[0].landZ + last.landZ) / 2;
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.target.set(0, total * 0.45, mid);
     this.camera.position.set(1.8, total * 0.75 + 2.5, last.landZ + 13 + total * 0.55);
@@ -294,7 +294,7 @@ export class WaterfallScene {
       floor -= (f.top - f.bottom) * smooth(zf - 0.02, zf + 0.22, z);
       // Plunge pool: a bowl dug by the falling water.
       const d = Math.hypot(x / 1.15, z - f.landZ) / (f.poolR + 0.4);
-      if (d < 1 && z > f.face) floor -= 1.1 * (1 - d * d);
+      if (d < 1 && z > f.face) floor -= pr.poolDepth * (1 - d * d);
     }
     // Rubble and an uneven bed.
     floor += 0.12 * fbm(x * 0.8, z * 0.8, 3);
@@ -350,10 +350,10 @@ export class WaterfallScene {
       c.copy(rock).lerp(dark, Math.max(0, 0.3 + 0.55 * n));
       if (steep > 0.3) {
         // Hard (light) and soft (dark) beds, cut by vertical joints into blocks.
-        const band = Math.sin(y * 2.2 + fbm(x * 0.25, z * 0.25, 2) * 3);
+        const band = Math.sin(y * 2.2 * pr.beds + fbm(x * 0.25, z * 0.25, 2) * 3);
         if (band < -0.25) c.lerp(soft, 0.55);
         else if (band > 0.55) c.offsetHSL(0, 0, 0.07);
-        const joint = Math.abs(noise2((z + x) * 1.7, Math.floor(y * 1.1)));
+        const joint = Math.abs(noise2((z + x) * (pr.ledge === "blocky" ? 3.2 : 1.7), Math.floor(y * 1.1 * pr.beds)));
         if (joint < 0.06) c.lerp(dark, 0.6);
         // Plants hang on to narrow ledges on the walls.
         if (up > 0.3 && pr.vegAmount > 0.5) c.lerp(veg, 0.6 * pr.vegAmount * smooth(0.3, 0.6, up));
@@ -380,7 +380,7 @@ export class WaterfallScene {
     const pr = this.preset;
     const width = (f === this.falls[0] ? this.upstreamHalf : pr.halfValley) * 2 + 1.2;
     const depth = 1.6 + f.lipZ - f.face;
-    const thick = 1.25;
+    const thick = pr.ledgeThick;
     const lip = f.lipZ - f.face;
     const geo = new THREE.BoxGeometry(width, thick, depth, 36, 4, 10);
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
@@ -396,10 +396,24 @@ export class WaterfallScene {
       // Each vertex keeps its share of the depth; the overhang shrinks away from the water (a rounded lip).
       const u = (z + depth / 2) / depth;
       const side = Math.min(1, Math.abs(x) / (width / 2));
-      const recede = lip * (0.15 + 0.85 * smooth(f.width * 0.35 / (width / 2), 1, side)) + 0.25 * side;
-      const zz = -depth / 2 + u * (depth - recede);
-      // The underside is ragged where blocks have already broken off.
-      const yy = y < 0 ? y - 0.34 * Math.max(0, fbm(x * 2.1, f.face + 4, 2)) * (1 - side) : y;
+      let recede = lip * (0.15 + 0.85 * smooth(f.width * 0.35 / (width / 2), 1, side)) + 0.25 * side;
+      let yy = y < 0 ? y - 0.34 * Math.max(0, fbm(x * 2.1, f.face + 4, 2)) * (1 - side) : y;
+      const wx = Math.abs(x) / Math.max(0.4, f.width * 0.5);
+      if (pr.ledge === "notched") {
+        // The stream has sawn a V into the cap rock: the lip juts out only in the notch, the top dips there.
+        recede += lip * 0.6 * smooth(0.6, 1.6, wx);
+        if (y > 0) yy -= thick * 0.55 * Math.max(0, 1 - wx * 0.7);
+      } else if (pr.ledge === "rounded") {
+        // Travertine lip: lime builds a rounded, bulging edge.
+        if (y > 0) yy -= thick * 0.6 * smooth(0.55, 1, u);
+        if (y < 0) yy += thick * 0.35 * smooth(0.6, 1, u);
+      } else {
+        // Basalt: square columns, each broken off at a slightly different place.
+        const col = Math.floor(x / 0.55 + 100);
+        recede += (hash01(col, 31) - 0.5) * 0.45 * (u > 0.5 ? 1 : 0);
+        if (y > 0) yy += (hash01(col, 32) - 0.5) * 0.18;
+      }
+      const zz = -depth / 2 + u * (depth - Math.max(0, recede));
       pos.setXYZ(i, x + 0.05 * n, yy + 0.08 * n, zz + (u > 0.99 ? 0.16 * fbm(x * 1.1, f.face, 3) : 0.05 * n));
       c.copy(cap).lerp(dark, Math.max(0, 0.25 + 0.5 * n) * (y < 0 ? 1.75 : 0.7));
       c.toArray(colors, i * 3);
@@ -424,7 +438,7 @@ export class WaterfallScene {
       const z = f.lipZ + f.vz * t;
       for (let k = 0; k <= nu; k++) {
         const u = k / nu - 0.5;
-        pos.push(u * f.width * (1 + 0.28 * s), y, z + 0.08 * Math.cos(u * Math.PI) * s);
+        pos.push(u * f.width * (1 + this.preset.fan * s), y, z + 0.08 * Math.cos(u * Math.PI) * s);
         uv.push(k / nu, s);
       }
     }
@@ -572,7 +586,7 @@ export class WaterfallScene {
       p.v.y *= 1 - 0.25 * dt;
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      const a = 0.27 * Math.sin(Math.PI * Math.min(1, k * 1.4 + 0.05)) * (0.5 + this.preset.flow * 0.6);
+      const a = 0.27 * Math.sin(Math.PI * Math.min(1, k * 1.4 + 0.05)) * (0.5 + this.preset.flow * 0.6) * (0.6 + 0.4 * this.preset.mist);
       const f = this.falls[p.fall];
       this.mist.set(i, p.p, (0.8 + 3 * k * (0.6 + p.size * 0.6)) * (0.45 + f.width * 0.18), Math.max(0, a), this.mistC);
     });
