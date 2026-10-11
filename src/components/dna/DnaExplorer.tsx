@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Panel, PillButton } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { cn } from "@/lib/utils";
 import { DnaScene, type DnaOptions } from "./DnaScene";
@@ -14,24 +15,16 @@ const STEPS: ChromosomeStep[] = ["nucleosome", "fiber", "chromosome"];
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "h-9 rounded-md border px-3 text-[13px] font-medium whitespace-nowrap transition-colors",
-        active ? "border-[#111a18] bg-[#111a18] text-white" : "border-[#d5dcd9] bg-white text-[#33413e] hover:bg-[#f5f7f6]",
-      )}
-    >
+    <PillButton pressed={active} onClick={onClick} color="#111a18">
       {children}
-    </button>
+    </PillButton>
   );
 }
 
 function Toolbar({ children }: { children: React.ReactNode }) {
   return (
     <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
-      <div className="flex gap-1.5 overflow-x-auto rounded-lg border border-[#e2e7e5] bg-white/95 p-1.5 shadow-sm backdrop-blur">{children}</div>
+      <Panel className="flex max-w-full gap-1.5 overflow-x-auto p-1.5">{children}</Panel>
     </div>
   );
 }

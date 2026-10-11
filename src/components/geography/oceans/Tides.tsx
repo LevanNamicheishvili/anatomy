@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Pause, Play } from "lucide-react";
+import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
 
 /*
@@ -120,34 +121,28 @@ export function Tides() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {PHASES.map((p) => (
-              <button key={p.name} type="button" onClick={() => setDay(p.day)} aria-pressed={Math.abs(day - p.day) < 0.3} className={cn("h-9 rounded-full px-3 text-sm", Math.abs(day - p.day) < 0.3 ? "bg-[#1f5f99] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}>
+              <PillButton key={p.name} onClick={() => setDay(p.day)} pressed={Math.abs(day - p.day) < 0.3} color="#1f5f99">
                 {p.name}
-              </button>
+              </PillButton>
             ))}
           </div>
         </div>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <label className="block text-sm">
-          <span className="flex justify-between">
-            <span className="font-semibold">მთვარის ფაზა — დღე</span>
-            <span className="tabular-nums">{day.toFixed(1).replace(".", ",")} / 29,5</span>
-          </span>
-          <input type="range" min={0} max={29.5} step={0.1} value={day} onChange={(e) => setDay(Number(e.target.value))} className="w-full accent-[#1f5f99]" />
-        </label>
+        <LabeledSlider label="მთვარის ფაზა — დღე" value={day} display={`${day.toFixed(1).replace(".", ",")} / 29,5`} min={0} max={29.5} step={0.1} onChange={setDay} color="#1f5f99" />
         <div className="flex items-end gap-2">
-          <label className="block flex-1 text-sm">
-            <span className="flex justify-between">
-              <span className="font-semibold">დღე-ღამის საათი</span>
-              <span className="tabular-nums">
-                {String(Math.floor(hour)).padStart(2, "0")}:{String(Math.floor((hour % 1) * 60)).padStart(2, "0")}
-              </span>
-            </span>
-            <input type="range" min={0} max={23.9} step={0.1} value={hour} onChange={(e) => setHour(Number(e.target.value))} className="w-full accent-[#1f5f99]" />
-          </label>
-          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "დედამიწის ბრუნვა"} className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg border", playing ? "border-[#1f5f99] bg-[#1f5f99] text-white" : "border-[#d5dcd9]")}>
-            {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
-          </button>
+          <LabeledSlider
+            className="flex-1"
+            label="დღე-ღამის საათი"
+            value={hour}
+            display={`${String(Math.floor(hour)).padStart(2, "0")}:${String(Math.floor((hour % 1) * 60)).padStart(2, "0")}`}
+            min={0}
+            max={23.9}
+            step={0.1}
+            onChange={setHour}
+            color="#1f5f99"
+          />
+          <PillButton onClick={() => setPlaying((p) => !p)} pressed={playing} color="#1f5f99" title={playing ? "გაჩერება" : "დედამიწის ბრუნვა"} aria-label={playing ? "გაჩერება" : "დედამიწის ბრუნვა"} icon={playing ? Pause : Play} className="mb-0.5" />
         </div>
       </div>
       <p className="mt-3 text-[15px] leading-7 text-[#33413e]">

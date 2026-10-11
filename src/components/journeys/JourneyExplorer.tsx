@@ -77,7 +77,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
                   type="button"
                   onClick={() => choose(j.id)}
                   aria-current={j.id === id ? "page" : undefined}
-                  className={cn("flex w-full flex-col items-start rounded-md border-s-4 px-3 py-2 text-left transition-colors max-lg:whitespace-nowrap", j.id === id ? "bg-[#f5f7f6]" : "border-transparent hover:bg-[#f5f7f6]")}
+                  className={cn("flex min-h-11 w-full flex-col items-start justify-center rounded-lg border-s-4 px-3 py-2 text-left transition-colors max-lg:whitespace-nowrap", j.id === id ? "bg-[#f5f7f6]" : "border-transparent hover:bg-[#f5f7f6]")}
                   style={j.id === id ? { borderColor: j.color } : undefined}
                 >
                   <span className={cn("text-sm", j.id === id ? "font-semibold" : "text-[#33413e]")}>{j.title}</span>
@@ -108,7 +108,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
             <button
               type="button"
               onClick={() => sceneRef.current?.setPlaying(!playing)}
-              className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg bg-[#111a18] px-4 text-sm font-semibold text-white shadow-sm"
+              className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-lg bg-[#111a18] px-4 text-sm font-semibold text-white shadow-panel"
             >
               {playing ? <Pause className="size-4" /> : last ? <RotateCcw className="size-4" /> : <Play className="size-4" />}
               {playing ? "პაუზა" : "გაგრძელება"}
@@ -136,7 +136,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
                   type="button"
                   onClick={() => go(i)}
                   aria-current={i === stage ? "step" : undefined}
-                  className={cn("flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors", i === stage ? "bg-[#f5f7f6] font-semibold" : "text-[#33413e] hover:bg-[#f5f7f6]")}
+                  className={cn("flex min-h-10 w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors", i === stage ? "bg-[#f5f7f6] font-semibold" : "text-[#33413e] hover:bg-[#f5f7f6]")}
                 >
                   <span
                     className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === stage ? "text-white" : i < stage ? "bg-[#dfe6e3] text-[#33413e]" : "bg-[#eef2f0] text-[#97a29e]")}

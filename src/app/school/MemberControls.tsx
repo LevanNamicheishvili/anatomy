@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { CredentialsCard } from "@/components/portal/Credentials";
+import { SegmentedTabs } from "@/components/portal/controls";
 import { Alert, Field, btn, input } from "@/components/portal/ui";
 import { createMembers, removeMember, resetMemberPassword, type CreateState, type ResetState } from "./actions";
 
@@ -24,19 +25,17 @@ export function AddMembersForm({ canAddTeachers, siteUrl }: { canAddTeachers: bo
       )}
       <form action={action} className="flex flex-col gap-4">
         {canAddTeachers && (
-          <div className="grid grid-cols-2 overflow-hidden rounded-md border border-[#d5dcd9] sm:w-fit">
-            {(["student", "teacher"] as const).map((r, i) => (
-              <button
-                key={r}
-                type="button"
-                aria-pressed={role === r}
-                onClick={() => setRole(r)}
-                className={`h-10 px-5 text-sm transition-colors ${i ? "border-s border-[#d5dcd9]" : ""} ${role === r ? "bg-[#111a18] font-semibold text-white" : "text-[#33413e] hover:bg-[#f5f7f6]"}`}
-              >
-                {r === "student" ? "მოსწავლეები" : "მასწავლებლები"}
-              </button>
-            ))}
-          </div>
+          <SegmentedTabs
+            label="ანგარიშის ტიპი"
+            value={role}
+            onChange={setRole}
+            color="#111a18"
+            className="sm:w-fit"
+            options={[
+              { id: "student", label: "მოსწავლეები" },
+              { id: "teacher", label: "მასწავლებლები" },
+            ]}
+          />
         )}
         <input type="hidden" name="role" value={role} />
         <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">

@@ -28,13 +28,13 @@ export const floating = "rounded-lg border border-[#d5dcd9] bg-white shadow-[0_1
 export const sectionLabel = "text-xs font-semibold text-[#66736f]";
 
 const btnBase =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/40 disabled:pointer-events-none disabled:opacity-40 max-md:h-11";
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 disabled:pointer-events-none disabled:opacity-40 max-md:h-11";
 
 export const btnPrimary = cn(btnBase, "bg-[#0f8a74] text-white hover:bg-[#0c7563]");
 export const btnSecondary = cn(btnBase, "border border-[#d5dcd9] bg-white text-[#33413e] hover:bg-[#f5f7f6]");
 export const btnGhost = cn(btnBase, "text-[#33413e] hover:bg-[#eef2f0]");
 export const iconBtn =
-  "inline-flex size-9 shrink-0 items-center justify-center rounded-md text-[#33413e] transition-colors outline-none hover:bg-[#eef2f0] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/40 max-md:size-11";
+  "inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-[#33413e] transition-colors outline-none hover:bg-[#eef2f0] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 max-md:size-11";
 
 export function Switch({
   checked,

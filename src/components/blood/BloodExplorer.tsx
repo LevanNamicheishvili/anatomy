@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { PillButton } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { cn } from "@/lib/utils";
 import { BloodScene } from "./BloodScene";
@@ -13,17 +14,9 @@ const WBC_ORDER: WbcKind[] = ["neutrophil", "eosinophil", "basophil", "lymphocyt
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "h-9 rounded-md border px-3 text-[13px] font-medium whitespace-nowrap transition-colors",
-        active ? "border-[#111a18] bg-[#111a18] text-white" : "border-[#d5dcd9] bg-white text-[#33413e] hover:bg-[#f5f7f6]",
-      )}
-    >
+    <PillButton pressed={active} onClick={onClick} color="#111a18">
       {children}
-    </button>
+    </PillButton>
   );
 }
 

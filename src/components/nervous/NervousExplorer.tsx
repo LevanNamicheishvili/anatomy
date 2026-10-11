@@ -59,7 +59,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
                   onClick={() => setIndex(i)}
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
+                    "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
                     i === index ? "bg-[#f1ebf8] font-semibold text-[#4f3478]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
@@ -89,7 +89,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
               type="button"
               onClick={() => setPlaying(!playing)}
               aria-label={playing ? "პაუზა" : "გაგრძელება"}
-              className="flex h-10 items-center gap-2 rounded-lg bg-[#111a18] px-4 text-sm font-semibold text-white shadow-sm"
+              className="flex h-11 items-center gap-2 rounded-lg bg-[#111a18] px-5 text-sm font-semibold text-white shadow-panel"
             >
               {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
               {playing ? "პაუზა" : "გაგრძელება"}

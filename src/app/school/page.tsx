@@ -74,13 +74,14 @@ export default async function SchoolPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <Card className="h-fit">
           <CardHeader title="მასწავლებლები" description={`${teachers.length}`} />
+          {teachers.length === 0 && <p className="px-5 py-6 text-sm text-[#66736f]">მასწავლებელი ჯერ არ არის დამატებული.</p>}
           <ul className="divide-y divide-[#e2e7e5]">{teachers.map(row)}</ul>
         </Card>
         <Card className="h-fit">
           <CardHeader title="მოსწავლეები" description={classes.size ? `${classes.size} კლასი` : "ჯერ არ არის დამატებული"} />
           {[...classes.keys()].sort(byClass).map((label) => (
             <div key={label}>
-              <h3 className="border-y border-[#e2e7e5] bg-[#f5f7f6] px-5 py-2 text-xs font-semibold text-[#66736f]">
+              <h3 className="border-y border-[#e2e7e5] bg-[#f5f7f6] px-5 py-2 text-[13px] font-semibold text-[#66736f]">
                 {label} კლასი · {classes.get(label)?.length}
               </h3>
               <ul className="divide-y divide-[#e2e7e5]">{classes.get(label)?.map(row)}</ul>

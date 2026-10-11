@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { PillButton } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
 import { WaterfallScene, type WaterfallAnchor } from "./WaterfallScene";
 import { WATERFALLS, WATERFALL_IDS, type WaterfallId } from "./waterfall-data";
@@ -44,7 +45,7 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_17rem]">
-      <div className="relative aspect-[16/10] max-h-[60vh] min-h-72 w-full overflow-hidden rounded-lg bg-[#c4dcea]">
+      <div className="relative h-[50dvh] min-h-72 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[60dvh] overflow-hidden rounded-lg bg-[#c4dcea]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ჩანჩქერის 3D მოდელი: ${NAMES[id]}`} />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
@@ -55,9 +56,9 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
         </div>
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {WATERFALL_IDS.map((w) => (
-            <button key={w} type="button" onClick={() => onPick(w)} aria-pressed={id === w} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", id === w ? "bg-[#0284c7] text-white" : "bg-white/92 text-[#111a18]")}>
+            <PillButton key={w} onClick={() => onPick(w)} pressed={id === w} color="#0284c7" className="shadow-sm">
               {NAMES[w]}
-            </button>
+            </PillButton>
           ))}
         </div>
       </div>

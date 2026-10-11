@@ -132,7 +132,7 @@ export function BattleExplorer() {
                   type="button"
                   onClick={() => go(i)}
                   aria-current={i === stage ? "step" : undefined}
-                  className={cn("flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal", i === stage ? "bg-[#f6efe6] font-semibold text-[#6b4218]" : "text-[#33413e] hover:bg-[#f5f7f6]")}
+                  className={cn("flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal", i === stage ? "bg-[#f6efe6] font-semibold text-[#6b4218]" : "text-[#33413e] hover:bg-[#f5f7f6]")}
                 >
                   <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === stage ? "text-white" : "bg-[#eef2f0] text-[#66736f]")} style={i === stage ? { backgroundColor: ACCENT } : undefined}>
                     {i + 1}
@@ -166,28 +166,28 @@ export function BattleExplorer() {
           {error && <div role="alert" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#eef2f0] p-6 text-center">
             <p className="font-semibold">3D სცენა ვერ ჩაიტვირთა</p>
             <p className="max-w-sm text-sm text-[#66736f]">შეამოწმე კავშირი და WebGL-ის მხარდაჭერა. ტექსტი და სასწავლო მასალა ხელმისაწვდომია.</p>
-            <button type="button" className="rounded-lg bg-[#a0662b] px-4 py-2 text-white" onClick={() => { setError(false); setLoading(true); setRate(1); setRetry((n) => n + 1); }}>ხელახლა ცდა</button>
+            <button type="button" className="min-h-11 rounded-lg bg-[#a0662b] px-5 py-2 text-sm font-semibold text-white" onClick={() => { setError(false); setLoading(true); setRate(1); setRetry((n) => n + 1); }}>ხელახლა ცდა</button>
           </div>}
-          <div className="absolute left-3 top-16 flex flex-wrap gap-2 rounded-lg bg-white/95 p-2 text-xs shadow-sm">
-            <label className="flex items-center gap-1">ხედი
-              <select aria-label="კამერის ხედი" value={camera} className="rounded border border-[#d9dfdb] p-1" onChange={(e) => { const value = e.target.value as BattleView["camera"]; clearCommander(); viewRef.current.camera = value; setCamera(value); sceneRef.current?.refreshView(); }}>
+          <div className="absolute left-3 top-16 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-line/80 bg-white/90 p-2 text-sm font-semibold shadow-panel backdrop-blur-sm">
+            <label className="flex items-center gap-2">ხედი
+              <select aria-label="კამერის ხედი" value={camera} className="h-10 rounded-lg border border-line-strong bg-white px-2 text-sm font-medium" onChange={(e) => { const value = e.target.value as BattleView["camera"]; clearCommander(); viewRef.current.camera = value; setCamera(value); sceneRef.current?.refreshView(); }}>
                 <option value="cinematic">კინემატოგრაფიული</option><option value="tactical">ტაქტიკური</option>
               </select>
             </label>
-            <label className="flex items-center gap-1">სიჩქარე
-              <select aria-label="სიმულაციის სიჩქარე" value={rate} disabled={narration.active} title={narration.active ? "მოყოლისას სიჩქარეს ხმა განსაზღვრავს" : undefined} className="rounded border border-[#d9dfdb] p-1 disabled:opacity-50" onChange={(e) => { const value = Number(e.target.value); setRate(value); sceneRef.current?.setPlaybackRate(value); }}>
+            <label className="flex items-center gap-2">სიჩქარე
+              <select aria-label="სიმულაციის სიჩქარე" value={rate} disabled={narration.active} title={narration.active ? "მოყოლისას სიჩქარეს ხმა განსაზღვრავს" : undefined} className="h-10 rounded-lg border border-line-strong bg-white px-2 text-sm font-medium disabled:opacity-50" onChange={(e) => { const value = Number(e.target.value); setRate(value); sceneRef.current?.setPlaybackRate(value); }}>
                 {[0.5, 1, 1.5, 2].map((n) => <option key={n} value={n}>{n}×</option>)}
               </select>
             </label>
           </div>
           <div className="absolute right-3 top-16 flex flex-col gap-2">
-            <button type="button" disabled={loading || error} aria-label="მიახლოება" onClick={() => sceneRef.current?.zoomBy(0.75)} className="flex size-9 items-center justify-center rounded-lg bg-white/95 shadow-sm disabled:opacity-40"><Plus className="size-4" /></button>
-            <button type="button" disabled={loading || error} aria-label="დაშორება" onClick={() => sceneRef.current?.zoomBy(1.33)} className="flex size-9 items-center justify-center rounded-lg bg-white/95 shadow-sm disabled:opacity-40"><Minus className="size-4" /></button>
+            <button type="button" disabled={loading || error} aria-label="მიახლოება" onClick={() => sceneRef.current?.zoomBy(0.75)} className="flex size-10 items-center justify-center rounded-lg border border-line/80 bg-white/90 shadow-panel backdrop-blur-sm disabled:opacity-40"><Plus className="size-4" /></button>
+            <button type="button" disabled={loading || error} aria-label="დაშორება" onClick={() => sceneRef.current?.zoomBy(1.33)} className="flex size-10 items-center justify-center rounded-lg border border-line/80 bg-white/90 shadow-panel backdrop-blur-sm disabled:opacity-40"><Minus className="size-4" /></button>
           </div>
-          {commander && <div className="absolute inset-x-3 bottom-28 flex flex-wrap items-center justify-center gap-2 rounded-lg bg-[#17231f]/90 p-2 text-xs text-white">
-            <button type="button" aria-pressed={!portrait} onClick={() => { setPortrait(false); viewRef.current.portrait = false; sceneRef.current?.refreshView(); }} className={cn("rounded px-3 py-2", !portrait && "bg-white/20")}>მთელი ფიგურა</button>
-            <button type="button" aria-pressed={portrait} onClick={() => { setPortrait(true); viewRef.current.portrait = true; sceneRef.current?.refreshView(); }} className={cn("rounded px-3 py-2", portrait && "bg-white/20")}>სახის ახლო ხედი</button>
-            <button type="button" onClick={clearCommander} className="flex items-center gap-1 rounded px-3 py-2"><X className="size-3" />ბრძოლაზე დაბრუნება</button>
+          {commander && <div className="absolute inset-x-3 bottom-28 flex flex-wrap items-center justify-center gap-2 rounded-xl bg-[#17231f]/90 p-2 text-sm text-white">
+            <button type="button" aria-pressed={!portrait} onClick={() => { setPortrait(false); viewRef.current.portrait = false; sceneRef.current?.refreshView(); }} className={cn("min-h-10 rounded-lg px-3 py-2 hover:bg-white/10", !portrait && "bg-white/20")}>მთელი ფიგურა</button>
+            <button type="button" aria-pressed={portrait} onClick={() => { setPortrait(true); viewRef.current.portrait = true; sceneRef.current?.refreshView(); }} className={cn("min-h-10 rounded-lg px-3 py-2 hover:bg-white/10", portrait && "bg-white/20")}>სახის ახლო ხედი</button>
+            <button type="button" onClick={clearCommander} className="flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/10"><X className="size-4" />ბრძოლაზე დაბრუნება</button>
           </div>}
           {!commander && stage !== 0 && stage !== 7 && <div className="pointer-events-none absolute right-3 top-40 space-y-1 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm max-md:hidden">
             <p className="text-[#a92e26]">საქართველო · {ARMY_TOTALS.georgia.count}</p><p className="text-[#2b3a6b]">კოალიცია · {ARMY_TOTALS.coalition.count}*</p><p className="text-[10px] text-[#66736f]">*რაოდენობა სადავოა; საწყისი შეფასებები</p>
@@ -231,7 +231,7 @@ export function BattleExplorer() {
             <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-[#8b6337]"><button type="button" disabled={loading || error} onClick={() => go(0)}>საქართველოს რუკიდან ნახვა ↗</button><a href={DIDGORI_PLACE.mapHref} target="_blank" rel="noreferrer">დღევანდელ რუკაზე ↗</a></div>
             {stage === 0 && <p className="mt-3 text-[11px] leading-5 text-[#7b7b70]">დღევანდელი საქართველოს კონტურები ორიენტირისთვისაა. წერტილი მემორიალს აღნიშნავს; ბრძოლის ზუსტი საზღვრები უცნობია.</p>}
           </section>
-          <label className="mb-4 block text-xs font-semibold text-[#66736f] lg:hidden">მეთაურის დათვალიერება<select aria-label="მეთაურის არჩევა" disabled={loading || error} value={selectedCommander ?? ""} onChange={(e) => e.target.value ? inspectCommander(e.target.value as CommanderId) : clearCommander()} className="mt-2 block w-full rounded-lg border border-[#e2e7e5] p-2 text-sm"><option value="">ბრძოლის საერთო ხედი</option>{COMMANDERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <label className="mb-4 block text-xs font-semibold text-[#66736f] lg:hidden">მეთაურის დათვალიერება<select aria-label="მეთაურის არჩევა" disabled={loading || error} value={selectedCommander ?? ""} onChange={(e) => e.target.value ? inspectCommander(e.target.value as CommanderId) : clearCommander()} className="mt-2 block h-11 w-full rounded-lg border border-line-strong bg-white px-2 text-sm"><option value="">ბრძოლის საერთო ხედი</option>{COMMANDERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           {commander && <section className="mb-6 rounded-xl bg-[#192b27] p-4 text-white" aria-live="polite">
             <p className="text-xs text-[#d5b583]">მეთაურის 3D ფიგურა</p><h2 className="mt-2 text-xl">{commander.name}</h2><p className="mt-1 text-xs text-[#c4d0ca]">{commander.role}</p><p className="mt-3 text-sm leading-6">{commander.description}</p><p className="mt-3 text-sm leading-6 text-[#c4d0ca]">{commander.equipment}</p><p className="mt-3 border-t border-white/15 pt-3 text-xs leading-5 text-[#b5c1bc]">სახე და აღჭურვილობა მხატვრული რეკონსტრუქციაა; ავთენტურ პორტრეტად არ არის წარმოდგენილი. გადაათრიე ფიგურის გარშემო დასათვალიერებლად.</p>
           </section>}
@@ -251,7 +251,7 @@ export function BattleExplorer() {
             <p className="mt-4 border-t border-[#e8ddce] pt-3 text-sm leading-6"><strong>დააკვირდი: </strong>{DIDGORI_LEARNING[stage].watch}</p>
           </section>
           <p className="mt-3 text-xs leading-6 text-[#66736f]"><strong>წყარო და მოდელი: </strong>{DIDGORI_LEARNING[stage].evidence}</p>
-          <button type="button" onClick={() => go(stage)} disabled={loading || error} className="mt-3 flex items-center gap-2 rounded-lg border border-[#d9dfdb] px-3 py-2 text-sm disabled:opacity-40"><RotateCcw className="size-4" />ეტაპის თავიდან ნახვა</button>
+          <button type="button" onClick={() => go(stage)} disabled={loading || error} className="mt-3 flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-semibold hover:bg-subtle disabled:opacity-40"><RotateCcw className="size-4" />ეტაპის თავიდან ნახვა</button>
 
           <h3 className="mt-8 text-sm font-semibold text-[#66736f]">ძალები</h3>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -283,7 +283,7 @@ export function BattleExplorer() {
             <h3 className="text-sm font-semibold text-[#66736f]">შეამოწმე ცოდნა</h3>
             {DIDGORI_QUIZ.map((q, qi) => <fieldset key={q.question} className="mt-4 rounded-lg border border-[#e2e7e5] p-3">
               <legend className="px-1 text-sm font-semibold">{q.question}</legend>
-              <div className="space-y-2">{q.answers.map((answer, ai) => <label key={answer} className="flex cursor-pointer items-start gap-2 text-sm leading-6"><input type="radio" name={`question-${qi}`} checked={attempts[qi] === ai} onChange={() => setAttempts((a) => ({ ...a, [qi]: ai }))} className="mt-1.5 accent-[#a0662b]" />{answer}</label>)}</div>
+              <div className="space-y-2">{q.answers.map((answer, ai) => <label key={answer} className="flex cursor-pointer items-start gap-2 text-sm leading-6"><input type="radio" name={`question-${qi}`} checked={attempts[qi] === ai} onChange={() => setAttempts((a) => ({ ...a, [qi]: ai }))} className="mt-1.5 size-4 accent-[#a0662b]" />{answer}</label>)}</div>
               {attempts[qi] !== undefined && <p role="status" className={cn("mt-3 text-sm leading-6", attempts[qi] === q.correct ? "text-[#147354]" : "text-[#93541e]")}>{attempts[qi] === q.correct ? "სწორია. " : "კიდევ დაფიქრდი. "}{q.explanation}</p>}
             </fieldset>)}
           </section>

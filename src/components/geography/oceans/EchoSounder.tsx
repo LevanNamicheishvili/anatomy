@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Radio } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
 import { depthAt, PROFILE, PROFILE_PARTS, SOUND_WATER } from "./ocean-data";
 
 /*
@@ -105,15 +106,9 @@ export function EchoSounder() {
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_16rem]">
         <div className="flex flex-col gap-3">
-          <label className="block text-sm">
-            <span className="flex justify-between">
-              <span className="font-semibold">გემის ადგილი</span>
-              <span className="tabular-nums text-[#33413e]">ნაპირიდან {nf(km)} კმ</span>
-            </span>
-            <input type="range" min={10} max={2030} step={5} value={km} onChange={(e) => move(Number(e.target.value))} className="w-full accent-[#1f5f99]" />
-          </label>
+          <LabeledSlider label="გემის ადგილი" value={km} display={`ნაპირიდან ${nf(km)} კმ`} min={10} max={2030} step={5} onChange={move} color="#1f5f99" />
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={ping} className="flex h-10 items-center gap-2 rounded-lg bg-[#1f5f99] px-4 text-sm font-semibold text-white">
+            <button type="button" onClick={ping} className="flex h-11 items-center gap-2 rounded-lg bg-[#1f5f99] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#194e7f]">
               <Radio className="size-4" />
               ბგერითი სიგნალი
             </button>

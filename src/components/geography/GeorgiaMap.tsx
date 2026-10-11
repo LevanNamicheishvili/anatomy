@@ -601,12 +601,12 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           )}
 
           {/* Layers */}
-          <div className="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-xl border border-[#d5dcd9] bg-white/95 shadow-sm backdrop-blur">
+          <div className="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-xl border border-line/80 bg-white/90 shadow-panel backdrop-blur-sm">
             <button
               type="button"
               onClick={() => setLayersOpen(!(layersOpen ?? window.matchMedia("(min-width: 1024px)").matches))}
               aria-expanded={layersOpen ?? undefined}
-              className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-semibold"
+              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
             >
               <Layers className="size-4 text-[#2f6fb0]" />
               შრეები
@@ -622,7 +622,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       aria-pressed={layer === l.id}
                       onClick={() => setLayer(l.id)}
                       className={cn(
-                        "h-9 grow rounded-md px-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors",
+                        "h-10 grow rounded-lg px-3 text-[13px] font-semibold whitespace-nowrap transition-colors",
                         layer === l.id ? "bg-[#111a18] text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ebe9]",
                       )}
                     >
@@ -638,7 +638,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       aria-pressed={labels[t.id]}
                       onClick={() => setLabels((s) => ({ ...s, [t.id]: !s[t.id] }))}
                       className={cn(
-                        "inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[12px] font-medium whitespace-nowrap transition-colors",
+                        "inline-flex h-10 items-center gap-1 rounded-lg border px-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
                         labels[t.id] ? "border-[#2f6fb0] bg-[#eaf2fa] text-[#1d4f84]" : "border-[#d5dcd9] bg-white text-[#66736f] hover:bg-[#f5f7f6]",
                       )}
                     >
@@ -696,7 +696,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           </div>
 
           {/* Legend of the active layer */}
-          <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 shadow-sm">
+          <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-xl border border-line/80 bg-white/90 px-3 py-2 shadow-panel backdrop-blur-sm">
             {layer === "satellite" && (
               <>
                 <p className="text-[11px] font-semibold text-[#66736f]">სატელიტური სურათი</p>
@@ -774,7 +774,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       key={c.id}
                       type="button"
                       onClick={() => select({ kind: "city", city: c })}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                      className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
                     >
                       <MapPin className="size-3.5 text-[#2f6fb0]" />
                       {c.name}
