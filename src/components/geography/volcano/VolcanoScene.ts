@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLSL_NOISE, ParticleCloud } from "../fx/particles";
+import { GLSL_NOISE, ParticleCloud, noise2 } from "../fx/particles";
 
 /*
  * Topic 6 — a slice through a subduction zone: the oceanic plate (left) dives under the continental plate
@@ -8,9 +8,10 @@ import { GLSL_NOISE, ParticleCloud } from "../fx/particles";
  * chamber and erupts from a volcano. Where the plates stick and slip, an earthquake starts (focus →
  * epicentre, seismic waves) and the uplifted sea floor sends out a tsunami that grows as the sea shallows.
  * 1 scene unit ≈ 20 km across, the height is exaggerated.
- * Realism layer: rock faces get grain and bedding in the shader, magma glows and churns, the ash column
- * rises and spreads into an umbrella cloud, lava crusts over as it cools, and the tsunami pulls the sea
- * back before its steepening crest arrives.
+ * Realism layer: rock faces get grain and bedding in the shader, the cone is a layered stratovolcano with
+ * gullies and an ash-dark summit, magma glows white-yellow → orange → deep red → black crust with cracks,
+ * the ash column billows up and spreads into a lit umbrella cloud with lightning, the sky dims, and the sea
+ * has swell, pulls back from the shore (bare sea bed) and then steepens into a foaming, spraying crest.
  */
 
 type RockKind = "mantle" | "basalt" | "crust";
@@ -18,6 +19,8 @@ type RockKind = "mantle" | "basalt" | "crust";
 /** MeshStandardMaterial plus procedural rock grain / bedding / mantle convection on the cut face. */
 function rockMaterial(kind: RockKind) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true });
+  // The three variants share one onBeforeCompile source; without a distinct key they would all reuse one program.
+  m.customProgramCacheKey = () => `rock-${kind}`;
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vRockPos;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvRockPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
     const pattern =
@@ -25,7 +28,20 @@ function rockMaterial(kind: RockKind) {
         ? "float g = fbm2(vRockPos.xy * vec2(0.35, 0.6) + vec2(fbm2(vRockPos.xy * 0.4) * 2.0, 0.0)); diffuseColor.rgb *= 0.82 + 0.36 * g;"
         : kind === "basalt"
           ? "float g = fbm2(vRockPos.xy * 3.0); diffuseColor.rgb *= 0.86 + 0.24 * g + 0.05 * sin(vRockPos.y * 14.0 + g * 3.0);"
-          : "float g = fbm2(vRockPos.xy * vec2(1.4, 3.2)); float bed = sin(vRockPos.y * 9.0 + fbm2(vRockPos.xy * 0.7) * 5.0); diffuseColor.rgb *= 0.82 + 0.24 * g + 0.11 * bed;";
+          : `float g = fbm2(vRockPos.xy * vec2(1.4, 3.2)); float bed = sin(vRockPos.y * 9.0 + fbm2(vRockPos.xy * 0.7) * 5.0); diffuseColor.rgb *= 0.82 + 0.24 * g + 0.11 * bed;
+float cone = (1.0 - smoothstep(1.4, 3.3, abs(vRockPos.x - ${VX.toFixed(3)}))) * smoothstep(0.2, 0.9, vRockPos.y);
+if (cone > 0.0) {
+  float s = vRockPos.y + abs(vRockPos.x - ${VX.toFixed(3)}) * 1.04;
+  float lay = sin(s * 15.0 + fbm2(vRockPos.xy * 1.8) * 6.0);
+  float gul = fbm2(vec2(vRockPos.x * 9.0, s * 2.0));
+  vec3 base = diffuseColor.rgb;
+  vec3 layered = base * (0.72 + 0.28 * smoothstep(-0.6, 0.8, lay));
+  layered = mix(layered, layered * vec3(1.45, 0.78, 0.6), smoothstep(0.72, 0.95, lay) * 0.55);
+  layered *= 0.78 + 0.4 * gul;
+  float ash = smoothstep(1.7, 2.9, vRockPos.y + (fbm2(vRockPos.xy * 3.0) - 0.5) * 0.9);
+  layered = mix(layered, vec3(0.07, 0.065, 0.06) + 0.05 * gul, ash * 0.7);
+  diffuseColor.rgb = mix(base, layered, cone);
+}`;
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", `#include <common>\nvarying vec3 vRockPos;\n${GLSL_NOISE}`)
       .replace("#include <color_fragment>", `#include <color_fragment>\nif (abs(abs(vRockPos.z) - ${(DEPTH / 2).toFixed(3)}) < 0.05) { ${pattern} }`);
@@ -33,7 +49,18 @@ function rockMaterial(kind: RockKind) {
   return m;
 }
 
-/** Glowing magma: a hot core fading to a dull red rim, churning slowly. Works on any flat shape. */
+/** Temperature → colour: black crust, deep red, orange, yellow, white-yellow core. */
+const LAVA_RAMP = /* glsl */ `
+vec3 lavaRamp(float t) {
+  t = clamp(t, 0.0, 1.2);
+  vec3 c = mix(vec3(0.015, 0.012, 0.012), vec3(0.34, 0.02, 0.0), smoothstep(0.0, 0.3, t));
+  c = mix(c, vec3(0.95, 0.17, 0.0), smoothstep(0.26, 0.55, t));
+  c = mix(c, vec3(1.0, 0.55, 0.05), smoothstep(0.5, 0.78, t));
+  c = mix(c, vec3(1.0, 0.93, 0.62), smoothstep(0.78, 1.05, t));
+  return c;
+}`;
+
+/** Glowing magma: a white-yellow core cooling to orange and deep red, flowing, with dark crust flecks at the rim. */
 function glowMaterial(center: THREE.Vector2, radius: THREE.Vector2, strength = 1) {
   return new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uCenter: { value: center }, uRadius: { value: radius }, uStrength: { value: strength } },
@@ -45,16 +72,20 @@ uniform vec2 uRadius;
 uniform float uStrength;
 varying vec2 vP;
 ${GLSL_NOISE}
+${LAVA_RAMP}
 void main() {
   vec2 q = (vP - uCenter) / uRadius;
   float d = length(q);
-  float churn = fbm2(vP * 2.2 + vec2(uTime * 0.45, -uTime * 0.7) + fbm2(vP * 1.1 - uTime * 0.2) * 1.5);
-  float pulse = 0.92 + 0.14 * sin(uTime * 2.3 + churn * 6.0);
-  float heat = clamp((1.2 - d) * (0.8 + 0.6 * churn) * uStrength * pulse, 0.0, 1.0);
-  vec3 col = mix(vec3(0.45, 0.04, 0.0), vec3(1.0, 0.35, 0.02), smoothstep(0.1, 0.55, heat));
-  col = mix(col, vec3(1.0, 0.93, 0.55), smoothstep(0.55, 0.95, heat));
-  col *= 1.0 + 0.25 * smoothstep(0.7, 1.0, heat);
-  float a = smoothstep(1.25, 0.85, d);
+  float w = fbm2(vP * 1.2 - vec2(0.0, uTime * 0.18));
+  float churn = fbm2(vP * 2.4 + vec2(uTime * 0.25, -uTime * 0.55) + w * 2.0);
+  float pulse = 0.94 + 0.1 * sin(uTime * 2.1 + churn * 7.0);
+  float heat = clamp((1.15 - d) * (0.65 + 0.85 * churn) * uStrength * pulse, 0.0, 1.2);
+  float plate = smoothstep(0.52, 0.64, fbm2(vP * 5.5 + vec2(uTime * 0.05, 0.0)));
+  heat *= 1.0 - 0.75 * smoothstep(0.5, 0.95, d) * plate;
+  heat = max(heat, 0.2);
+  vec3 col = lavaRamp(heat);
+  col *= 1.0 + 0.3 * smoothstep(0.8, 1.1, heat);
+  float a = 1.0 - smoothstep(0.85, 1.25, d);
   gl_FragColor = vec4(col, a);
   #include <colorspace_fragment>
 }`,
@@ -63,7 +94,7 @@ void main() {
   });
 }
 
-/** Lava ribbon: a glowing front, a crust that darkens as it cools, and bright cracks in the crust. */
+/** Lava ribbon: a white-hot front, a channel cooling to orange and red, black crust plates with glowing cracks drifting downhill. */
 function lavaMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uProg: { value: 0 } },
@@ -73,26 +104,118 @@ uniform float uTime;
 uniform float uProg;
 varying vec2 vUv;
 ${GLSL_NOISE}
+${LAVA_RAMP}
 void main() {
   float along = vUv.x;
   float lobe = 0.035 * (vnoise(vec2(vUv.y * 6.0, 3.0)) - 0.5);
   if (along > uProg + lobe) discard;
   float age = clamp((uProg - along) * 2.2, 0.0, 1.0);
-  float vent = smoothstep(0.12, 0.0, along);
-  // A hot channel stays open in the middle; the edges and the old parts crust over first.
-  float cool = age * (1.0 - vent) * (0.45 + 0.55 * abs(vUv.y - 0.5) * 2.0);
-  float flow = fbm2(vec2(along * 26.0 - uTime * 0.7, vUv.y * 3.0));
-  float crack = 1.0 - smoothstep(0.0, 0.1, abs(fbm2(vec2(along * 40.0, vUv.y * 5.0 + 2.0)) - 0.5));
-  crack = max(crack, 1.0 - smoothstep(0.0, 0.06, abs(fbm2(vec2(along * 70.0 + 9.0, vUv.y * 9.0)) - 0.5)));
-  vec3 hot = mix(vec3(1.0, 0.32, 0.02), vec3(1.0, 0.82, 0.3), flow);
-  vec3 crust = mix(vec3(0.07, 0.06, 0.06), vec3(0.18, 0.14, 0.13), flow);
-  vec3 col = mix(hot, crust, smoothstep(0.15, 0.85, cool));
-  col = mix(col, hot * 1.15, crack * cool);
-  float edge = smoothstep(0.0, 0.18, vUv.y) * smoothstep(1.0, 0.82, vUv.y);
-  col *= 0.75 + 0.25 * edge;
+  float vent = 1.0 - smoothstep(0.0, 0.12, along);
+  float edgeD = abs(vUv.y - 0.5) * 2.0;
+  vec2 pc = vec2(along * 24.0 - uTime * 0.5, vUv.y * 3.5);
+  float warp = fbm2(pc * 0.6 + 4.0);
+  float n = fbm2(pc + warp * 1.6);
+  // A hot channel stays open in the middle; the edges and the old parts cool and crust over first.
+  float temp = 1.0 - age * (1.0 - vent) * (0.55 + 0.45 * edgeD);
+  temp += (n - 0.5) * 0.4 - 0.12 * edgeD + (1.0 - smoothstep(0.0, 0.1, uProg - along)) * 0.25;
+  vec2 cp = vec2(along * 34.0 - uTime * 0.18, vUv.y * 6.5);
+  float c1 = fbm2(cp + warp * 1.2);
+  float crack = 1.0 - smoothstep(0.0, 0.09, abs(c1 - 0.5));
+  float c2 = fbm2(cp * 2.1 + 7.0);
+  crack = max(crack, (1.0 - smoothstep(0.0, 0.06, abs(c2 - 0.5))) * 0.7);
+  float crusted = smoothstep(0.25, 0.7, 1.0 - temp);
+  float open = smoothstep(0.55, 0.8, temp);
+  float tPlate = clamp(temp * 0.28 + 0.04 * n, 0.0, 0.3);
+  float tCrack = clamp(temp + 0.35 + 0.15 * sin(uTime * 1.7 + c1 * 9.0), 0.0, 1.1);
+  float tHot = mix(tCrack, temp + 0.1, open);
+  float glowMask = clamp(crack * crusted + open, 0.0, 1.0);
+  vec3 col = mix(lavaRamp(tPlate) * (0.8 + 0.4 * n), lavaRamp(tHot), glowMask);
+  col *= 0.7 + 0.3 * (1.0 - smoothstep(0.75, 1.0, edgeD));
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
 }`,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Ocean front panel: depth colour, caustic streaks, silt near the sea bed, foam at the surface and on the crest. */
+function seaFrontMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uCrestX: { value: 0 }, uFoam: { value: 0 } },
+    vertexShader: `
+attribute vec2 aInfo;
+varying vec3 vW;
+varying vec2 vInfo;
+void main() {
+  vW = (modelMatrix * vec4(position, 1.0)).xyz;
+  vInfo = aInfo;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`,
+    fragmentShader: `
+uniform float uTime;
+uniform float uCrestX;
+uniform float uFoam;
+varying vec3 vW;
+varying vec2 vInfo;
+${GLSL_NOISE}
+void main() {
+  float dep = max(0.0, vInfo.y - vW.y);
+  float above = max(0.0, vW.y - vInfo.x);
+  vec3 col = mix(vec3(0.05, 0.26, 0.4), vec3(0.01, 0.06, 0.17), 1.0 - exp(-dep * 0.55));
+  float cs = fbm2(vec2(vW.x * 1.7 + uTime * 0.12, vW.y * 2.6 - uTime * 0.08));
+  col += vec3(0.07, 0.17, 0.2) * pow(1.0 - abs(cs * 2.0 - 1.0), 5.0) * exp(-dep * 0.9);
+  col = mix(col, vec3(0.1, 0.085, 0.06), (1.0 - smoothstep(0.0, 0.35, above)) * 0.45);
+  float nz = fbm2(vec2(vW.x * 7.0 - uTime * 0.4, vW.y * 7.0));
+  float band = exp(-dep * 10.0) * (0.25 + 0.5 * smoothstep(0.35, 0.75, nz));
+  float cd = (vW.x - uCrestX) / 0.6;
+  float cx = exp(-cd * cd) * uFoam * exp(-dep * 2.0) * smoothstep(0.3, 0.7, nz);
+  float foam = clamp(band * 0.55 + cx * 1.2, 0.0, 1.0);
+  col = mix(col, vec3(0.88, 0.94, 1.0), foam);
+  gl_FragColor = vec4(col, mix(0.86, 0.97, foam));
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+}
+
+/** Ocean top surface: sky reflection by angle, sun glint, foam streaks on the crest. */
+function seaTopMaterial(sky: THREE.Color) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uCrestX: { value: 0 }, uFoam: { value: 0 }, uSky: { value: sky } },
+    vertexShader: `
+varying vec3 vN;
+varying vec3 vW;
+void main() {
+  vN = normalize(mat3(modelMatrix) * normal);
+  vW = (modelMatrix * vec4(position, 1.0)).xyz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`,
+    fragmentShader: `
+uniform float uTime;
+uniform float uCrestX;
+uniform float uFoam;
+uniform vec3 uSky;
+varying vec3 vN;
+varying vec3 vW;
+${GLSL_NOISE}
+void main() {
+  vec3 V = normalize(cameraPosition - vW);
+  vec3 N = normalize(vN);
+  if (dot(N, V) < 0.0) N = -N;
+  float fr = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  vec3 H = normalize(normalize(vec3(-0.3, 0.8, 0.6)) + V);
+  float spec = pow(max(dot(N, H), 0.0), 90.0) * 0.7;
+  vec3 col = mix(vec3(0.05, 0.25, 0.4), uSky, fr * 0.6) + spec;
+  float nz = fbm2(vec2(vW.x * 6.0 - uTime * 0.5, vW.z * 3.0));
+  float cd = (vW.x - uCrestX) / 0.7;
+  float cx = exp(-cd * cd) * uFoam * smoothstep(0.25, 0.65, nz);
+  col = mix(col, vec3(0.9, 0.95, 1.0), clamp(cx * 1.3, 0.0, 1.0));
+  gl_FragColor = vec4(col, 0.9);
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
     side: THREE.DoubleSide,
   });
 }
@@ -110,6 +233,9 @@ const BOTTOM = -11;
 const CONT_BASE = -3.6;
 const QX = -0.5;
 const WATER_END = 4.5;
+const ASH_N = 900;
+const BOMB_N = 70;
+const HALO_N = 16;
 
 const smooth = (t: number) => {
   const k = Math.min(1, Math.max(0, t));
@@ -120,7 +246,10 @@ const slabBot = (x: number) => slabTop(x) - 1.1;
 function land(x: number) {
   if (x < 2) return -2 + 2.1 * smooth((x + 2) / 4);
   let h = 0.1 + 0.35 * Math.min(1, (x - 2) / 3);
-  h += 2.7 * Math.max(0, 1 - Math.abs(x - VX) / 2.6);
+  const cone = Math.max(0, 1 - Math.abs(x - VX) / 2.6);
+  h += 2.7 * cone;
+  // Ridges and gullies cut into the flanks (fade to nothing at the foot of the cone).
+  h += cone * (0.14 * (1 - Math.abs(noise2(x * 6, 2.1))) - 0.07 + 0.045 * noise2(x * 13, 5.3));
   const c = Math.abs(x - VX);
   if (c < 0.35) h -= 0.3 * (1 - c / 0.35);
   return h;
@@ -231,7 +360,17 @@ interface Particle {
   v: THREE.Vector3;
   age: number;
   life: number;
+  /** Per-particle random 0…1, re-rolled when the particle is reborn. */
+  r: number;
 }
+const particle = (life: number, age = 0): Particle => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), age, life, r: Math.random() });
+
+/** Ambient swell: wavenumber, amplitude, angular speed, phase. */
+const SWELL: [number, number, number, number][] = [
+  [0.9, 0.04, 0.9, 0.3],
+  [1.9, 0.028, 1.5, 1.7],
+  [3.4, 0.016, 2.1, 4.1],
+];
 
 export class VolcanoScene {
   onFrame: ((project: Projector, anchors: typeof ANCHORS, state: { tsunami: number; quake: number }) => void) | null = null;
@@ -258,15 +397,41 @@ export class VolcanoScene {
   private bombs: THREE.InstancedMesh;
   private ash: ParticleCloud;
   private embers: ParticleCloud;
+  private trail: ParticleCloud;
+  private halo: ParticleCloud;
   private crest: ParticleCloud;
   private emberP: Particle[] = [];
   private crestP: Particle[] = [];
   private craterLight = new THREE.PointLight("#ff7a1a", 0, 9, 1.6);
+  private flashLight = new THREE.PointLight("#bcd0ff", 0, 10, 1.6);
+  private bolt: THREE.Line;
+  private flash = 0;
+  private flashCool = 3;
+  private flashPos = new THREE.Vector3();
   private chamberHalo: THREE.Mesh;
-  private ashLow = new THREE.Color("#3f3631");
-  private ashLit = new THREE.Color("#8a4a24");
-  private ashHigh = new THREE.Color("#8d8984");
+  private skyDay = new THREE.Color("#a9d4f0");
+  private skyDim = new THREE.Color("#4f5663");
+  private sky = new THREE.Color("#a9d4f0");
+  private dim = 0;
+  private hemi = new THREE.HemisphereLight("#eef5ff", "#5a4a3a", 1.2);
+  private sun = new THREE.DirectionalLight("#fff4e0", 2);
+  private seaFront = seaFrontMaterial();
+  private seaTop = seaTopMaterial(this.sky);
+  private ashDark = new THREE.Color("#2b2826");
+  private ashFresh = new THREE.Color("#5b4a40");
+  private ashLit = new THREE.Color("#c4601f");
+  private ashTop = new THREE.Color("#8b8782");
   private c = new THREE.Color();
+  private tmp = new THREE.Vector3();
+  private ventPos = new THREE.Vector3(VX, PEAK, 0);
+  private projTmp = new THREE.Vector3();
+  private shakeOff = new THREE.Vector3();
+  private blobFrom = new THREE.Vector2(5.2, slabTop(5.2) + 0.35);
+  private blobTo = new THREE.Vector2(VX, -1.9);
+  private bombHot = new THREE.Color("#ffd27a");
+  private bombCool = new THREE.Color("#2e2420");
+  private mistC = new THREE.Color("#e8f1f7");
+  private sprayC = new THREE.Color("#f4f8fb");
   private bombP: Particle[] = [];
   private ashP: Particle[] = [];
   private waterFront: THREE.BufferGeometry;
@@ -280,10 +445,10 @@ export class VolcanoScene {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.scene.background = new THREE.Color("#a9d4f0");
-    const sun = new THREE.DirectionalLight("#fff4e0", 2);
-    sun.position.set(-4, 12, 8);
-    this.scene.add(new THREE.HemisphereLight("#eef5ff", "#5a4a3a", 1.2), sun);
+    this.scene.background = this.sky;
+    this.scene.fog = new THREE.FogExp2(this.sky.clone(), 0.009);
+    this.sun.position.set(-4, 12, 8);
+    this.scene.add(this.hemi, this.sun);
 
     // Rock: mantle, oceanic plate, mantle wedge, continental crust.
     const mantleUnder: [number, number][] = [[X0, BOTTOM], ...sample(slabBot, X0, SLAB_END_BOT), [X0, BOTTOM]];
@@ -298,7 +463,8 @@ export class VolcanoScene {
       slab(wedge, "#e07a35", "#c86a2a", undefined, "mantle"),
       slab(plate, "#4a5566", "#3d4757", (x, y) => (x < -2 && y > -1.3 - ((x - X0) / 12) * 0.8 ? "#c8b48a" : null), "basalt"),
       slab(crust, "#8a6a4a", "#5f8a3e", (x, y) => {
-        if (Math.abs(x - VX) < 2.7 && y > 0.7) return y > 2.4 ? "#eef1f4" : "#6b6258";
+        // Ash-dark summit (and a lighter, ash-grey flank), not a snowcap: this cone is erupting.
+        if (Math.abs(x - VX) < 2.7 && y > 0.7) return y > 2.2 ? "#4b4540" : "#6b6258";
         return y < -0.2 ? "#a08a66" : null;
       }),
     );
@@ -310,10 +476,7 @@ export class VolcanoScene {
     for (let i = 0; i <= this.waterN; i++) this.waterX[i] = X0 + ((WATER_END - X0) * i) / this.waterN;
     this.waterFront = this.strip(FZ - 0.01, true);
     this.waterTop = this.strip(0, false);
-    this.scene.add(
-      new THREE.Mesh(this.waterFront, new THREE.MeshBasicMaterial({ color: "#2f7fbf", transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false })),
-      new THREE.Mesh(this.waterTop, new THREE.MeshStandardMaterial({ color: "#3b8fd0", roughness: 0.3, transparent: true, opacity: 0.85, side: THREE.DoubleSide })),
-    );
+    this.scene.add(new THREE.Mesh(this.waterFront, this.seaFront), new THREE.Mesh(this.waterTop, this.seaTop));
 
     // Plates: arrows of motion, trench.
     const arrowMat = (dir: 1 | -1, x: number, y: number, color: string) => {
@@ -382,20 +545,30 @@ export class VolcanoScene {
       this.groups.eruption.add(new THREE.Mesh(geo, this.lavaMat));
     }
     // A lava lake glowing in the crater.
-    this.groups.eruption.add(decal(ellipse(VX, PEAK - 0.12, 0.33, 0.12), "#ffb03a", 1, 0.035));
+    this.groups.eruption.add(glow(ellipse(VX, PEAK - 0.12, 0.33, 0.12), VX, PEAK - 0.12, 0.33, 0.12, 1.4, 0.035));
     const bombMat = new THREE.MeshBasicMaterial({ color: "#ffffff" });
-    this.bombs = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.085, 0), bombMat, 70);
-    this.bombs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(70 * 3).fill(1), 3);
-    this.ash = new ParticleCloud(820, { soft: 1, order: 3 });
+    this.bombs = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.085, 0), bombMat, BOMB_N);
+    this.bombs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(BOMB_N * 3).fill(1), 3);
+    this.ash = new ParticleCloud(ASH_N, { soft: 1, order: 3 });
     this.embers = new ParticleCloud(220, { soft: 0.45, additive: true, order: 4 });
-    this.crest = new ParticleCloud(320, { soft: 0.55, order: 5 });
-    for (let i = 0; i < 70; i++) this.bombP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.5 });
-    for (let i = 0; i < 820; i++) this.ashP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 7 });
-    for (let i = 0; i < 220; i++) this.emberP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.2 });
-    for (let i = 0; i < 320; i++) this.crestP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 9, life: 0 });
-    this.craterLight.position.set(VX, PEAK + 0.6, FZ + 1.2);
-    this.groups.eruption.add(this.bombs, this.ash.points, this.embers.points, this.craterLight);
-    this.scene.add(this.crest.points);
+    this.trail = new ParticleCloud(BOMB_N * 4, { soft: 0.8, additive: true, order: 4 });
+    this.halo = new ParticleCloud(HALO_N, { soft: 1, additive: true, order: 6 });
+    this.crest = new ParticleCloud(400, { soft: 0.55, order: 5 });
+    for (let i = 0; i < BOMB_N; i++) this.bombP.push(particle(-Math.random() * 1.5));
+    for (let i = 0; i < ASH_N; i++) this.ashP.push(particle(-Math.random() * 7));
+    for (let i = 0; i < 220; i++) this.emberP.push(particle(-Math.random() * 1.2));
+    for (let i = 0; i < 400; i++) this.crestP.push(particle(0, 9));
+    this.craterLight.position.set(VX, PEAK + 0.2, FZ + 0.9);
+    // A lightning bolt flickers inside the ash cloud.
+    const boltGeo = new THREE.BufferGeometry();
+    boltGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(9 * 3), 3));
+    this.bolt = new THREE.Line(boltGeo, new THREE.LineBasicMaterial({ color: "#dfe9ff", transparent: true, opacity: 0 }));
+    this.bolt.frustumCulled = false;
+    this.bolt.visible = false;
+    this.bombs.frustumCulled = false;
+    this.groups.eruption.add(this.bombs, this.trail.points, this.ash.points, this.embers.points, this.bolt);
+    // Lights stay in the scene (intensity 0 outside the eruption) so toggling the group never changes the light count and recompiles the rock shaders.
+    this.scene.add(this.crest.points, this.halo.points, this.craterLight, this.flashLight);
 
     // Earthquake: focus, epicentre, dashed line between them, expanding seismic waves.
     this.groups.quake.add(decal(star(FOCUS.x, FOCUS.y, 0.42), "#ffe600", 1, 0.02));
@@ -439,15 +612,19 @@ export class VolcanoScene {
   private strip(z: number, front: boolean) {
     const n = this.waterN;
     const pos = new Float32Array((n + 1) * 2 * 3);
+    const info = new Float32Array((n + 1) * 2 * 2);
     for (let i = 0; i <= n; i++) {
       const x = this.waterX[i];
-      if (front) pos.set([x, floor(x), z, x, 0, z], i * 6);
-      else pos.set([x, 0, DEPTH / 2, x, 0, -DEPTH / 2], i * 6);
+      if (front) {
+        pos.set([x, floor(x), z, x, 0, z], i * 6);
+        info.set([floor(x), 0, floor(x), 0], i * 4);
+      } else pos.set([x, 0, DEPTH / 2, x, 0, -DEPTH / 2], i * 6);
     }
     const idx: number[] = [];
     for (let i = 0; i < n; i++) idx.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    if (front) g.setAttribute("aInfo", new THREE.BufferAttribute(info, 2));
     g.setIndex(idx);
     g.computeVertexNormals();
     return g;
@@ -468,6 +645,8 @@ export class VolcanoScene {
   restart() {
     this.eventT = 0;
     this.pulses = { l: QX, r: QX };
+    this.flash = 0;
+    this.flashCool = 3;
     for (const p of [...this.bombP, ...this.emberP]) {
       p.life = -Math.random() * 1.5;
       p.age = 0;
@@ -480,7 +659,7 @@ export class VolcanoScene {
   }
 
   private project: Projector = (p) => {
-    const v = p.clone().project(this.camera);
+    const v = this.projTmp.copy(p).project(this.camera);
     return { x: ((v.x + 1) / 2) * this.canvas.clientWidth, y: ((1 - v.y) / 2) * this.canvas.clientHeight, visible: v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 };
   };
 
@@ -492,7 +671,7 @@ export class VolcanoScene {
     this.camera.aspect = w / h;
     this.camera.fov = w < h ? 40 / Math.max(0.5, w / h) : 40;
     this.camera.updateProjectionMatrix();
-    for (const c of [this.ash, this.embers, this.crest]) c.setViewport(h * this.renderer.getPixelRatio(), this.camera.fov);
+    for (const c of [this.ash, this.embers, this.trail, this.halo, this.crest]) c.setViewport(h * this.renderer.getPixelRatio(), this.camera.fov);
   }
 
   /** Wave speed in scene units per second (∝ √depth, as for a real tsunami). */
@@ -509,68 +688,143 @@ export class VolcanoScene {
     }
     const d0 = -floor(QX);
     const front = this.waterFront.getAttribute("position") as THREE.BufferAttribute;
+    const info = this.waterFront.getAttribute("aInfo") as THREE.BufferAttribute;
     const top = this.waterTop.getAttribute("position") as THREE.BufferAttribute;
-    const wave = (x: number) => {
-      if (!on) return 0;
-      let h = 0;
-      for (const [c, side] of [[this.pulses.l, -1], [this.pulses.r, 1]] as const) {
-        const d = Math.max(0.05, -floor(Math.min(c, COAST - 0.05)));
-        const grow = Math.min(2.8, (d0 / d) ** 0.25);
-        const width = Math.max(0.28, 0.85 * Math.sqrt(d / d0));
-        const inland = side > 0 && c > COAST ? Math.max(0, 1 - (c - COAST) / 2.2) : 1;
-        const fade = side < 0 ? Math.max(0, 1 - (QX - c) / 18) : 1;
-        const amp = 0.21 * grow * inland * fade * Math.min(1, age * 2);
-        // In shallow water the front steepens and the back stretches: the wave leans forward.
-        const steep = Math.min(1, Math.max(0, (grow - 1.15) / 1.3));
-        const xi = (x - c) * side;
-        const w = xi > 0 ? width * (1 - 0.65 * steep) : width * (1 + 0.6 * steep);
-        h += amp * Math.exp(-((xi / w) ** 2));
-        // Toward the coast a trough runs ahead of the crest: the sea first draws back from the shore.
-        if (side > 0) h -= amp * 0.95 * Math.exp(-(((xi - width * 1.7) / (width * 0.9)) ** 2));
-      }
+    // One pulse's contribution at x (called per vertex, so no per-call allocations).
+    const pulse = (x: number, c: number, side: number) => {
+      const d = Math.max(0.05, -floor(Math.min(c, COAST - 0.05)));
+      const grow = Math.min(2.8, (d0 / d) ** 0.25);
+      const width = Math.max(0.28, 0.85 * Math.sqrt(d / d0));
+      const inland = side > 0 && c > COAST ? Math.max(0, 1 - (c - COAST) / 2.2) : 1;
+      const fade = side < 0 ? Math.max(0, 1 - (QX - c) / 18) : 1;
+      const amp = 0.21 * grow * inland * fade * Math.min(1, age * 2);
+      // In shallow water the front steepens and the back stretches: the wave leans forward.
+      const steep = Math.min(1, Math.max(0, (grow - 1.15) / 1.3));
+      const xi = (x - c) * side;
+      const w = xi > 0 ? width * (1 - 0.65 * steep) : width * (1 + 0.6 * steep);
+      let h = amp * Math.exp(-((xi / w) ** 2));
+      // Toward the coast a trough runs ahead of the crest: the sea first draws back from the shore.
+      if (side > 0) h -= amp * 0.95 * Math.exp(-(((xi - width * 1.7) / (width * 0.9)) ** 2));
       return h;
     };
-    const t = this.t;
-    if (on && this.pulses.r < COAST + 0.3) {
-      const d = Math.max(0.05, -floor(Math.min(this.pulses.r, COAST - 0.05)));
-      const steep = Math.min(1, Math.max(0, ((-floor(QX) / d) ** 0.25 - 1.15) / 1.3));
-      this.updateCrest(dt, this.pulses.r, wave(this.pulses.r) + 0.02, steep);
-    } else {
-      this.updateCrest(dt, 0, 0, 0);
+    const wave = (x: number) => (on ? pulse(x, this.pulses.l, -1) + pulse(x, this.pulses.r, 1) : 0);
+    // Steepness of the shoreward crest (0 in deep water … 1 breaking) and the sea's drawback before it arrives.
+    const pr = this.pulses.r;
+    let steepR = 0;
+    if (on && pr < COAST + 0.3) {
+      const d = Math.max(0.05, -floor(Math.min(pr, COAST - 0.05)));
+      steepR = Math.min(1, Math.max(0, ((d0 / d) ** 0.25 - 1.15) / 1.3));
     }
+    const prog = on ? (pr - QX) / (COAST - QX) : 0;
+    const drawAmp = on ? 0.95 * smooth(prog / 0.3) * (1 - smooth((prog - 0.78) / 0.22)) * Math.min(1, age * 1.2) : 0;
+    const t = this.t;
+    const crestH = on ? wave(pr) : 0;
+    const lean = 0.45 * steepR;
+    if (steepR > 0 || on) this.updateCrest(dt, pr + lean * Math.max(0, crestH), crestH + 0.02, steepR);
+    else this.updateCrest(dt, 0, 0, 0);
+    const calm = this.reduceMotion ? 0 : 1;
     for (let i = 0; i <= this.waterN; i++) {
       const x = this.waterX[i];
       const ground = floor(x);
-      const ripple = this.reduceMotion ? 0 : 0.025 * Math.sin(x * 2.2 - t * 1.6);
+      // Ambient swell: Gerstner-like — heights plus a horizontal shift that bunches the water toward the crests.
+      let swell = 0;
+      let shift = 0;
+      if (x < COAST) {
+        const df = Math.min(1, Math.max(0, -ground / 0.8)) * calm;
+        for (const [k, a, w, ph] of SWELL) {
+          const th = k * x - w * t + ph;
+          swell += a * Math.sin(th) * df;
+          shift += 1.1 * a * Math.cos(th) * df;
+        }
+      }
       // Run-up: a wave reaching the shore climbs onto the land.
-      const run = this.step === "tsunami" && x > COAST && this.pulses.r > COAST && x < this.pulses.r + 0.4 ? Math.max(0, 0.45 * (1 - (x - COAST) / 2.6)) * Math.min(1, (this.pulses.r - COAST) * 1.5) : 0;
-      let level = (x < COAST ? ripple : -1) + wave(x);
-      if (run > 0) level = Math.max(level, ground + run * Math.max(0, 1 - Math.max(0, x - this.pulses.r) / 0.4));
+      const run = this.step === "tsunami" && x > COAST && pr > COAST && x < pr + 0.4 ? Math.max(0, 0.45 * (1 - (x - COAST) / 2.6)) * Math.min(1, (pr - COAST) * 1.5) : 0;
+      const w = wave(x);
+      // Drawback: the whole nearshore sea level sinks and the sea bed comes into view.
+      const drawdown = drawAmp * smooth((x - (QX + 1)) / (COAST - 0.3 - (QX + 1)));
+      let level = (x < COAST ? swell : -1) + w - drawdown;
+      if (run > 0) level = Math.max(level, ground + run * Math.max(0, 1 - Math.max(0, x - pr) / 0.4));
       const y = Math.max(ground, level);
+      // The steep face of the crest leans forward (vertex shift), so it reads as an almost vertical wall.
+      const xs = x + shift + lean * Math.max(0, w);
       front.setXY(i * 2, x, ground);
-      front.setXY(i * 2 + 1, x, y);
+      front.setXY(i * 2 + 1, xs, y);
+      info.setXY(i * 2, ground, y);
+      info.setXY(i * 2 + 1, ground, y);
+      top.setX(i * 2, xs);
+      top.setX(i * 2 + 1, xs);
       top.setY(i * 2, y);
       top.setY(i * 2 + 1, y);
     }
     front.needsUpdate = true;
+    info.needsUpdate = true;
     top.needsUpdate = true;
     this.waterTop.computeVertexNormals();
+    const foam = on ? Math.min(1, steepR * 1.2 + 0.15 * Math.min(1, age)) : 0;
+    for (const m of [this.seaFront, this.seaTop]) {
+      m.uniforms.uTime.value = t;
+      m.uniforms.uCrestX.value = pr + lean * Math.max(0, crestH);
+      m.uniforms.uFoam.value = foam;
+    }
     this.anchors.tsunamiL.set(Math.max(X0 + 1.5, this.pulses.l), wave(this.pulses.l) + 0.7, FZ);
     this.anchors.tsunamiR.set(Math.min(COAST + 1.2, this.pulses.r), Math.max(0, wave(this.pulses.r)) + 0.9 + Math.max(0, floor(this.pulses.r)), FZ);
   }
 
+  /** Sky dims under the ash; the cloud's lightning briefly lights everything. */
+  private updateAtmosphere(dt: number) {
+    const target = this.step === "eruption" ? smooth(this.eventT / 6) : 0;
+    this.dim = dt > 0 ? this.dim + (target - this.dim) * Math.min(1, dt * 2.5) : target;
+    this.flash *= Math.exp(-dt * 6);
+    this.sky.copy(this.skyDay).lerp(this.skyDim, this.dim * 0.85);
+    (this.scene.fog as THREE.FogExp2).color.copy(this.sky);
+    this.hemi.intensity = 1.2 - 0.45 * this.dim + this.flash * 0.6;
+    this.sun.intensity = 2 - 1.05 * this.dim;
+  }
+
+  /** Big additive glow sprites: the chamber, the crater and the lava front light up their surroundings. */
+  private updateHalo() {
+    const k = ["plates", "magma", "eruption", "quake", "tsunami"].indexOf(this.step);
+    for (let i = 0; i < HALO_N; i++) this.halo.hide(i);
+    const t = this.t;
+    if (k >= 1) {
+      const pulse = 0.85 + 0.15 * Math.sin(t * 1.7);
+      this.halo.set(0, this.tmp.set(VX, -1.6, FZ + 0.05), 3.2, 0.26 * pulse, this.c.setRGB(1, 0.32, 0.04));
+      this.halo.set(1, this.tmp.set(VX, -1.6, FZ + 0.06), 1.5, 0.3 * pulse, this.c.setRGB(1, 0.5, 0.1));
+      this.halo.set(2, this.tmp.set(5.2, slabTop(5.2) + 0.35, FZ + 0.05), 2.1, 0.16 * pulse, this.c.setRGB(1, 0.3, 0.04));
+    }
+    if (this.step === "eruption") {
+      const ramp = smooth(this.eventT / 4);
+      const flick = 0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 5.3) + 0.08 * Math.sin(t * 31);
+      this.halo.set(3, this.tmp.set(VX, PEAK + 0.2, FZ + 0.1), 3.6, 0.3 * ramp * flick, this.c.setRGB(1, 0.33, 0.05));
+      this.halo.set(4, this.tmp.set(VX, PEAK + 0.1, FZ + 0.12), 1.3, 0.5 * ramp * flick, this.c.setRGB(1, 0.7, 0.25));
+      const prog = this.lavaMat.uniforms.uProg.value as number;
+      [1, -1].forEach((dir, di) => {
+        for (let j = 0; j < 4; j++) {
+          const u = (j + 0.6) / 4;
+          if (u > prog) continue;
+          const x = VX + dir * (0.3 + u * 2.7);
+          this.halo.set(5 + di * 4 + j, this.tmp.set(x, land(x), FZ + 0.1), 0.9 + 0.2 * (1 - u), 0.3 * (1 - u * 0.55) * flick, this.c.setRGB(1, 0.28 + 0.15 * (1 - u), 0.03));
+        }
+      });
+    }
+    this.halo.commit();
+  }
+
   private updateEruption(dt: number) {
     const g = -6;
-    const cr = new THREE.Vector3(VX, PEAK, 0);
-    const hotC = new THREE.Color("#ffd27a");
-    const coolC = new THREE.Color("#2e2420");
+    const ramp = smooth(this.eventT / 4);
+    // Own vector: this.tmp is overwritten by the trail code below, which would corrupt respawn positions.
+    const vent = this.ventPos;
+    const hotC = this.bombHot;
+    const coolC = this.bombCool;
     this.bombP.forEach((b, i) => {
       b.life += dt;
       if (b.life < 0) {
         this.dummy.scale.setScalar(0.0001);
+        for (let k = 0; k < 4; k++) this.trail.hide(i * 4 + k);
       } else {
         if (b.age === 0 || b.p.y < floor(b.p.x) - 0.05) {
-          b.p.copy(cr);
+          b.p.copy(vent);
           b.v.set((Math.random() - 0.5) * 3.2, 3.5 + Math.random() * 2.5, (Math.random() - 0.5) * 1.6);
           b.age = 0.0001;
         }
@@ -581,7 +835,14 @@ export class VolcanoScene {
         this.dummy.rotation.set(b.age * 5, b.age * 3, 0);
         this.dummy.scale.setScalar(0.7 + (i % 5) * 0.18);
         // Bombs cool in the air: yellow-hot → red → dark crust.
-        this.bombs.setColorAt(i, this.c.copy(hotC).lerp(coolC, Math.min(1, b.age / 1.6)));
+        const heat = Math.max(0, 1 - b.age / 1.6);
+        this.bombs.setColorAt(i, this.c.copy(hotC).lerp(coolC, 1 - heat));
+        // Faint glowing trail: where the bomb was a moment ago (ballistic arc, no history needed).
+        for (let k = 0; k < 4; k++) {
+          const s = 0.05 * (k + 1);
+          this.tmp.set(b.p.x - b.v.x * s, b.p.y - b.v.y * s + 0.5 * g * s * s, b.p.z - b.v.z * s);
+          this.trail.set(i * 4 + k, this.tmp, 0.14 * (1 - k * 0.18), 0.32 * (1 - k / 4) * heat, this.c.setRGB(1, 0.45 * heat + 0.1, 0.05));
+        }
       }
       this.dummy.updateMatrix();
       this.bombs.setMatrixAt(i, this.dummy.matrix);
@@ -592,68 +853,127 @@ export class VolcanoScene {
       if (e.life < 0) return this.embers.hide(i);
       if (e.age === 0 || e.age > 0.9) {
         e.p.set(VX + (Math.random() - 0.5) * 0.2, PEAK - 0.05, (Math.random() - 0.5) * 0.4);
-        e.v.set((Math.random() - 0.5) * 1.6, 2.4 + Math.random() * 2.6, (Math.random() - 0.5) * 0.8);
+        e.v.set((Math.random() - 0.5) * 1.8, 2.4 + Math.random() * 3, (Math.random() - 0.5) * 0.8);
         e.age = 0.0001;
       }
       e.v.y += g * dt;
       e.p.addScaledVector(e.v, dt);
       e.age += dt;
       const k = e.age / 0.9;
-      this.embers.set(i, e.p, 0.22 * (1 - k * 0.5), 0.9 * (1 - k), this.c.setRGB(1, 0.55 - 0.35 * k, 0.12 * (1 - k)));
+      this.embers.set(i, e.p, 0.2 * (1 - k * 0.5), 0.9 * (1 - k), this.c.setRGB(1, 0.75 - 0.55 * k, 0.3 * (1 - k) * (1 - k)));
     });
-    // Ash column: a fast jet, then buoyant rise, then the umbrella cloud spreads and drifts with the wind.
-    const top = PEAK + 2.6;
+
+    // Lightning inside the umbrella: occasionally a flash with a short jagged bolt.
+    this.flashCool -= dt;
+    if (ramp > 0.9 && this.eventT > 6 && this.flashCool <= 0) {
+      this.flash = 1;
+      this.flashCool = 2 + Math.random() * 3.5;
+      this.flashPos.set(VX + (Math.random() - 0.2) * 3.2, PEAK + 2.2 + Math.random() * 1.2, (Math.random() - 0.5) * 1.2);
+      const bp = this.bolt.geometry.getAttribute("position") as THREE.BufferAttribute;
+      let bx = this.flashPos.x;
+      let by = this.flashPos.y;
+      for (let k = 0; k < 9; k++) {
+        bp.setXYZ(k, bx, by, this.flashPos.z + 0.5);
+        bx += (Math.random() - 0.5) * 0.4;
+        by -= 0.2 + Math.random() * 0.12;
+      }
+      bp.needsUpdate = true;
+    }
+    const f = this.flash * (0.65 + 0.35 * Math.sin(this.t * 70));
+    this.bolt.visible = f > 0.05;
+    (this.bolt.material as THREE.LineBasicMaterial).opacity = Math.min(1, f);
+    this.flashLight.position.set(this.flashPos.x, this.flashPos.y, this.flashPos.z + 1.6);
+    this.flashLight.intensity = Math.max(0, f) * 30;
+
+    // Ash column: a fast jet, then buoyant rise with billowing; it spreads into an umbrella at its neutral-buoyancy
+    // height, expanding and darkening as it ages, wind pushing it right. Lit orange from below by the lava.
+    const flick = 0.85 + 0.15 * Math.sin(this.t * 11) * Math.sin(this.t * 4.1);
     this.ashP.forEach((a, i) => {
       a.life += dt;
       if (a.life < 0) return this.ash.hide(i);
       if (a.age === 0 || a.age > 7.5) {
+        a.r = Math.random();
         a.p.set(VX + (Math.random() - 0.5) * 0.25, PEAK + 0.1, (Math.random() - 0.5) * 0.5);
-        a.v.set((Math.random() - 0.5) * 0.4, 4 + Math.random() * 2.5, (Math.random() - 0.5) * 0.4);
+        a.v.set((Math.random() - 0.5) * 0.5, 4 + Math.random() * 2.5, (Math.random() - 0.5) * 0.5);
         a.age = 0.0001;
       }
       const h = a.p.y - PEAK;
-      if (a.p.y < top) {
-        // Jet slows down quickly, buoyancy keeps it rising; the column widens as it pulls in air.
-        a.v.y += (1.6 - a.v.y) * Math.min(1, 1.4 * dt);
-        a.v.x += (Math.random() - 0.5) * 0.9 * dt + 0.08 * dt;
+      const topY = PEAK + 2.5 + a.r * 0.8;
+      if (a.p.y < topY) {
+        // Jet slows down quickly, buoyancy keeps it rising; billows swirl and the column widens as it pulls in air.
+        a.v.y += (1.5 + 0.6 * a.r - a.v.y) * Math.min(1, 1.4 * dt);
+        a.v.x += (Math.sin(this.t * 1.3 + i * 0.7) * 0.35 + (a.p.x - VX) * 0.3 + 0.08) * dt;
+        a.v.z += (Math.cos(this.t * 1.1 + i * 0.5) * 0.25 + a.p.z * 0.3) * dt;
       } else {
-        // Umbrella: stops rising (neutral buoyancy) and spreads sideways, wind pushes it right.
+        // Umbrella: stops rising and spreads outward from the axis; the wind pushes it right.
         a.v.y *= 1 - 2.5 * dt;
-        a.v.x += (Math.sign(a.v.x || 1) * 0.85 + 0.35) * dt;
-        a.v.y += (Math.random() - 0.5) * 0.6 * dt;
+        a.v.y += (Math.random() - 0.5) * 0.6 * dt - 0.04 * dt;
+        const dx = a.p.x - (VX + 0.35);
+        a.v.x += ((dx === 0 ? a.r - 0.5 : Math.sign(dx)) * (0.9 + 0.5 * a.r) + 0.3) * dt;
+        a.v.z += (Math.sign(a.p.z || a.r - 0.5) * 0.35 + (Math.random() - 0.5) * 0.4) * dt;
+        a.v.x *= 1 - 0.3 * dt;
+        a.v.z *= 1 - 0.5 * dt;
       }
-      a.v.z += (Math.random() - 0.5) * 0.4 * dt;
       a.p.addScaledVector(a.v, dt);
       a.age += dt;
       const k = a.age / 7.5;
-      // Lit orange from below near the vent, grey and lighter higher up.
-      this.c.copy(this.ashLit).lerp(this.ashLow, Math.min(1, h / 1.2)).lerp(this.ashHigh, Math.min(1, Math.max(0, h - 1) / 3));
-      this.ash.set(i, a.p, 0.7 + Math.min(3.6, h * 0.6 + a.age * 0.38), 0.74 * Math.min(1, a.age * 4) * (1 - k * k), this.c);
+      // Fresh ash is brown-hot, then dark charcoal; the top of the umbrella catches a little light.
+      this.c.copy(this.ashFresh).lerp(this.ashDark, Math.min(1, a.age * 0.35));
+      this.c.lerp(this.ashTop, 0.45 * smooth((a.p.y - (topY - 0.5)) / 1.2) * (0.6 + 0.4 * a.r));
+      // Warm underlighting from the lava and crater: strongest low and near the axis.
+      const under = Math.exp(-h * 0.65) * flick * ramp * (0.55 + 0.45 * Math.exp(-Math.abs(a.p.x - VX) * 0.35)) + 0.12 * ramp * (a.p.y < topY - 0.3 ? 1 : 0.4) * flick;
+      this.c.lerp(this.ashLit, Math.min(0.85, under));
+      this.c.multiplyScalar(0.85 + 0.3 * a.r);
+      if (f > 0.02) {
+        const dx = a.p.x - this.flashPos.x;
+        const dy = a.p.y - this.flashPos.y;
+        const lit = f * Math.exp(-(dx * dx + dy * dy) / 3.5);
+        this.c.r += 0.55 * lit;
+        this.c.g += 0.6 * lit;
+        this.c.b += 0.85 * lit;
+      }
+      this.ash.set(i, a.p, 0.45 + Math.min(3.3, Math.max(0, h * 0.55) + a.age * 0.25) * (0.75 + 0.5 * a.r), 0.62 * Math.min(1, a.age * 3) * (1 - Math.pow(k, 2.2)) * (0.75 + 0.25 * a.r), this.c);
     });
     this.ash.commit();
     this.embers.commit();
+    this.trail.commit();
     this.bombs.instanceMatrix.needsUpdate = true;
     if (this.bombs.instanceColor) this.bombs.instanceColor.needsUpdate = true;
     this.lavaMat.uniforms.uProg.value = Math.min(1, this.eventT / 7);
-    this.craterLight.intensity = 9 + 4 * Math.sin(this.t * 13) * Math.sin(this.t * 5.3);
+    // The crater glows from below; the light flickers like a real lava lake.
+    this.craterLight.intensity = ramp * (11 + 4 * Math.sin(this.t * 13) * Math.sin(this.t * 5.3) + 2 * Math.sin(this.t * 29));
   }
 
-  /** White water thrown off the steepening crest of the tsunami. */
+  /** White water and mist thrown off the steepening crest of the tsunami. */
   private updateCrest(dt: number, x: number, y: number, steep: number) {
-    let spawn = this.step === "tsunami" && steep > 0.15 ? Math.ceil(steep * 8) : 0;
+    let spawn = this.step === "tsunami" && steep > 0.15 ? Math.ceil(steep * 10) : 0;
     this.crestP.forEach((p, i) => {
       p.age += dt;
       if (p.age > p.life && spawn > 0) {
         spawn--;
-        p.p.set(x + (Math.random() - 0.3) * 0.25, y, (Math.random() - 0.5) * DEPTH * 0.95);
-        p.v.set(0.6 + Math.random() * 1.2, 0.6 + Math.random() * 1.4 * steep, 0);
+        p.r = Math.random();
+        p.p.set(x + (Math.random() - 0.3) * 0.3, y, (Math.random() - 0.5) * DEPTH * 0.95);
+        if (p.r < 0.3) {
+          // Mist: slow, big, translucent.
+          p.v.set(0.5 + Math.random() * 0.8, 0.3 + Math.random() * 0.5, 0);
+          p.life = 0.9 + Math.random() * 0.7;
+        } else {
+          p.v.set(0.7 + Math.random() * 1.4, 0.8 + Math.random() * 1.8 * steep, 0);
+          p.life = 0.5 + Math.random() * 0.6;
+        }
         p.age = 0;
-        p.life = 0.5 + Math.random() * 0.5;
       }
       if (p.age > p.life) return this.crest.hide(i);
-      p.v.y -= 6 * dt;
-      p.p.addScaledVector(p.v, dt);
-      this.crest.set(i, p.p, 0.14 + 0.2 * (p.age / p.life), 0.95 * (1 - p.age / p.life), this.c.set("#f4f8fb"));
+      const k = p.age / p.life;
+      if (p.r < 0.3) {
+        p.v.y -= 0.8 * dt;
+        p.p.addScaledVector(p.v, dt);
+        this.crest.set(i, p.p, 0.35 + 0.8 * k, 0.3 * (1 - k), this.mistC);
+      } else {
+        p.v.y -= 6 * dt;
+        p.p.addScaledVector(p.v, dt);
+        this.crest.set(i, p.p, 0.14 + 0.2 * k, 0.95 * (1 - k), this.sprayC);
+      }
     });
     this.crest.commit();
   }
@@ -670,8 +990,8 @@ export class VolcanoScene {
     const s = (this.t * 0.35) % 1;
     this.plateArrows.forEach((a, i) => (a.position.x = [-12, 13.2, -5][i] + (i === 1 ? -1 : 1) * s * 0.9));
     // Magma blobs rise from the melting zone to the chamber.
-    const from = new THREE.Vector2(5.2, slabTop(5.2) + 0.35);
-    const to = new THREE.Vector2(VX, -1.9);
+    const from = this.blobFrom;
+    const to = this.blobTo;
     this.blobs.forEach((b, i) => {
       const u = (this.t * 0.12 + i / this.blobs.length) % 1;
       b.position.x = from.x + (to.x - from.x) * u + Math.sin(u * 9 + i) * 0.25;
@@ -684,7 +1004,13 @@ export class VolcanoScene {
     for (const m of this.glows) m.uniforms.uTime.value = this.t;
     this.lavaMat.uniforms.uTime.value = this.t;
     (this.chamberHalo.material as THREE.MeshBasicMaterial).opacity = 0.18 + 0.06 * Math.sin(this.t * 1.7);
+    this.updateAtmosphere(dt);
     if (this.step === "eruption") this.updateEruption(dt);
+    else {
+      this.craterLight.intensity = 0;
+      this.flashLight.intensity = 0;
+    }
+    this.updateHalo();
 
     // Seismic waves and a short shake.
     const quakeOn = this.step === "quake" || this.step === "tsunami";
@@ -702,7 +1028,7 @@ export class VolcanoScene {
 
     this.controls.update();
     const shake = quakeOn && qt < 1.6 && !this.reduceMotion ? 0.12 * (1 - qt / 1.6) : 0;
-    const off = new THREE.Vector3((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, 0);
+    const off = this.shakeOff.set((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, 0);
     this.camera.position.add(off);
     this.renderer.render(this.scene, this.camera);
     this.camera.position.sub(off);
@@ -714,6 +1040,8 @@ export class VolcanoScene {
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
     this.controls.dispose();
+    this.timer.dispose();
+    this.bombs.dispose();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();
