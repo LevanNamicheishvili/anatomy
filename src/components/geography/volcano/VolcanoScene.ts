@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLSL_NOISE, ParticleCloud } from "../fx/particles";
 
 /*
  * Topic 6 — a slice through a subduction zone: the oceanic plate (left) dives under the continental plate
@@ -7,7 +8,91 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
  * chamber and erupts from a volcano. Where the plates stick and slip, an earthquake starts (focus →
  * epicentre, seismic waves) and the uplifted sea floor sends out a tsunami that grows as the sea shallows.
  * 1 scene unit ≈ 20 km across, the height is exaggerated.
+ * Realism layer: rock faces get grain and bedding in the shader, magma glows and churns, the ash column
+ * rises and spreads into an umbrella cloud, lava crusts over as it cools, and the tsunami pulls the sea
+ * back before its steepening crest arrives.
  */
+
+type RockKind = "mantle" | "basalt" | "crust";
+
+/** MeshStandardMaterial plus procedural rock grain / bedding / mantle convection on the cut face. */
+function rockMaterial(kind: RockKind) {
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vRockPos;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvRockPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    const pattern =
+      kind === "mantle"
+        ? "float g = fbm2(vRockPos.xy * vec2(0.35, 0.6) + vec2(fbm2(vRockPos.xy * 0.4) * 2.0, 0.0)); diffuseColor.rgb *= 0.82 + 0.36 * g;"
+        : kind === "basalt"
+          ? "float g = fbm2(vRockPos.xy * 3.0); diffuseColor.rgb *= 0.86 + 0.24 * g + 0.05 * sin(vRockPos.y * 14.0 + g * 3.0);"
+          : "float g = fbm2(vRockPos.xy * vec2(1.4, 3.2)); float bed = sin(vRockPos.y * 9.0 + fbm2(vRockPos.xy * 0.7) * 5.0); diffuseColor.rgb *= 0.82 + 0.24 * g + 0.11 * bed;";
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vRockPos;\n${GLSL_NOISE}`)
+      .replace("#include <color_fragment>", `#include <color_fragment>\nif (abs(abs(vRockPos.z) - ${(DEPTH / 2).toFixed(3)}) < 0.05) { ${pattern} }`);
+  };
+  return m;
+}
+
+/** Glowing magma: a hot core fading to a dull red rim, churning slowly. Works on any flat shape. */
+function glowMaterial(center: THREE.Vector2, radius: THREE.Vector2, strength = 1) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uCenter: { value: center }, uRadius: { value: radius }, uStrength: { value: strength } },
+    vertexShader: "varying vec2 vP; void main() { vP = (modelMatrix * vec4(position, 1.0)).xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `
+uniform float uTime;
+uniform vec2 uCenter;
+uniform vec2 uRadius;
+uniform float uStrength;
+varying vec2 vP;
+${GLSL_NOISE}
+void main() {
+  vec2 q = (vP - uCenter) / uRadius;
+  float d = length(q);
+  float churn = fbm2(vP * 2.2 + vec2(uTime * 0.25, -uTime * 0.4));
+  float heat = clamp((1.15 - d) * (0.75 + 0.5 * churn) * uStrength, 0.0, 1.0);
+  vec3 col = mix(vec3(0.45, 0.04, 0.0), vec3(1.0, 0.35, 0.02), smoothstep(0.1, 0.55, heat));
+  col = mix(col, vec3(1.0, 0.9, 0.45), smoothstep(0.65, 1.0, heat));
+  float a = smoothstep(1.25, 0.85, d);
+  gl_FragColor = vec4(col, a);
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
+    depthWrite: false,
+  });
+}
+
+/** Lava ribbon: a glowing front, a crust that darkens as it cools, and bright cracks in the crust. */
+function lavaMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uProg: { value: 0 } },
+    vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `
+uniform float uTime;
+uniform float uProg;
+varying vec2 vUv;
+${GLSL_NOISE}
+void main() {
+  float along = vUv.x;
+  float lobe = 0.035 * (vnoise(vec2(vUv.y * 6.0, 3.0)) - 0.5);
+  if (along > uProg + lobe) discard;
+  float age = clamp((uProg - along) * 2.2, 0.0, 1.0);
+  float vent = smoothstep(0.12, 0.0, along);
+  // A hot channel stays open in the middle; the edges and the old parts crust over first.
+  float cool = age * (1.0 - vent) * (0.45 + 0.55 * abs(vUv.y - 0.5) * 2.0);
+  float flow = fbm2(vec2(along * 26.0 - uTime * 0.7, vUv.y * 3.0));
+  float crack = 1.0 - smoothstep(0.0, 0.07, abs(fbm2(vec2(along * 40.0, vUv.y * 5.0 + 2.0)) - 0.5));
+  vec3 hot = mix(vec3(1.0, 0.32, 0.02), vec3(1.0, 0.82, 0.3), flow);
+  vec3 crust = mix(vec3(0.07, 0.06, 0.06), vec3(0.18, 0.14, 0.13), flow);
+  vec3 col = mix(hot, crust, smoothstep(0.15, 0.85, cool));
+  col = mix(col, hot, crack * cool * 0.9);
+  float edge = smoothstep(0.0, 0.18, vUv.y) * smoothstep(1.0, 0.82, vUv.y);
+  col *= 0.75 + 0.25 * edge;
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`,
+    side: THREE.DoubleSide,
+  });
+}
 
 export type VolcanoStep = "plates" | "magma" | "eruption" | "quake" | "tsunami";
 export type Projector = (p: THREE.Vector3) => { x: number; y: number; visible: boolean };
@@ -64,7 +149,7 @@ function sample(f: (x: number) => number, a: number, b: number, step = 0.08): [n
   return out;
 }
 
-function slab(points: [number, number][], cap: string, side: string, colorAt?: (x: number, y: number) => string | null) {
+function slab(points: [number, number][], cap: string, side: string, colorAt?: (x: number, y: number) => string | null, kind: RockKind = "crust") {
   const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: DEPTH, bevelEnabled: false, steps: 1, curveSegments: 1 });
   geo.translate(0, 0, -DEPTH / 2);
@@ -79,7 +164,7 @@ function slab(points: [number, number][], cap: string, side: string, colorAt?: (
   // Caps and walls share vertices only by position; ExtrudeGeometry is non-indexed, so this colours per face.
   geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
+  return new THREE.Mesh(geo, rockMaterial(kind));
 }
 
 /** Flat shape drawn on the front face of the slice. */
@@ -165,9 +250,20 @@ export class VolcanoScene {
   private blobs: THREE.Mesh[] = [];
   private rings: THREE.Mesh[] = [];
   private plateArrows: THREE.Mesh[] = [];
-  private lava: { geo: THREE.BufferGeometry; n: number }[] = [];
+  private lavaMat = lavaMaterial();
+  private glows: THREE.ShaderMaterial[] = [];
   private bombs: THREE.InstancedMesh;
-  private ash: THREE.InstancedMesh;
+  private ash: ParticleCloud;
+  private embers: ParticleCloud;
+  private crest: ParticleCloud;
+  private emberP: Particle[] = [];
+  private crestP: Particle[] = [];
+  private craterLight = new THREE.PointLight("#ff7a1a", 0, 9, 1.6);
+  private chamberHalo: THREE.Mesh;
+  private ashLow = new THREE.Color("#3f3631");
+  private ashLit = new THREE.Color("#8a4a24");
+  private ashHigh = new THREE.Color("#8d8984");
+  private c = new THREE.Color();
   private bombP: Particle[] = [];
   private ashP: Particle[] = [];
   private waterFront: THREE.BufferGeometry;
@@ -194,10 +290,10 @@ export class VolcanoScene {
     // Deep mantle below the slice's lower edge, so the view never shows sky under the ground.
     const deep: [number, number][] = [[X0, BOTTOM], [X1, BOTTOM], [X1, BOTTOM - 12], [X0, BOTTOM - 12]];
     this.scene.add(
-      slab(deep, "#d0612a", "#b8501f"),
-      slab(mantleUnder, "#d0612a", "#b8501f"),
-      slab(wedge, "#e07a35", "#c86a2a"),
-      slab(plate, "#4a5566", "#3d4757", (x, y) => (x < -2 && y > -1.3 - ((x - X0) / 12) * 0.8 ? "#c8b48a" : null)),
+      slab(deep, "#c4561f", "#b8501f", undefined, "mantle"),
+      slab(mantleUnder, "#d0612a", "#b8501f", undefined, "mantle"),
+      slab(wedge, "#e07a35", "#c86a2a", undefined, "mantle"),
+      slab(plate, "#4a5566", "#3d4757", (x, y) => (x < -2 && y > -1.3 - ((x - X0) / 12) * 0.8 ? "#c8b48a" : null), "basalt"),
       slab(crust, "#8a6a4a", "#5f8a3e", (x, y) => {
         if (Math.abs(x - VX) < 2.7 && y > 0.7) return y > 2.4 ? "#eef1f4" : "#6b6258";
         return y < -0.2 ? "#a08a66" : null;
@@ -228,17 +324,30 @@ export class VolcanoScene {
 
     // Magma: melting zone, rising blobs, chamber, conduit.
     const meltY = slabTop(5.2) + 0.35;
-    this.groups.magma.add(decal(ellipse(5.2, meltY, 1.1, 0.45), "#ff8c1a", 0.75), decal(ellipse(VX, -1.6, 1.15, 0.5), "#ff5a00", 1, 0.01));
+    const glow = (shape: THREE.Shape, cx: number, cy: number, rx: number, ry: number, strength: number, lift: number) => {
+      const mat = glowMaterial(new THREE.Vector2(cx, cy), new THREE.Vector2(rx, ry), strength);
+      this.glows.push(mat);
+      const m = new THREE.Mesh(new THREE.ShapeGeometry(shape, 32), mat);
+      m.position.z = FZ + lift;
+      return m;
+    };
+    // Heat halo in the rock around the chamber (additive, faint) under the magma itself.
+    const haloMat = new THREE.MeshBasicMaterial({ color: "#ff5a00", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.chamberHalo = new THREE.Mesh(new THREE.ShapeGeometry(ellipse(VX, -1.6, 1.9, 0.95), 32), haloMat);
+    this.chamberHalo.position.z = FZ + 0.004;
+    // The melting zone is a sponge of partly molten rock, not a lake: weaker glow.
+    this.groups.magma.add(this.chamberHalo, glow(ellipse(5.2, meltY, 1.1, 0.45), 5.2, meltY, 1.1, 0.45, 0.65, 0), glow(ellipse(VX, -1.6, 1.15, 0.5), VX, -1.6, 1.15, 0.5, 1.15, 0.01));
     const conduit = new THREE.Shape();
     conduit.moveTo(VX - 0.16, -1.3);
     conduit.lineTo(VX - 0.09, PEAK - 0.05);
     conduit.lineTo(VX + 0.09, PEAK - 0.05);
     conduit.lineTo(VX + 0.16, -1.3);
     conduit.closePath();
-    this.groups.magma.add(decal(conduit, "#ff6a00", 1, 0.01));
+    this.groups.magma.add(glow(conduit, VX, (PEAK - 1.3) / 2, 0.28, (PEAK + 1.3) / 2 + 0.4, 1, 0.01));
     const blobGeo = new THREE.CircleGeometry(0.17, 16);
-    const blobMat = new THREE.MeshBasicMaterial({ color: "#ffb347" });
     for (let i = 0; i < 7; i++) {
+      const blobMat = glowMaterial(new THREE.Vector2(), new THREE.Vector2(0.17, 0.17), 1.2);
+      this.glows.push(blobMat);
       const b = new THREE.Mesh(blobGeo, blobMat);
       b.position.z = FZ + 0.02;
       this.blobs.push(b);
@@ -246,27 +355,44 @@ export class VolcanoScene {
     }
 
     // Eruption: lava streams down both flanks, bombs and ash above the crater.
+    // Lava runs down both flanks on the front face and over the top of the cone (a ribbon with uv: x along, y across).
     for (const dir of [1, -1] as const) {
-      const n = 60;
-      const pos = new Float32Array((n + 1) * 2 * 3);
+      const n = 90;
+      const pos: number[] = [];
+      const uv: number[] = [];
       for (let i = 0; i <= n; i++) {
-        const x = VX + dir * (0.3 + (i / n) * 2.6);
+        const u = i / n;
+        const x = VX + dir * (0.3 + u * 2.7);
         const y = land(x);
-        pos.set([x, y + 0.03, FZ + 0.03, x, y + 0.19 - (i / n) * 0.06, FZ + 0.03], i * 6);
+        // Thick near the vent, thinner and lumpy downhill.
+        const th = (0.4 - u * 0.18) * (0.85 + 0.3 * Math.sin(u * 37 + dir));
+        // Drawn over the cut face just under the surface line, so the flow reads as a layer on the cone.
+        pos.push(x, y - th, FZ + 0.03, x, y + 0.07, FZ + 0.03);
+        uv.push(u, 0, u, 1);
       }
       const idx: number[] = [];
       for (let i = 0; i < n; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
       const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
       geo.setIndex(idx);
-      this.lava.push({ geo, n });
-      this.groups.eruption.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: "#ff4d00", side: THREE.DoubleSide })));
+      this.groups.eruption.add(new THREE.Mesh(geo, this.lavaMat));
     }
-    this.bombs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: "#ff7a1a" }), 70);
-    this.ash = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 10, 8), new THREE.MeshStandardMaterial({ color: "#6b6b6b", roughness: 1, transparent: true, opacity: 0.7 }), 90);
+    // A lava lake glowing in the crater.
+    this.groups.eruption.add(decal(ellipse(VX, PEAK - 0.12, 0.33, 0.12), "#ffb03a", 1, 0.035));
+    const bombMat = new THREE.MeshBasicMaterial({ color: "#ffffff" });
+    this.bombs = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.085, 0), bombMat, 70);
+    this.bombs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(70 * 3).fill(1), 3);
+    this.ash = new ParticleCloud(520, { soft: 1, order: 3 });
+    this.embers = new ParticleCloud(220, { soft: 0.45, additive: true, order: 4 });
+    this.crest = new ParticleCloud(180, { soft: 0.55, order: 5 });
     for (let i = 0; i < 70; i++) this.bombP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.5 });
-    for (let i = 0; i < 90; i++) this.ashP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 4 });
-    this.groups.eruption.add(this.bombs, this.ash);
+    for (let i = 0; i < 520; i++) this.ashP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 7 });
+    for (let i = 0; i < 220; i++) this.emberP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 0, life: -Math.random() * 1.2 });
+    for (let i = 0; i < 180; i++) this.crestP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), age: 9, life: 0 });
+    this.craterLight.position.set(VX, PEAK + 0.6, FZ + 1.2);
+    this.groups.eruption.add(this.bombs, this.ash.points, this.embers.points, this.craterLight);
+    this.scene.add(this.crest.points);
 
     // Earthquake: focus, epicentre, dashed line between them, expanding seismic waves.
     this.groups.quake.add(decal(star(FOCUS.x, FOCUS.y, 0.42), "#ffe600", 1, 0.02));
@@ -339,7 +465,15 @@ export class VolcanoScene {
   restart() {
     this.eventT = 0;
     this.pulses = { l: QX, r: QX };
-    for (const p of [...this.bombP, ...this.ashP]) p.life = -Math.random() * 1.5;
+    for (const p of [...this.bombP, ...this.emberP]) {
+      p.life = -Math.random() * 1.5;
+      p.age = 0;
+    }
+    for (const p of this.ashP) {
+      p.life = -Math.random() * 7;
+      p.age = 0;
+    }
+    for (const p of this.crestP) p.age = 9;
   }
 
   private project: Projector = (p) => {
@@ -355,6 +489,7 @@ export class VolcanoScene {
     this.camera.aspect = w / h;
     this.camera.fov = w < h ? 40 / Math.max(0.5, w / h) : 40;
     this.camera.updateProjectionMatrix();
+    for (const c of [this.ash, this.embers, this.crest]) c.setViewport(h * this.renderer.getPixelRatio(), this.camera.fov);
   }
 
   /** Wave speed in scene units per second (∝ √depth, as for a real tsunami). */
@@ -381,11 +516,25 @@ export class VolcanoScene {
         const width = Math.max(0.28, 0.85 * Math.sqrt(d / d0));
         const inland = side > 0 && c > COAST ? Math.max(0, 1 - (c - COAST) / 2.2) : 1;
         const fade = side < 0 ? Math.max(0, 1 - (QX - c) / 18) : 1;
-        h += 0.17 * grow * inland * fade * Math.exp(-(((x - c) / width) ** 2)) * Math.min(1, age * 2);
+        const amp = 0.17 * grow * inland * fade * Math.min(1, age * 2);
+        // In shallow water the front steepens and the back stretches: the wave leans forward.
+        const steep = Math.min(1, Math.max(0, (grow - 1.15) / 1.3));
+        const xi = (x - c) * side;
+        const w = xi > 0 ? width * (1 - 0.65 * steep) : width * (1 + 0.6 * steep);
+        h += amp * Math.exp(-((xi / w) ** 2));
+        // Toward the coast a trough runs ahead of the crest: the sea first draws back from the shore.
+        if (side > 0) h -= amp * 0.55 * Math.exp(-(((xi - width * 1.7) / (width * 0.9)) ** 2));
       }
       return h;
     };
     const t = this.t;
+    if (on && this.pulses.r < COAST + 0.3) {
+      const d = Math.max(0.05, -floor(Math.min(this.pulses.r, COAST - 0.05)));
+      const steep = Math.min(1, Math.max(0, ((-floor(QX) / d) ** 0.25 - 1.15) / 1.3));
+      this.updateCrest(dt, this.pulses.r, wave(this.pulses.r) + 0.02, steep);
+    } else {
+      this.updateCrest(dt, 0, 0, 0);
+    }
     for (let i = 0; i <= this.waterN; i++) {
       const x = this.waterX[i];
       const ground = floor(x);
@@ -410,6 +559,8 @@ export class VolcanoScene {
   private updateEruption(dt: number) {
     const g = -6;
     const cr = new THREE.Vector3(VX, PEAK, 0);
+    const hotC = new THREE.Color("#ffd27a");
+    const coolC = new THREE.Color("#2e2420");
     this.bombP.forEach((b, i) => {
       b.life += dt;
       if (b.life < 0) {
@@ -424,34 +575,83 @@ export class VolcanoScene {
         b.p.addScaledVector(b.v, dt);
         b.age += dt;
         this.dummy.position.copy(b.p);
-        this.dummy.scale.setScalar(1);
+        this.dummy.rotation.set(b.age * 5, b.age * 3, 0);
+        this.dummy.scale.setScalar(0.7 + (i % 5) * 0.18);
+        // Bombs cool in the air: yellow-hot → red → dark crust.
+        this.bombs.setColorAt(i, this.c.copy(hotC).lerp(coolC, Math.min(1, b.age / 1.6)));
       }
       this.dummy.updateMatrix();
       this.bombs.setMatrixAt(i, this.dummy.matrix);
     });
+    // Fire fountain: glowing spatter just above the vent.
+    this.emberP.forEach((e, i) => {
+      e.life += dt;
+      if (e.life < 0) return this.embers.hide(i);
+      if (e.age === 0 || e.age > 0.9) {
+        e.p.set(VX + (Math.random() - 0.5) * 0.2, PEAK - 0.05, (Math.random() - 0.5) * 0.4);
+        e.v.set((Math.random() - 0.5) * 1.6, 2.4 + Math.random() * 2.6, (Math.random() - 0.5) * 0.8);
+        e.age = 0.0001;
+      }
+      e.v.y += g * dt;
+      e.p.addScaledVector(e.v, dt);
+      e.age += dt;
+      const k = e.age / 0.9;
+      this.embers.set(i, e.p, 0.22 * (1 - k * 0.5), 0.9 * (1 - k), this.c.setRGB(1, 0.55 - 0.35 * k, 0.12 * (1 - k)));
+    });
+    // Ash column: a fast jet, then buoyant rise, then the umbrella cloud spreads and drifts with the wind.
+    const top = PEAK + 2;
     this.ashP.forEach((a, i) => {
       a.life += dt;
-      if (a.life < 0) {
-        this.dummy.scale.setScalar(0.0001);
-      } else {
-        if (a.age === 0 || a.age > 4.5) {
-          a.p.copy(cr).add(new THREE.Vector3(0, 0.2, 0));
-          a.v.set((Math.random() - 0.3) * 0.6, 1.4 + Math.random() * 0.9, (Math.random() - 0.5) * 0.6);
-          a.age = 0.0001;
-        }
-        a.v.x += 0.25 * dt; // wind
-        a.p.addScaledVector(a.v, dt);
-        a.age += dt;
-        this.dummy.position.copy(a.p);
-        this.dummy.scale.setScalar(0.5 + a.age * 0.55);
+      if (a.life < 0) return this.ash.hide(i);
+      if (a.age === 0 || a.age > 7.5) {
+        a.p.set(VX + (Math.random() - 0.5) * 0.25, PEAK + 0.1, (Math.random() - 0.5) * 0.5);
+        a.v.set((Math.random() - 0.5) * 0.4, 4 + Math.random() * 2.5, (Math.random() - 0.5) * 0.4);
+        a.age = 0.0001;
       }
-      this.dummy.updateMatrix();
-      this.ash.setMatrixAt(i, this.dummy.matrix);
+      const h = a.p.y - PEAK;
+      if (a.p.y < top) {
+        // Jet slows down quickly, buoyancy keeps it rising; the column widens as it pulls in air.
+        a.v.y += (1.6 - a.v.y) * Math.min(1, 1.4 * dt);
+        a.v.x += (Math.random() - 0.5) * 0.9 * dt + 0.08 * dt;
+      } else {
+        // Umbrella: stops rising (neutral buoyancy) and spreads sideways, wind pushes it right.
+        a.v.y *= 1 - 2.5 * dt;
+        a.v.x += (Math.sign(a.v.x || 1) * 0.5 + 0.35) * dt;
+      }
+      a.v.z += (Math.random() - 0.5) * 0.4 * dt;
+      a.p.addScaledVector(a.v, dt);
+      a.age += dt;
+      const k = a.age / 7.5;
+      // Lit orange from below near the vent, grey and lighter higher up.
+      this.c.copy(this.ashLit).lerp(this.ashLow, Math.min(1, h / 1.2)).lerp(this.ashHigh, Math.min(1, Math.max(0, h - 1) / 3));
+      this.ash.set(i, a.p, 0.6 + Math.min(2.8, h * 0.5 + a.age * 0.3), 0.62 * Math.min(1, a.age * 4) * (1 - k * k), this.c);
     });
+    this.ash.commit();
+    this.embers.commit();
     this.bombs.instanceMatrix.needsUpdate = true;
-    this.ash.instanceMatrix.needsUpdate = true;
-    const k = Math.min(1, this.eventT / 7);
-    for (const l of this.lava) l.geo.setDrawRange(0, Math.round(l.n * k) * 6);
+    if (this.bombs.instanceColor) this.bombs.instanceColor.needsUpdate = true;
+    this.lavaMat.uniforms.uProg.value = Math.min(1, this.eventT / 7);
+    this.craterLight.intensity = 9 + 4 * Math.sin(this.t * 13) * Math.sin(this.t * 5.3);
+  }
+
+  /** White water thrown off the steepening crest of the tsunami. */
+  private updateCrest(dt: number, x: number, y: number, steep: number) {
+    let spawn = this.step === "tsunami" && steep > 0.25 ? Math.ceil(steep * 4) : 0;
+    this.crestP.forEach((p, i) => {
+      p.age += dt;
+      if (p.age > p.life && spawn > 0) {
+        spawn--;
+        p.p.set(x + (Math.random() - 0.3) * 0.25, y, (Math.random() - 0.5) * DEPTH * 0.95);
+        p.v.set(0.6 + Math.random() * 1.2, 0.6 + Math.random() * 1.4 * steep, 0);
+        p.age = 0;
+        p.life = 0.5 + Math.random() * 0.5;
+      }
+      if (p.age > p.life) return this.crest.hide(i);
+      p.v.y -= 6 * dt;
+      p.p.addScaledVector(p.v, dt);
+      this.crest.set(i, p.p, 0.12 + 0.12 * (p.age / p.life), 0.9 * (1 - p.age / p.life), this.c.set("#f4f8fb"));
+    });
+    this.crest.commit();
   }
 
   private loop = () => {
@@ -473,7 +673,13 @@ export class VolcanoScene {
       b.position.x = from.x + (to.x - from.x) * u + Math.sin(u * 9 + i) * 0.25;
       b.position.y = from.y + (to.y - from.y) * u;
       b.scale.setScalar(0.7 + 0.5 * Math.sin(u * Math.PI));
+      const gm = b.material as THREE.ShaderMaterial;
+      gm.uniforms.uCenter.value.set(b.position.x, b.position.y);
+      gm.uniforms.uRadius.value.setScalar(0.17 * b.scale.x);
     });
+    for (const m of this.glows) m.uniforms.uTime.value = this.t;
+    this.lavaMat.uniforms.uTime.value = this.t;
+    (this.chamberHalo.material as THREE.MeshBasicMaterial).opacity = 0.18 + 0.06 * Math.sin(this.t * 1.7);
     if (this.step === "eruption") this.updateEruption(dt);
 
     // Seismic waves and a short shake.

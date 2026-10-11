@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
+import { WaterfallView } from "../waterfall/WaterfallView";
+import { WATERFALL_IDS, type WaterfallId } from "../waterfall/waterfall-data";
 import { KIND_INFO, RIVER_LANDFORMS, type LandformKind, type RiverLandform } from "./landforms-data";
 
 /*
  * Topic 11 — gorges, waterfalls and deltas on the real relief of Georgia. Reuses the Georgia map scene
- * (terrain, rivers, satellite/physical colouring) and only adds its own labels and a guided list.
+ * (terrain, rivers, satellite/physical colouring) and only adds its own labels and a guided list. For
+ * waterfalls a close-up 3D model (WaterfallView) opens under the map.
  */
 
 const KINDS: LandformKind[] = ["gorge", "waterfall", "delta"];
@@ -20,6 +23,7 @@ export function GeorgiaLandforms() {
   const [ready, setReady] = useState(false);
   const [kind, setKind] = useState<LandformKind>("gorge");
   const [active, setActive] = useState<RiverLandform | null>(null);
+  const [fall, setFall] = useState<WaterfallId>("kinchkha");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -56,6 +60,7 @@ export function GeorgiaLandforms() {
   const open = (f: RiverLandform) => {
     setActive(f);
     setKind(f.kind);
+    if ((WATERFALL_IDS as string[]).includes(f.id)) setFall(f.id as WaterfallId);
     sceneRef.current?.flyTo(f.lon, f.lat, f.span, f.span * 0.7);
   };
   const home = () => {
@@ -152,6 +157,24 @@ export function GeorgiaLandforms() {
           )}
         </div>
       </div>
+      {kind === "waterfall" && (
+        <div className="mx-5 mb-4 border-t border-[#eef2f0] pt-4">
+          <h2 className="text-lg">ჩანჩქერი ახლოდან</h2>
+          <div className="mt-3">
+            <WaterfallView
+              id={fall}
+              onPick={(id) => {
+                setFall(id);
+                const f = RIVER_LANDFORMS.find((x) => x.id === id);
+                if (f) {
+                  setActive(f);
+                  sceneRef.current?.flyTo(f.lon, f.lat, f.span, f.span * 0.7);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
       <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">რელიეფი: AWS Terrain Tiles (Mapzen); მდინარეები: OpenStreetMap. სიმაღლე გაზრდილია, რომ რელიეფი კარგად ჩანდეს.</p>
     </section>
   );
