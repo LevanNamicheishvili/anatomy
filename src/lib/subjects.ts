@@ -1,9 +1,11 @@
+import { GEO_LESSONS, GEO_PLANNED } from "./geography-lessons";
+
 /**
  * The portal's structure: subjects → topics. Every subject has its own page (/biology, /geography …)
  * listing its topics; a topic without `href` is shown as "coming soon".
  */
 export type SubjectIcon = "biology" | "geography" | "history";
-export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "atom" | "tissue" | "bone" | "lungs" | "digest" | "kidney" | "eye" | "hormone" | "health" | "baby" | "genetics" | "evolution" | "plant" | "eco" | "battle" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr";
+export type TopicIcon = "body" | "heart" | "nerve" | "journey" | "atom" | "tissue" | "bone" | "lungs" | "digest" | "kidney" | "eye" | "hormone" | "health" | "baby" | "genetics" | "evolution" | "plant" | "eco" | "battle" | "blood" | "dna" | "cell" | "map" | "mountain" | "climate" | "qr" | "globe" | "solar" | "waves" | "ship" | "clock" | "compass" | "volcano" | "wind";
 
 export interface Topic {
   slug: string;
@@ -116,7 +118,7 @@ export const SUBJECTS: Subject[] = [
   {
     slug: "geography",
     name: "გეოგრაფია",
-    description: "საქართველოს 3D რელიეფური რუკა: მთები, მდინარეები, ტბები, ბუნებრივი ზონები, ჰავა, მხარეები და ქალაქები.",
+    description: "საქართველოს 3D რელიეფური რუკა, ინტერაქტიული გლობუსი გრადუსთა ბადით, მდინარის შექმნილი რელიეფი და მზის ელექტროსადგური.",
     icon: "geography",
     color: "#2f6fb0",
     href: "/geography",
@@ -156,6 +158,9 @@ export const SUBJECTS: Subject[] = [
         grades: "VII–IX",
         href: "/geography/georgia?layer=climate",
       },
+      // Interactive 3D lessons (src/lib/geography-lessons.ts), then the topics still being built.
+      ...GEO_LESSONS.map((l) => ({ slug: l.slug, name: l.title, description: l.description, icon: l.icon, grades: l.grades, href: `/geography/lesson/${l.slug}` })),
+      ...GEO_PLANNED.map((p) => ({ slug: p.slug, name: p.name, description: p.description, icon: p.icon })),
     ],
   },
   {

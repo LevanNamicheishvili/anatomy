@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Swords, Atom, Baby, Bone, Droplets, Eye, Fish, FlaskConical, Layers, ShieldPlus, Shuffle, Sprout, Trees, Utensils, Wind, Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
+import { Clock, Compass, Earth, Flame, Ship, SolarPanel, Waves, Swords, Atom, Baby, Bone, Droplets, Eye, Fish, FlaskConical, Layers, ShieldPlus, Shuffle, Sprout, Trees, Utensils, Wind, Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
 import type { SubjectIcon, TopicIcon } from "@/lib/subjects";
 import { Logo } from "./ui";
 
@@ -32,6 +32,14 @@ export const TOPIC_ICONS: Record<TopicIcon, LucideIcon> = {
   mountain: Mountain,
   climate: Sun,
   qr: QrCode,
+  globe: Earth,
+  solar: SolarPanel,
+  waves: Waves,
+  ship: Ship,
+  clock: Clock,
+  compass: Compass,
+  volcano: Flame,
+  wind: Wind,
 };
 
 /**
