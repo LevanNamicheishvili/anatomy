@@ -19,6 +19,11 @@ const SolarPlant = dynamic(() => import("../solar/SolarPlant").then((m) => m.Sol
 const SeasonsGlobe = dynamic(() => import("../seasons/SeasonsGlobe").then((m) => m.SeasonsGlobe), { ssr: false, loading: Loading });
 const PolarisSky = dynamic(() => import("../polaris/PolarisSky").then((m) => m.PolarisSky), { ssr: false, loading: Loading });
 const SeaBreeze = dynamic(() => import("../atmosphere/SeaBreeze").then((m) => m.SeaBreeze), { ssr: false, loading: Loading });
+const EarthCutaway = dynamic(() => import("../earth/EarthCutaway").then((m) => m.EarthCutaway), { ssr: false, loading: Loading });
+const VoyagesGlobe = dynamic(() => import("../discoveries/VoyagesGlobe").then((m) => m.VoyagesGlobe), { ssr: false, loading: Loading });
+const Volcanoes = dynamic(() => import("../volcano/Volcanoes").then((m) => m.Volcanoes), { ssr: false, loading: Loading });
+const GeorgiaHazards = dynamic(() => import("../hazards/GeorgiaHazards").then((m) => m.GeorgiaHazards), { ssr: false, loading: Loading });
+const Oceans = dynamic(() => import("../oceans/Oceans").then((m) => m.Oceans), { ssr: false, loading: Loading });
 
 export function GeoVisual({ kind }: { kind: GeoVisualKind }) {
   if (kind === "graticule") return <GraticuleGlobe />;
@@ -26,5 +31,10 @@ export function GeoVisual({ kind }: { kind: GeoVisualKind }) {
   if (kind === "seasons") return <SeasonsGlobe />;
   if (kind === "polaris") return <PolarisSky />;
   if (kind === "atmosphere") return <SeaBreeze />;
+  if (kind === "earth-structure") return <EarthCutaway />;
+  if (kind === "discoveries") return <VoyagesGlobe />;
+  if (kind === "volcanoes") return <Volcanoes />;
+  if (kind === "hazards") return <GeorgiaHazards />;
+  if (kind === "oceans") return <Oceans />;
   return <SolarPlant />;
 }
