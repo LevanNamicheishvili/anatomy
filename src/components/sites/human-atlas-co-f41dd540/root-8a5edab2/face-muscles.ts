@@ -23,6 +23,10 @@ const TEMPORALIS_L: B = [[0.032, 1.556, -0.059], [0.079, 1.66, 0.043]];
 const OCULI_L: B = [[0.0067, 1.5725, 0.0443], [0.0622, 1.6231, 0.0814]];
 const ORIS_L: B = [[0, 1.5125, 0.0591], [0.0345, 1.553, 0.097]];
 const FRONTALIS_L: B = [[0.0038, 1.6164, 0.051], [0.0497, 1.6904, 0.0795]];
+const DAO_L: B = [[0.0184, 1.5065, 0.0336], [0.0408, 1.5285, 0.0602]];
+const MENTALIS_L: B = [[0.0018, 1.5028, 0.0617], [0.015, 1.5108, 0.0743]];
+const BUCCINATOR_L: B = [[0.024, 1.5292, 0.0291], [0.0395, 1.553, 0.0622]];
+const CORRUGATOR_L: B = [[0.0026, 1.6137, 0.0709], [0.0226, 1.6212, 0.0768]];
 const ZYGOMATICUS_L: B = [[0.0302, 1.5324, 0.0337], [0.0548, 1.5879, 0.0659]];
 
 export const FACE_MUSCLES: CustomPartDef[] = [
@@ -38,6 +42,14 @@ export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9005M", name: "Right frontalis", url: `${FACE_MUSCLE_DIR}/frontalis.glb`, mesh: "frontalis_R", bounds: mirror(FRONTALIS_L) },
   { id: "FX9008", name: "Left zygomaticus major", url: `${FACE_MUSCLE_DIR}/zygomaticus.glb`, mesh: "zygomaticus_L", bounds: ZYGOMATICUS_L },
   { id: "FX9008M", name: "Right zygomaticus major", url: `${FACE_MUSCLE_DIR}/zygomaticus.glb`, mesh: "zygomaticus_R", bounds: mirror(ZYGOMATICUS_L) },
+  { id: "FX9006", name: "Left depressor anguli oris", url: `${FACE_MUSCLE_DIR}/dao.glb`, mesh: "dao_L", bounds: DAO_L },
+  { id: "FX9006M", name: "Right depressor anguli oris", url: `${FACE_MUSCLE_DIR}/dao.glb`, mesh: "dao_R", bounds: mirror(DAO_L) },
+  { id: "FX9007", name: "Left mentalis", url: `${FACE_MUSCLE_DIR}/mentalis.glb`, mesh: "mentalis_L", bounds: MENTALIS_L },
+  { id: "FX9007M", name: "Right mentalis", url: `${FACE_MUSCLE_DIR}/mentalis.glb`, mesh: "mentalis_R", bounds: mirror(MENTALIS_L) },
+  { id: "FX9009", name: "Left buccinator", url: `${FACE_MUSCLE_DIR}/buccinator.glb`, mesh: "buccinator_L", bounds: BUCCINATOR_L },
+  { id: "FX9009M", name: "Right buccinator", url: `${FACE_MUSCLE_DIR}/buccinator.glb`, mesh: "buccinator_R", bounds: mirror(BUCCINATOR_L) },
+  { id: "FX9010", name: "Left corrugator supercilii", url: `${FACE_MUSCLE_DIR}/corrugator.glb`, mesh: "corrugator_L", bounds: CORRUGATOR_L },
+  { id: "FX9010M", name: "Right corrugator supercilii", url: `${FACE_MUSCLE_DIR}/corrugator.glb`, mesh: "corrugator_R", bounds: mirror(CORRUGATOR_L) },
 ];
 
 export const FACE_MUSCLE_BY_ID = new Map(FACE_MUSCLES.map((d) => [d.id, d]));
