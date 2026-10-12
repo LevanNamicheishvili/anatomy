@@ -277,7 +277,7 @@ const DICT: Record<string, string> = {
   frontalis: "შუბლის კუნთი",
   "zygomaticus major": "ყვრიმალის დიდი კუნთი",
   buccinator: "ლოყის კუნთი",
-  "depressor anguli oris": "პირის კუთხის დაწევის კუნთი",
+  "depressor anguli oris": "პირის კუთხის დამწევი კუნთი",
   mentalis: "ნიკაპის კუნთი",
   "corrugator supercilii": "წარბის შეკუმშვის კუნთი",
   "orbicularis oris": "პირის წრიული კუნთი",
