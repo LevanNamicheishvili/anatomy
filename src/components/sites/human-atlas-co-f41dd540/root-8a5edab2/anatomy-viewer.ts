@@ -27,6 +27,9 @@ import {
   type SystemKey,
 } from "./atlas-data";
 
+/** Max wait for one face-muscle GLB before skipping it. */
+const FACE_GLB_TIMEOUT_MS = 12_000;
+
 export type ViewName = "threeQuarter" | "front" | "side" | "back";
 export type HeartPhase = "atria" | "ventricles" | "relax";
 export type BreathPhase = "inhale" | "exhale";
@@ -626,7 +629,8 @@ export class AnatomyViewer {
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);
-    await this.loadCustomParts(manifest.parts.filter((p) => p.chunk === CUSTOM_CHUNK));
+    // Face muscles stream in after the atlas is usable: the UI never waits on Draco.
+    void this.loadCustomParts(manifest.parts.filter((p) => p.chunk === CUSTOM_CHUNK)).catch(() => undefined);
   }
 
   /** Face muscles shipped as separate Draco GLBs, already in atlas space; they move rigidly with the head. */
@@ -643,7 +647,11 @@ export class AnatomyViewer {
     try {
       await Promise.all(
         [...byUrl].map(async ([url, list]) => {
-          const gltf = await loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null);
+          // A stalled Draco worker or a 401 must not hang anything: skip that muscle after ~12s.
+          const gltf = await Promise.race([
+            loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), FACE_GLB_TIMEOUT_MS)),
+          ]);
           if (!gltf || this.disposed) return;
           gltf.scene.updateMatrixWorld(true);
           for (const part of list) {

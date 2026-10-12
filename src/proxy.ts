@@ -4,6 +4,8 @@ import { SESSION_COOKIE } from "@/lib/session-cookie";
 /** Pages open without signing in: the landing page, the login page and the school application form. */
 const PUBLIC = ["/login", "/request"];
 const PUBLIC_EXACT = ["/"];
+/** Public three.js Draco decoder (wasm/js) — not lesson data. */
+const PUBLIC_PREFIX = ["/draco/"];
 
 /** Lesson data that must stay behind sign-in (still served by Next from /public once the cookie is present). */
 const LESSON_ASSET = /\.(?:gz|bin|json|hdr|glb|gltf|ktx2|mp3|m4a|ogg|mp4|webm)$/i;
@@ -14,7 +16,9 @@ const LESSON_ASSET = /\.(?:gz|bin|json|hdr|glb|gltf|ktx2|mp3|m4a|ogg|mp4|webm)$/
  */
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_EXACT.includes(path) || PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));
+  const isPublic =
+    PUBLIC_EXACT.includes(path) ||
+    PUBLIC_PREFIX.some((p) => path.startsWith(p)) || PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));
   if (isPublic || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
   // Lesson data files (models, terrain, audio) are fetched by scripts: answer 401 instead of an HTML redirect.
   if (LESSON_ASSET.test(path)) return new NextResponse(null, { status: 401 });
