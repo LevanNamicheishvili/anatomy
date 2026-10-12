@@ -311,6 +311,8 @@ export class AnatomyViewer {
   private tween: CameraTween | null = null;
   private resizeObserver: ResizeObserver;
   private downAt: { x: number; y: number; t: number } | null = null;
+  /** Last wheel/trackpad scroll; a pointerup right after scrolling is not a click. */
+  private lastWheel = 0;
   /** Cursor over the canvas (canvas pixels) while hovering with a mouse. */
   private hoverPos: { x: number; y: number } | null = null;
   private hoverStale = false;
@@ -425,6 +427,9 @@ export class AnatomyViewer {
     canvas.addEventListener("pointerleave", this.onPointerLeave);
     canvas.addEventListener("dblclick", this.onDoubleClick);
     canvas.addEventListener("contextmenu", this.onContextMenu);
+    canvas.addEventListener("wheel", this.onWheel, { passive: true });
+    canvas.addEventListener("webglcontextlost", this.onContextLost);
+    canvas.addEventListener("webglcontextrestored", this.onContextRestored);
 
     this.loop();
   }
@@ -1313,10 +1318,28 @@ export class AnatomyViewer {
     this.downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
   };
 
+  private onWheel = () => {
+    this.lastWheel = performance.now();
+    this.downAt = null;
+  };
+
+  /** The GPU can drop the WebGL context (driver reset, zoom, memory pressure). Ask for it back. */
+  private onContextLost = (e: Event) => {
+    e.preventDefault();
+  };
+
+  /** three.js re-uploads buffers and shaders on restore; we only need to draw again. */
+  private onContextRestored = () => {
+    for (const m of this.materials.values()) m.needsUpdate = true;
+    this.matricesDirty = true;
+    this.dirty = true;
+  };
+
   private onPointerUp = (e: PointerEvent) => {
     const down = this.downAt;
     this.downAt = null;
-    if (!down || e.button !== 0) return;
+    if (!down || e.button !== 0 || !e.isPrimary) return;
+    if (performance.now() - this.lastWheel < 350) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     if (moved > 5 || performance.now() - down.t > 500) return;
     const { x, y } = this.canvasPoint(e);
@@ -1495,6 +1518,9 @@ export class AnatomyViewer {
     this.canvas.removeEventListener("pointermove", this.onPointerMove);
     this.canvas.removeEventListener("pointerleave", this.onPointerLeave);
     this.canvas.removeEventListener("dblclick", this.onDoubleClick);
+    this.canvas.removeEventListener("wheel", this.onWheel);
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
     this.canvas.removeEventListener("contextmenu", this.onContextMenu);
     this.controls.dispose();
     for (const { mesh } of this.parts.values()) mesh.geometry.dispose();
