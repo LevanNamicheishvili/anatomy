@@ -27,8 +27,6 @@ import {
   type SystemKey,
 } from "./atlas-data";
 
-/** Max wait for one face-muscle GLB before skipping it. */
-const FACE_GLB_TIMEOUT_MS = 12_000;
 
 export type ViewName = "threeQuarter" | "front" | "side" | "back";
 export type HeartPhase = "atria" | "ventricles" | "relax";
@@ -637,6 +635,7 @@ export class AnatomyViewer {
   private async loadCustomParts(parts: AtlasPart[]) {
     if (!parts.length || this.disposed) return;
     const draco = new DRACOLoader().setDecoderPath("/draco/");
+    draco.preload();
     const loader = new GLTFLoader().setDRACOLoader(draco);
     const byUrl = new Map<string, AtlasPart[]>();
     for (const p of parts) {
@@ -644,14 +643,13 @@ export class AnatomyViewer {
       if (!def) continue;
       byUrl.set(def.url, [...(byUrl.get(def.url) ?? []), p]);
     }
+    let added = 0;
     try {
       await Promise.all(
         [...byUrl].map(async ([url, list]) => {
-          // A stalled Draco worker or a 401 must not hang anything: skip that muscle after ~12s.
-          const gltf = await Promise.race([
-            loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), FACE_GLB_TIMEOUT_MS)),
-          ]);
+          // Runs in the background, so nothing waits on it. No timeout: on a busy main thread the Draco
+          // decoder can take longer than any fixed limit, and a discarded result left the muscles invisible.
+          const gltf = await loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null);
           if (!gltf || this.disposed) return;
           gltf.scene.updateMatrixWorld(true);
           for (const part of list) {
@@ -667,10 +665,12 @@ export class AnatomyViewer {
             geometry.setAttribute("normal", g.getAttribute("normal"));
             if (g.index) geometry.setIndex(g.index);
             this.addPart(part, null, null, geometry);
+            added += 1;
           }
           this.dirty = true;
         }),
       );
+      console.info(`[atlas] face muscles ready: ${added}/${parts.length}`);
     } finally {
       draco.dispose();
     }
