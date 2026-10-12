@@ -64,14 +64,14 @@ export function LoginForm({ next }: { next: string }) {
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "პაროლის დამალვა" : "პაროლის ჩვენება"}
             title={showPassword ? "დამალვა" : "ჩვენება"}
-            className="absolute end-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-[#66736f] transition-colors hover:bg-[#eef2f0] hover:text-[#111a18]"
+            className="absolute end-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-md text-[#66736f] transition-colors hover:bg-[#eef2f0] hover:text-[#111a18]"
           >
             {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
           </button>
         </div>
         {capsLock && (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-[#8a6100]">
-            <TriangleAlert className="size-3.5" />
+          <p className="flex items-center gap-1.5 text-xs font-medium text-[#8a6100]" role="status">
+            <TriangleAlert className="size-3.5 shrink-0" />
             Caps Lock ჩართულია
           </p>
         )}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Search, X } from "lucide-react";
 import type { BioTopic } from "@/lib/biology-topics";
 import { cn } from "@/lib/utils";
-import { FeaturedCard, TopicCard } from "./cards";
+import { FeaturedCard, ToolCard, TopicCard } from "./cards";
 import { TOPIC_ICONS } from "./TopicHeader";
 import { SectionTitle } from "./ui";
 
@@ -48,7 +48,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
           className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-faint"
         />
         {query && (
-          <button type="button" onClick={() => setQuery("")} aria-label="გასუფთავება" className="flex size-10 items-center justify-center rounded-lg text-mute hover:bg-chip">
+          <button type="button" onClick={() => setQuery("")} aria-label="გასუფთავება" className="-me-2 flex size-10 shrink-0 items-center justify-center rounded-lg text-mute hover:bg-chip">
             <X className="size-5" />
           </button>
         )}
@@ -62,7 +62,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
               <li key={`${topic.slug}-${href}`}>
                 <Link href={href} className={cn("group flex min-h-14 items-center gap-3 px-5 py-2.5 transition-colors hover:bg-subtle focus-visible:bg-subtle", i > 0 && "border-t border-chip")}>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-semibold">{title}</span>
+                    <span className="block text-[15px] font-semibold [overflow-wrap:anywhere]">{title}</span>
                     <span className="block text-xs text-mute">
                       {is3d ? "3D · " : ""}
                       {topic.title}
@@ -86,25 +86,9 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
               </div>
             )}
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {compact.map((f) => {
-                const Icon = TOPIC_ICONS[f.icon];
-                return (
-                  <Link
-                    key={f.href}
-                    href={f.href}
-                    className="group flex items-center gap-3 rounded-xl bg-ink p-4 text-white outline-none transition-colors hover:bg-[#25302d] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-                  >
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold">{f.label}</span>
-                      <span className="block truncate text-xs text-white/70">{f.sub}</span>
-                    </span>
-                    <ArrowRight className="size-4 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                  </Link>
-                );
-              })}
+              {compact.map((f) => (
+                <ToolCard key={f.href} href={f.href} title={f.label} sub={f.sub} icon={TOPIC_ICONS[f.icon]} />
+              ))}
             </div>
           </section>
 

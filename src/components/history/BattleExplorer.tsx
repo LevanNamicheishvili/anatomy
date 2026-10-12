@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Crown, MapPin, Plus, Minus, X, Headphones } from "lucide-react";
+import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { JourneyScene } from "@/components/journeys/JourneyScene";
 import { cn } from "@/lib/utils";
 import { createDidgori, type BattleView } from "./didgori";
@@ -121,9 +123,9 @@ export function BattleExplorer() {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ისტორია", href: "/history" }} topic="დიდგორის ბრძოლა, 1121" color={ACCENT} icon="battle" />
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_52dvh_minmax(0,1fr)] lg:grid-cols-[250px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[250px_minmax(0,1fr)_400px]")}>
         <nav aria-label="ბრძოლის ეტაპები" className="overflow-y-auto border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {DIDGORI_STAGES.map((s, i) => (
@@ -150,7 +152,7 @@ export function BattleExplorer() {
           </section>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden bg-[#c8d4da]">
+        <div className="relative isolate min-h-0 overflow-hidden bg-[#c8d4da]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D სიმულაცია: ${current.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
@@ -168,13 +170,16 @@ export function BattleExplorer() {
             <p className="max-w-sm text-sm text-[#66736f]">შეამოწმე კავშირი და WebGL-ის მხარდაჭერა. ტექსტი და სასწავლო მასალა ხელმისაწვდომია.</p>
             <button type="button" className="min-h-11 rounded-lg bg-[#a0662b] px-5 py-2 text-sm font-semibold text-white" onClick={() => { setError(false); setLoading(true); setRate(1); setRetry((n) => n + 1); }}>ხელახლა ცდა</button>
           </div>}
-          <div className="absolute left-3 top-16 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-line/80 bg-white/90 p-2 text-sm font-semibold shadow-panel backdrop-blur-sm">
-            <label className="flex items-center gap-2">ხედი
+          {/* Phones: the selects keep their own names and drop the visible words, so both fit on one row and the panel hides less of the field. */}
+          <div className="absolute left-3 top-16 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-line/80 bg-white/90 p-2 text-sm font-semibold shadow-panel backdrop-blur-sm max-sm:gap-x-2 max-sm:p-1.5">
+            <label className="flex items-center gap-2">
+              <span className="max-sm:sr-only">ხედი</span>
               <select aria-label="კამერის ხედი" value={camera} className="h-10 rounded-lg border border-line-strong bg-white px-2 text-sm font-medium" onChange={(e) => { const value = e.target.value as BattleView["camera"]; clearCommander(); viewRef.current.camera = value; setCamera(value); sceneRef.current?.refreshView(); }}>
                 <option value="cinematic">კინემატოგრაფიული</option><option value="tactical">ტაქტიკური</option>
               </select>
             </label>
-            <label className="flex items-center gap-2">სიჩქარე
+            <label className="flex items-center gap-2">
+              <span className="max-sm:sr-only">სიჩქარე</span>
               <select aria-label="სიმულაციის სიჩქარე" value={rate} disabled={narration.active} title={narration.active ? "მოყოლისას სიჩქარეს ხმა განსაზღვრავს" : undefined} className="h-10 rounded-lg border border-line-strong bg-white px-2 text-sm font-medium disabled:opacity-50" onChange={(e) => { const value = Number(e.target.value); setRate(value); sceneRef.current?.setPlaybackRate(value); }}>
                 {[0.5, 1, 1.5, 2].map((n) => <option key={n} value={n}>{n}×</option>)}
               </select>
@@ -222,16 +227,16 @@ export function BattleExplorer() {
           </div>
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-5 py-5 max-lg:border-s-0 max-lg:border-t">
+        <article className={cn(explorerText, "px-5 py-5")}>
           <NarrationTranscript n={narration} accent={ACCENT} />
           <section className="mb-5 rounded-xl border border-[#e5d9c8] bg-[#fbf7ef] p-4" aria-label="ბრძოლის ძველი და დღევანდელი მდებარეობა">
             <p className="flex items-center gap-2 text-xs font-semibold text-[#986627]"><MapPin className="size-4" />სად მოხდა ბრძოლა?</p>
             <dl className="mt-3 space-y-2 text-sm"><div><dt className="text-xs text-[#7b7b70]">1121 წელი</dt><dd className="font-semibold">{DIDGORI_PLACE.historic}</dd></div><div><dt className="text-xs text-[#7b7b70]">დღეს</dt><dd className="font-semibold">{DIDGORI_PLACE.modern}</dd><dd className="mt-1 text-xs leading-5 text-[#66736f]">{DIDGORI_PLACE.region}</dd></div></dl>
             <p className="mt-3 text-xs leading-5 text-[#66736f]">{DIDGORI_PLACE.description}</p>
-            <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-[#8b6337]"><button type="button" disabled={loading || error} onClick={() => go(0)}>საქართველოს რუკიდან ნახვა ↗</button><a href={DIDGORI_PLACE.mapHref} target="_blank" rel="noreferrer">დღევანდელ რუკაზე ↗</a></div>
+            <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-[#8b6337]"><button type="button" disabled={loading || error} onClick={() => { go(0); revealScene(); }}>საქართველოს რუკიდან ნახვა ↗</button><a href={DIDGORI_PLACE.mapHref} target="_blank" rel="noreferrer">დღევანდელ რუკაზე ↗</a></div>
             {stage === 0 && <p className="mt-3 text-[11px] leading-5 text-[#7b7b70]">დღევანდელი საქართველოს კონტურები ორიენტირისთვისაა. წერტილი მემორიალს აღნიშნავს; ბრძოლის ზუსტი საზღვრები უცნობია.</p>}
           </section>
-          <label className="mb-4 block text-xs font-semibold text-[#66736f] lg:hidden">მეთაურის დათვალიერება<select aria-label="მეთაურის არჩევა" disabled={loading || error} value={selectedCommander ?? ""} onChange={(e) => e.target.value ? inspectCommander(e.target.value as CommanderId) : clearCommander()} className="mt-2 block h-11 w-full rounded-lg border border-line-strong bg-white px-2 text-sm"><option value="">ბრძოლის საერთო ხედი</option>{COMMANDERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <label className="mb-4 block text-xs font-semibold text-[#66736f] lg:hidden">მეთაურის დათვალიერება<select aria-label="მეთაურის არჩევა" disabled={loading || error} value={selectedCommander ?? ""} onChange={(e) => { if (e.target.value) { inspectCommander(e.target.value as CommanderId); revealScene(); } else clearCommander(); }} className="mt-2 block h-11 w-full rounded-lg border border-line-strong bg-white px-2 text-sm"><option value="">ბრძოლის საერთო ხედი</option>{COMMANDERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           {commander && <section className="mb-6 rounded-xl bg-[#192b27] p-4 text-white" aria-live="polite">
             <p className="text-xs text-[#d5b583]">მეთაურის 3D ფიგურა</p><h2 className="mt-2 text-xl">{commander.name}</h2><p className="mt-1 text-xs text-[#c4d0ca]">{commander.role}</p><p className="mt-3 text-sm leading-6">{commander.description}</p><p className="mt-3 text-sm leading-6 text-[#c4d0ca]">{commander.equipment}</p><p className="mt-3 border-t border-white/15 pt-3 text-xs leading-5 text-[#b5c1bc]">სახე და აღჭურვილობა მხატვრული რეკონსტრუქციაა; ავთენტურ პორტრეტად არ არის წარმოდგენილი. გადაათრიე ფიგურის გარშემო დასათვალიერებლად.</p>
           </section>}
@@ -251,7 +256,7 @@ export function BattleExplorer() {
             <p className="mt-4 border-t border-[#e8ddce] pt-3 text-sm leading-6"><strong>დააკვირდი: </strong>{DIDGORI_LEARNING[stage].watch}</p>
           </section>
           <p className="mt-3 text-xs leading-6 text-[#66736f]"><strong>წყარო და მოდელი: </strong>{DIDGORI_LEARNING[stage].evidence}</p>
-          <button type="button" onClick={() => go(stage)} disabled={loading || error} className="mt-3 flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-semibold hover:bg-subtle disabled:opacity-40"><RotateCcw className="size-4" />ეტაპის თავიდან ნახვა</button>
+          <button type="button" onClick={() => { go(stage); revealScene(); }} disabled={loading || error} className="mt-3 flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-semibold hover:bg-subtle disabled:opacity-40"><RotateCcw className="size-4" />ეტაპის თავიდან ნახვა</button>
 
           <h3 className="mt-8 text-sm font-semibold text-[#66736f]">ძალები</h3>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">

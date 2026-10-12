@@ -23,17 +23,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
       <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-[#33413e] transition-colors hover:bg-white hover:text-[#111a18]">
+        <Link href="/" className="-ms-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-[#33413e] transition-colors hover:bg-white hover:text-[#111a18]">
           <ArrowLeft className="size-4" />
           მთავარი გვერდი
         </Link>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 pb-16">
+      <main className="flex flex-1 items-center justify-center px-4 pt-2 pb-12 sm:pb-16">
         <div className="w-full max-w-[420px]">
           <div className="flex flex-col items-center text-center">
             <Logo className="size-12 rounded-xl [&>svg]:size-6" />
-            <h1 className="mt-5 text-[28px] leading-snug font-semibold">შესვლა პორტალზე</h1>
+            <h1 className="mt-5 text-[1.75rem] leading-snug">შესვლა პორტალზე</h1>
             <p className="mt-2 text-[15px] leading-7 text-[#66736f]">გამოიყენე სკოლისგან მიღებული მომხმარებლის სახელი და პაროლი.</p>
           </div>
 
@@ -71,7 +71,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
       </main>
 
-      <footer className="border-t border-[#e2e7e5] py-5 text-center text-xs text-[#97a29e]">{PORTAL_NAME} · მხოლოდ საგანმანათლებლო დაწესებულებებისთვის</footer>
+      <footer className="border-t border-[#e2e7e5] px-4 py-5 text-center text-xs leading-5 text-[#97a29e]">{PORTAL_NAME} · მხოლოდ საგანმანათლებლო დაწესებულებებისთვის</footer>
     </div>
   );
 }

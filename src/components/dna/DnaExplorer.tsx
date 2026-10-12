@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Panel, PillButton } from "@/components/portal/controls";
+import { Panel, PillButton, SectionPager } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { DnaScene, type DnaOptions } from "./DnaScene";
 import { BASE_COLORS, BASE_INFO, BASE_NAMES, CODONS, GLOBIN, MRNA, SECTIONS, STEP_INFO, STEP_NAMES, type Base, type ChromosomeStep } from "./dna-data";
@@ -156,14 +156,14 @@ export function DnaExplorer({ initial }: { initial?: string }) {
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="დნმ და მემკვიდრეობა" color={ACCENT} icon="dna">
         <Link href="/biology/blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           სისხლი
         </Link>
       </TopicHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_42dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
         <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
@@ -173,7 +173,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
                   onClick={() => setIndex(i)}
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
+                    "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
                     i === index ? "bg-[#eaeefb] font-semibold text-[#26408f]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
@@ -190,7 +190,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${section.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
           {!ready && (
@@ -225,13 +225,13 @@ export function DnaExplorer({ initial }: { initial?: string }) {
               <Chip active={opts.mutant} onClick={() => set({ mutant: true })}>
                 მუტაცია
               </Chip>
-              <span className="mx-1 w-px bg-[#e2e7e5]" />
+              <span className="mx-1 w-px shrink-0 bg-[#e2e7e5]" />
               {modeChips}
             </Toolbar>
           )}
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
+        <article className={explorerText}>
           <p className="text-xs font-semibold" style={{ color: ACCENT }}>
             {index + 1} / {SECTIONS.length}
           </p>
@@ -280,26 +280,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
           {(section.view === "helix" || section.view === "pairing") && <Legend />}
           {(section.view === "transcription" || section.view === "translation") && <Legend rna />}
 
-          <div className="mt-8 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => setIndex(index - 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-[#d5dcd9] text-sm font-semibold hover:bg-[#f5f7f6] disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-              წინა
-            </button>
-            <button
-              type="button"
-              disabled={index === SECTIONS.length - 1}
-              onClick={() => setIndex(index + 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-[#111a18] text-sm font-semibold text-white hover:bg-[#2a3532] disabled:opacity-40"
-            >
-              შემდეგი
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <SectionPager index={index} count={SECTIONS.length} onGo={setIndex} />
 
           <p className="mt-8 text-xs leading-5 text-[#97a29e]">
             მოლეკულები: RCSB Protein Data Bank — 1BNA (Drew et al., 1981) და 1KX5 (Davey et al., 2002), CC0. პროცესები ნაჩვენებია გამარტივებული მოდელით.

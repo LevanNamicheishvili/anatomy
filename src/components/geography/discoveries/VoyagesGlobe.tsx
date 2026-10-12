@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { Pause, Play, Ship } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { latLonToVec3 } from "../globe/coords";
 import { GlobeScene } from "../globe/GlobeScene";
@@ -167,7 +169,7 @@ export function VoyagesGlobe() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დიდი გეოგრაფიული აღმოჩენების მარშრუტები გლობუსზე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {VOYAGES.flatMap((v) =>
@@ -205,7 +207,7 @@ export function VoyagesGlobe() {
             <Ship className="size-5" />
           </button>
         </div>
-        <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{current?.name}</p>
           <p className="text-[13px] text-[#66736f] tabular-nums">
             {current?.when} · გავლილია ~{nf(Math.round((PATHS[id].km * progress) / 100) * 100)} კმ
@@ -213,15 +215,22 @@ export function VoyagesGlobe() {
         </div>
       </div>
 
-      <div className="grid gap-5 px-5 py-4 md:grid-cols-[1fr_16rem]">
+      <div className="grid gap-5 px-5 py-4 md:grid-cols-[minmax(0,1fr)_16rem]">
         <div className="flex flex-col gap-3">
-          <label className="block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">მოგზაურობის მსვლელობა</span>
-              <span className="tabular-nums text-[#33413e]">{Math.round(progress * 100)}%</span>
-            </span>
-            <input type="range" min={0} max={1} step={0.002} value={progress} onChange={(e) => { setPlaying(false); setProgress(Number(e.target.value)); followRef.current = true; }} className="mt-1 w-full" style={{ accentColor: voyage.color }} aria-label="მოგზაურობის მსვლელობა" />
-          </label>
+          <LabeledSlider
+            label="მოგზაურობის მსვლელობა"
+            value={progress}
+            display={`${Math.round(progress * 100)}%`}
+            min={0}
+            max={1}
+            step={0.002}
+            onChange={(v) => {
+              setPlaying(false);
+              setProgress(v);
+              followRef.current = true;
+            }}
+            color={voyage.color}
+          />
           <div>
             <h2 className="text-lg">{voyage.name}</h2>
             <p className="mt-1 text-sm text-[#66736f]">

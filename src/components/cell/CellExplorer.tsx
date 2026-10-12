@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
-import { Panel, PillButton } from "@/components/portal/controls";
+import { Pause, Play } from "lucide-react";
+import { Panel, PillButton, SectionPager, revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { CellScene } from "./CellScene";
 import { ANIMAL_ORGANELLES, MEIOSIS_PHASES, MITOSIS_PHASES, ORGANELLES, PLANT_ORGANELLES, SECTIONS, type OrganelleId } from "./cell-data";
@@ -90,14 +91,14 @@ export function CellExplorer({ initial }: { initial?: string }) {
   const pickedInfo = picked ? ORGANELLES[picked] : null;
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="უჯრედი" color={ACCENT} icon="cell">
         <Link href="/biology/dna" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           დნმ
         </Link>
       </TopicHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_44dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
         <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
@@ -107,7 +108,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
                   onClick={() => go(i)}
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
+                    "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
                     i === index ? "bg-[#e6f3ef] font-semibold text-[#0c5c4d]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
@@ -124,7 +125,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className={cn("absolute inset-0 size-full touch-none", organelles && "cursor-pointer")} aria-label={`3D: ${section.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {phases && (
@@ -172,7 +173,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
           )}
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
+        <article className={explorerText}>
           <p className="text-xs font-semibold" style={{ color: ACCENT }}>
             {index + 1} / {SECTIONS.length}
           </p>
@@ -217,10 +218,13 @@ export function CellExplorer({ initial }: { initial?: string }) {
                   <li key={id}>
                     <button
                       type="button"
-                      onClick={() => setPicked(picked === id ? null : id)}
+                      onClick={() => {
+                        setPicked(picked === id ? null : id);
+                        if (picked !== id) revealScene();
+                      }}
                       aria-current={picked === id ? "true" : undefined}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
+                        "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
                         picked === id ? "bg-[#e6f3ef] font-semibold text-[#0c5c4d]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                       )}
                     >
@@ -251,26 +255,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
             ))}
           </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => go(index - 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-[#d5dcd9] text-sm font-semibold hover:bg-[#f5f7f6] disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-              წინა
-            </button>
-            <button
-              type="button"
-              disabled={index === SECTIONS.length - 1}
-              onClick={() => go(index + 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-[#111a18] text-sm font-semibold text-white hover:bg-[#2a3532] disabled:opacity-40"
-            >
-              შემდეგი
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <SectionPager index={index} count={SECTIONS.length} onGo={go} />
         </article>
       </div>
     </div>

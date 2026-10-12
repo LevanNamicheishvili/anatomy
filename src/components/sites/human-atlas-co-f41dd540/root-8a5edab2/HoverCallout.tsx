@@ -64,7 +64,7 @@ export function HoverCallout({ t, hover, width, height }: { t: Strings; hover: H
           <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
           {t.systemNames[hover.system]}
         </span>
-        <span className="text-sm leading-5 font-semibold text-[#111a18]">{hover.name}</span>
+        <span className="text-sm leading-5 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{hover.name}</span>
       </div>
     </div>
   );

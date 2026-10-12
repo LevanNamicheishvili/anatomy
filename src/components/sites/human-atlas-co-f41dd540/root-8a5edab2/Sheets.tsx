@@ -54,7 +54,7 @@ export function SheetHeader({
         >
           {title}
         </h2>
-        {subtitle && <p className="mt-0.5 text-sm leading-6 text-[#66736f]">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-sm leading-6 text-[#66736f] [overflow-wrap:anywhere]">{subtitle}</p>}
       </div>
       <button type="button" onClick={onClose} aria-label={closeLabel} className={iconBtn}>
         <X className="size-5" />
@@ -205,8 +205,8 @@ export function SearchPanel({
                     i === active && "bg-[#eef2f0]",
                   )}
                 >
-                  <span className="flex-1 py-2">{titleCase(r.name)}</span>
-                  <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{r.ids.length}</span>
+                  <span className="min-w-0 flex-1 py-2">{titleCase(r.name)}</span>
+                  <span className="shrink-0 rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{r.ids.length}</span>
                 </button>
               </li>
             ))

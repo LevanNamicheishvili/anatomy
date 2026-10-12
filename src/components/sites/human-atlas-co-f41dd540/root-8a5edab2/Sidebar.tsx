@@ -94,8 +94,8 @@ function ActionCard({
       )}
     >
       {lead}
-      <span className="min-w-0 flex-1">
-        <span className={cn("block text-sm font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")}>{title}</span>
+      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <span className={cn("block text-sm leading-5 font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")}>{title}</span>
         {body && <span className="mt-0.5 block text-[13px] leading-5 text-[#66736f]">{body}</span>}
       </span>
       {chevron && <ChevronRight className="size-4 shrink-0 text-[#97a29e]" aria-hidden />}
@@ -159,7 +159,9 @@ function SystemsTab({
       </div>
 
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-t border-[#e2e7e5] ps-4 pe-2">
-        <span className="text-[13px] text-[#66736f] tabular-nums">{visibleLabel}</span>
+        <span className="min-w-0 truncate text-[13px] text-[#66736f] tabular-nums" title={visibleLabel}>
+          {visibleLabel}
+        </span>
         <button type="button" onClick={onToggleAll} className={btnGhost}>
           {anyVisible ? t.hideAll : t.showAll}
         </button>
@@ -177,7 +179,7 @@ function PoseGrid({ t, pose, keys, onPose }: { t: Strings; pose: PoseKey; keys: 
           icon={ANIMATED_POSES.includes(key) ? Play : PersonStanding}
           pressed={pose === key}
           onClick={() => onPose(key)}
-          className="min-h-11 justify-start rounded-lg px-3 py-2 text-start leading-5 whitespace-normal"
+          className="min-h-11 min-w-0 justify-start rounded-lg px-3 py-2 text-start leading-5 whitespace-normal [overflow-wrap:anywhere]"
         >
           {t.poses[key]}
         </PillButton>
@@ -437,7 +439,8 @@ export function Sidebar({
       )}
     >
       <div className="flex shrink-0 items-stretch border-b border-[#e2e7e5] bg-white max-md:rounded-t-2xl">
-        <div role="tablist" aria-label={t.systems} className="grid flex-1 grid-cols-4">
+        {/* Tabs share the width by their label length, so "ანიმაციები" gets the room "თემები" doesn't need in the 288px sidebar. */}
+        <div role="tablist" aria-label={t.systems} className="flex min-w-0 flex-1">
           {tabs.map(({ key, label, icon: Icon }) => {
             const on = tab === key;
             return (
@@ -448,12 +451,15 @@ export function Sidebar({
                 aria-selected={on}
                 onClick={() => onTab(key)}
                 className={cn(
-                  "relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-xs transition-colors",
+                  "relative flex min-h-14 min-w-0 flex-auto flex-col items-center justify-center gap-1 px-1.5 text-xs transition-colors",
                   on ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]",
                 )}
               >
-                <Icon className={cn("size-[18px]", on ? "text-[#0f8a74]" : "text-[#97a29e]")} strokeWidth={2} aria-hidden />
-                {label}
+                <Icon className={cn("size-[18px] shrink-0", on ? "text-[#0f8a74]" : "text-[#97a29e]")} strokeWidth={2} aria-hidden />
+                {/* The hidden bold copy reserves the selected width, so tabs don't shift when the selection moves. */}
+                <span data-label={label} className="max-w-full truncate after:invisible after:block after:h-0 after:font-semibold after:content-[attr(data-label)]">
+                  {label}
+                </span>
                 {on && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#0f8a74]" />}
               </button>
             );

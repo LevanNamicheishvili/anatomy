@@ -81,7 +81,7 @@ export function TopicSheet({
             </p>
           </div>
           {/* The health slide carries its own heading inside the green box. */}
-          {!last && <h3 className="mt-5 text-2xl font-semibold text-[#111a18]">{slides[i].heading}</h3>}
+          {!last && <h3 className="mt-5 text-2xl font-semibold text-[#111a18] [overflow-wrap:anywhere]">{slides[i].heading}</h3>}
           <div className={last ? "mt-1" : "mt-4"}>{slides[i].body}</div>
         </div>
         <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-[#e2e7e5] p-4">

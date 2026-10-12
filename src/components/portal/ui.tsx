@@ -50,6 +50,25 @@ export function Card({ className, children }: { className?: string; children: Re
 export const cardLink =
   "group relative flex flex-col overflow-hidden rounded-xl border border-line-strong bg-white shadow-card outline-none transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-faint hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2";
 
+/**
+ * Class string for the box around a lesson's 3D canvas. Phones: a fixed share of the small viewport
+ * (svh, so the canvas doesn't resize as the browser bars slide) that fits under the sticky top bar
+ * with the caption peeking below; wider screens: 16:10, never taller than the window, so a landscape
+ * phone doesn't get a scene taller than what's left under the bar.
+ */
+export const sceneFrame = "h-[60svh] min-h-72 w-full sm:h-auto sm:min-h-0 sm:aspect-[16/10] sm:max-h-[72svh]";
+
+/*
+ * Explorer pages (sections on the left, the 3D view in the middle, the text on the right).
+ * From `lg` the columns fill the window and each scrolls on its own. Below it the page scrolls as one
+ * column: the sections strip, the 3D view at ~58% of the small viewport (never under 18rem), then the
+ * text — instead of squeezing both the scene and the text into one screen.
+ * Add the `lg:grid-cols-[…]` of the page to `explorerGrid`.
+ */
+export const explorerPage = "flex min-h-dvh flex-col bg-page font-sans text-ink lg:h-dvh";
+export const explorerGrid = "grid flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(18rem,58svh)_auto] lg:min-h-0 lg:grid-rows-1";
+export const explorerText = "atlas-scroll border-s border-line bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t lg:min-h-0 lg:overflow-y-auto";
+
 /** Small rounded label: grade, count, status. */
 export function Chip({ tone = "neutral", className, children }: { tone?: "neutral" | "accent" | "dark"; className?: string; children: React.ReactNode }) {
   const tones = { neutral: "bg-chip text-copy", accent: "bg-brand-soft text-brand-strong", dark: "bg-ink text-white" };
@@ -65,8 +84,8 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 export function SectionTitle({ children, hint, className }: { children: React.ReactNode; hint?: React.ReactNode; className?: string }) {
   return (
     <div className={cn("flex items-baseline justify-between gap-3", className)}>
-      <h2 className="text-lg text-ink">{children}</h2>
-      {hint && <span className="text-sm text-mute">{hint}</span>}
+      <h2 className="min-w-0 text-lg text-ink">{children}</h2>
+      {hint && <span className="shrink-0 text-sm text-mute">{hint}</span>}
     </div>
   );
 }
@@ -132,7 +151,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl text-ink sm:text-3xl">{title}</h1>
+        <h1 className="text-2xl text-ink [overflow-wrap:anywhere] sm:text-3xl">{title}</h1>
         {description && <p className="mt-2 max-w-2xl text-base leading-7 text-copy">{description}</p>}
       </div>
       {action}

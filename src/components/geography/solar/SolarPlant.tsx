@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Sun, Zap } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { SEASONS, solarReading, trackerTilt } from "./solar-math";
 import { SolarScene } from "./SolarScene";
 
@@ -57,7 +58,7 @@ export function SolarPlant() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh]">
+      <div className={`relative ${sceneFrame}`}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="მზის ელექტროსადგური" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold">
           <span data-at="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">

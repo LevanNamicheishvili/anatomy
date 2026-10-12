@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Layers } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { CutawayScene } from "./CutawayScene";
 import { drawnRadius, EARTH_R_KM, LAYERS, layerAt, pressureAt, tempAt, type LayerId } from "./layers";
@@ -86,7 +88,7 @@ export function EarthCutaway() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა ჭრილში: ქერქი, მანტია, ბირთვი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LAYERS.map((l) => (
@@ -109,25 +111,34 @@ export function EarthCutaway() {
         <p className="pointer-events-none absolute right-3 bottom-3 rounded bg-black/50 px-2 py-1 text-[11px] text-white/85">ქერქი ნახატზე გადიდებულია — სინამდვილეში ის ვაშლის კანივით თხელია</p>
       </div>
 
-      <div className="grid gap-5 px-5 py-4 md:grid-cols-[1fr_17rem]">
+      <div className="grid gap-5 px-5 py-4 md:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="flex flex-col gap-4">
-          <label className="block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">ჩავიდეთ სიღრმეში</span>
-              <span className="tabular-nums text-[#33413e]">{nf(depth)} კმ</span>
-            </span>
-            <input type="range" min={0} max={EARTH_R_KM} step={5} value={depth} onChange={(e) => { setDepth(Number(e.target.value)); setSelected(null); if (opening === 0) view(90); }} className="mt-1 w-full accent-[#2f6fb0]" aria-label="სიღრმე, კმ" />
-            <span className="relative mt-1 block h-3 w-full overflow-hidden rounded-full">
+          <div>
+            <LabeledSlider
+              label="ჩავიდეთ სიღრმეში"
+              value={depth}
+              display={`${nf(depth)} კმ`}
+              min={0}
+              max={EARTH_R_KM}
+              step={5}
+              onChange={(v) => {
+                setDepth(v);
+                setSelected(null);
+                if (opening === 0) view(90);
+              }}
+              color="#2f6fb0"
+            />
+            <span className="relative mt-1 block h-3 w-full overflow-hidden rounded-full" aria-hidden>
               {LAYERS.map((l) => (
                 <span key={l.id} className="absolute top-0 h-full" style={{ left: `${(l.top / EARTH_R_KM) * 100}%`, width: `${((l.bottom - l.top) / EARTH_R_KM) * 100}%`, backgroundColor: l.color }} />
               ))}
             </span>
-            <span className="mt-1 flex justify-between text-[10px] text-[#97a29e] tabular-nums">
+            <span className="mt-1 flex justify-between text-[10px] text-[#97a29e] tabular-nums" aria-hidden>
               {BOUNDARIES.map((b) => (
                 <span key={b}>{nf(b)}</span>
               ))}
             </span>
-          </label>
+          </div>
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { k: "ფენა", v: layer.name },
@@ -137,15 +148,15 @@ export function EarthCutaway() {
             ].map((x) => (
               <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
                 <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
-                <dd className="mt-1 text-[15px] leading-5 font-semibold">{x.v}</dd>
+                <dd className="mt-1 text-[15px] leading-5 font-semibold [overflow-wrap:anywhere]">{x.v}</dd>
               </div>
             ))}
           </dl>
           <div className="rounded-lg border border-[#e2e7e5] p-4">
-            <h2 className="flex items-center gap-2 text-lg">
-              <span className="size-3 rounded-full" style={{ backgroundColor: info.color }} />
+            <h2 className="flex flex-wrap items-center gap-x-2 text-lg">
+              <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: info.color }} />
               {info.name}
-              <span className="text-sm font-normal text-[#66736f]">
+              <span className="text-sm font-normal whitespace-nowrap text-[#66736f]">
                 {nf(info.top)}–{nf(info.bottom)} კმ
               </span>
             </h2>

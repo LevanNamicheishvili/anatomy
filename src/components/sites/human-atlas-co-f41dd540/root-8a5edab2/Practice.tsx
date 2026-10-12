@@ -163,7 +163,7 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
             <p className="text-[15px] leading-7 text-[#33413e]">
               {score === questions.length ? "ყველა პასუხი სწორია — შესანიშნავია!" : score >= questions.length * 0.7 ? "ძალიან კარგია!" : "კიდევ ერთხელ სცადე — ყოველ ჯერზე უკეთ გამოგივა."}
             </p>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
               <button type="button" onClick={restart} className={btnPrimary}>
                 <RotateCcw className="size-4" />
                 თავიდან
@@ -178,7 +178,7 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
             {q.kind === "find" ? (
               <>
                 <p className={sectionLabel}>იპოვე მოდელზე და დააჭირე</p>
-                <p className="mt-2 rounded-xl border border-[#d5dcd9] bg-[#f5f7f6] px-4 py-3 text-2xl leading-9 font-semibold text-[#111a18]">{q.item.name}</p>
+                <p className="mt-2 rounded-xl border border-[#d5dcd9] bg-[#f5f7f6] px-4 py-3 text-2xl leading-9 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{q.item.name}</p>
                 {!answered && <p className="mt-3 text-sm leading-6 text-[#66736f]">მოდელის შემობრუნება და გადიდება შეგიძლია.</p>}
               </>
             ) : (
@@ -214,7 +214,7 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
                         >
                           {isRight ? <Check className="size-4" /> : isWrong ? <X className="size-4" /> : OPTION_LETTERS[k]}
                         </span>
-                        <span className="min-w-0 flex-1">{o}</span>
+                        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{o}</span>
                       </button>
                     );
                   })}
@@ -295,7 +295,7 @@ function Cards({ items, host, levelName, onClose }: { items: LearnItem[]; host: 
       <SheetHeader label={`ბარათები · ${levelName}`} dot="#0f8a74" title="რა არის ეს?" onClose={onClose} closeLabel="დახურვა" />
       <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <div className="flex items-center justify-between gap-2 text-xs text-[#66736f]">
-          <span className="tabular-nums">
+          <span className="min-w-0 tabular-nums">
             ნასწავლი: {known} / {items.length}
           </span>
           {card && <Chip className="tabular-nums">ყუთი {boxes[card.name] ?? 1} / 5</Chip>}
@@ -309,15 +309,16 @@ function Cards({ items, host, levelName, onClose }: { items: LearnItem[]; host: 
             <p className={sectionLabel}>მოდელზე მონიშნულია ერთი ნაწილი. გაიხსენე მისი სახელი.</p>
             {revealed ? (
               <>
-                <p className="mt-3 text-2xl leading-9 font-semibold text-[#111a18]">{card.name}</p>
+                <p className="mt-3 text-2xl leading-9 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{card.name}</p>
                 {info && <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{info}</p>}
+                {/* In the 340px sheet "ვერ გავიხსენე" needs two lines rather than spilling out of its button. */}
                 <div className="mt-5 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => grade(false)} className={cn(btnSecondary, "h-11")}>
-                    <X className="size-4" aria-hidden />
+                  <button type="button" onClick={() => grade(false)} className={cn(btnSecondary, "h-auto min-h-11 py-2 leading-5 whitespace-normal")}>
+                    <X className="size-4 shrink-0" aria-hidden />
                     ვერ გავიხსენე
                   </button>
-                  <button type="button" onClick={() => grade(true)} className={cn(btnPrimary, "h-11")}>
-                    <Check className="size-4" aria-hidden />
+                  <button type="button" onClick={() => grade(true)} className={cn(btnPrimary, "h-auto min-h-11 py-2 leading-5 whitespace-normal")}>
+                    <Check className="size-4 shrink-0" aria-hidden />
                     ვიცოდი
                   </button>
                 </div>

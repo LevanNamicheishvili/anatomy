@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, RotateCcw } from "lucide-react";
 import { JourneyScene } from "@/components/journeys/JourneyScene";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { VISUAL_BUILDERS } from "./builders";
 import type { VisualStage } from "./lesson-visuals";
@@ -60,7 +61,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
 
   return (
     <section ref={boxRef} className={cn("mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card", full && "flex flex-col rounded-none border-0")}>
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : "h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[70dvh]")}>
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ანიმაცია: ${current.title}`} />
         <div ref={overlayRef} className="lesson-visual pointer-events-none absolute inset-0 overflow-hidden" />
         {loading && (

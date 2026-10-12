@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { Clock, Moon, Pause, Play, Sun } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { formatLat, latLonToVec3, vec3ToLatLon } from "../globe/coords";
 import { AXIAL_TILT, meridian, parallel, SPECIAL_LINES } from "../globe/graticule";
@@ -214,7 +216,7 @@ export function SeasonsGlobe() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა, მზე, დღე და ღამე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {ZONES.map((z) => (
@@ -240,7 +242,7 @@ export function SeasonsGlobe() {
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{tp ? tp.name : dateLabel(day)}</p>
           <p className="text-[13px] text-[#66736f]">
             მზე ზენიტშია: <b className="text-[#111a18] tabular-nums">{Math.abs(decl) < 0.05 ? "ეკვატორზე" : formatLat(decl).text}</b>
@@ -257,7 +259,7 @@ export function SeasonsGlobe() {
         </div>
       </div>
 
-      <div className="grid gap-5 px-5 py-4 md:grid-cols-[1fr_15rem]">
+      <div className="grid gap-5 px-5 py-4 md:grid-cols-[minmax(0,1fr)_15rem]">
         <div className="flex flex-col gap-4">
           <div>
             <p className="text-sm font-semibold">ბუნიობა და მზედგომა</p>
@@ -276,22 +278,8 @@ export function SeasonsGlobe() {
             </div>
             <p className="mt-2 min-h-12 text-[15px] leading-7 text-[#33413e]">{tp ? tp.note : "გადაათრიე თარიღი — ნახე, როგორ ინაცვლებს ზენიტური მზე ტროპიკებს შორის და როგორ იცვლება დღის სიგრძე."}</p>
           </div>
-          <label className="block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">თარიღი</span>
-              <span className="tabular-nums text-[#33413e]">{dateLabel(day)}</span>
-            </span>
-            <input type="range" min={1} max={365} value={day} onChange={(e) => setDay(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-          </label>
-          <label className="block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">დრო თბილისში</span>
-              <span className="tabular-nums text-[#33413e]">
-                {clock(tbTime)} · გრინვიჩით (UTC) {clock(utc)}
-              </span>
-            </span>
-            <input type="range" min={0} max={23.75} step={0.25} value={tbTime} onChange={(e) => setTbTime(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-          </label>
+          <LabeledSlider label="თარიღი" value={day} display={dateLabel(day)} min={1} max={365} onChange={setDay} color="#2f6fb0" />
+          <LabeledSlider label="დრო თბილისში" value={tbTime} display={`${clock(tbTime)} · გრინვიჩით (UTC) ${clock(utc)}`} min={0} max={23.75} step={0.25} onChange={setTbTime} color="#2f6fb0" />
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
               { k: "დღის სიგრძე თბილისში", v: fmtHours(tbLen) },
@@ -299,7 +287,7 @@ export function SeasonsGlobe() {
               { k: "ახლა შუადღეა სარტყელში", v: utcLabel(noonZone) },
             ].map((x) => (
               <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
+                <dt className="text-[11px] leading-4 text-[#66736f] [overflow-wrap:anywhere]">{x.k}</dt>
                 <dd className="mt-1 text-base leading-5 font-semibold tabular-nums">{x.v}</dd>
               </div>
             ))}

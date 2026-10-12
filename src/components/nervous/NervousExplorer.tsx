@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
+import { SectionPager } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { NervousScene } from "./NervousScene";
 import { SECTIONS } from "./nervous-data";
@@ -39,7 +41,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
   }, [playing]);
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="ნერვული სისტემა" color={ACCENT} icon="nerve">
         <Link href="/topic/brain" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           თავის ტვინი ატლასში
@@ -49,7 +51,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
         </Link>
       </TopicHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_46dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
         <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
@@ -76,7 +78,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${section.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {step && (
@@ -97,7 +99,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
           </div>
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
+        <article className={explorerText}>
           <p className="text-xs font-semibold" style={{ color: ACCENT }}>
             {index + 1} / {SECTIONS.length}
           </p>
@@ -118,26 +120,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
               </p>
             ))}
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => setIndex(index - 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-[#d5dcd9] text-sm font-semibold hover:bg-[#f5f7f6] disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-              წინა
-            </button>
-            <button
-              type="button"
-              disabled={index === SECTIONS.length - 1}
-              onClick={() => setIndex(index + 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-[#111a18] text-sm font-semibold text-white hover:bg-[#2a3532] disabled:opacity-40"
-            >
-              შემდეგი
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <SectionPager index={index} count={SECTIONS.length} onGo={setIndex} />
         </article>
       </div>
     </div>

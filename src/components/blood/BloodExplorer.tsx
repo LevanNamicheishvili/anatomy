@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { PillButton } from "@/components/portal/controls";
+import { Check, X } from "lucide-react";
+import { Panel, PillButton, SectionPager } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { BloodScene } from "./BloodScene";
 import { GROUP_NAMES, SECTIONS, WBC, compatible, type BloodGroup, type WbcKind } from "./blood-data";
@@ -17,6 +18,14 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <PillButton pressed={active} onClick={onClick} color="#111a18">
       {children}
     </PillButton>
+  );
+}
+
+function Toolbar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+      <Panel className="flex max-w-full gap-1.5 overflow-x-auto p-1.5">{children}</Panel>
+    </div>
   );
 }
 
@@ -101,14 +110,14 @@ export function BloodExplorer({ initial }: { initial?: string }) {
   }, [section.view, wbc, group, rh]);
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="სისხლი" color="#b8232b" icon="blood">
         <Link href="/anatomy" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
           ადამიანის ატლასი
         </Link>
       </TopicHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_42dvh_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
         {/* Sections, in reading order. */}
         <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
@@ -119,7 +128,7 @@ export function BloodExplorer({ initial }: { initial?: string }) {
                   onClick={() => setIndex(i)}
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
+                    "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
                     i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                   )}
                 >
@@ -138,38 +147,34 @@ export function BloodExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden">
+        <div className="relative isolate min-h-0 overflow-hidden">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${section.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
           {section.view === "wbc" && (
-            <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
-              <div className="flex gap-1.5 overflow-x-auto rounded-lg border border-[#e2e7e5] bg-white/95 p-1.5 shadow-sm backdrop-blur">
-                {WBC_ORDER.map((k) => (
-                  <Chip key={k} active={wbc === k} onClick={() => setWbc(k)}>
-                    {WBC[k].name}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+            <Toolbar>
+              {WBC_ORDER.map((k) => (
+                <Chip key={k} active={wbc === k} onClick={() => setWbc(k)}>
+                  {WBC[k].name}
+                </Chip>
+              ))}
+            </Toolbar>
           )}
           {section.view === "groups" && (
-            <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
-              <div className="flex gap-1.5 overflow-x-auto rounded-lg border border-[#e2e7e5] bg-white/95 p-1.5 shadow-sm backdrop-blur">
-                {GROUPS.map((g) => (
-                  <Chip key={g} active={group === g} onClick={() => setGroup(g)}>
-                    {GROUP_NAMES[g]}
-                  </Chip>
-                ))}
-                <span className="mx-1 w-px bg-[#e2e7e5]" />
-                <Chip active={rh} onClick={() => setRh(!rh)}>
-                  {rh ? "Rh+" : "Rh−"}
+            <Toolbar>
+              {GROUPS.map((g) => (
+                <Chip key={g} active={group === g} onClick={() => setGroup(g)}>
+                  {GROUP_NAMES[g]}
                 </Chip>
-              </div>
-            </div>
+              ))}
+              <span className="mx-1 w-px shrink-0 bg-[#e2e7e5]" />
+              <Chip active={rh} onClick={() => setRh(!rh)}>
+                {rh ? "Rh+" : "Rh−"}
+              </Chip>
+            </Toolbar>
           )}
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
+        <article className={explorerText}>
           <p className="text-xs font-semibold text-[#b8232b]">
             {index + 1} / {SECTIONS.length}
           </p>
@@ -206,26 +211,7 @@ export function BloodExplorer({ initial }: { initial?: string }) {
           )}
           {section.view === "groups" && <Compatibility />}
 
-          <div className="mt-8 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => setIndex(index - 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-[#d5dcd9] text-sm font-semibold hover:bg-[#f5f7f6] disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-              წინა
-            </button>
-            <button
-              type="button"
-              disabled={index === SECTIONS.length - 1}
-              onClick={() => setIndex(index + 1)}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-[#111a18] text-sm font-semibold text-white hover:bg-[#2a3532] disabled:opacity-40"
-            >
-              შემდეგი
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <SectionPager index={index} count={SECTIONS.length} onGo={setIndex} />
         </article>
       </div>
     </div>

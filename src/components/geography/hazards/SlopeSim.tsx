@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { Play, RotateCcw, Trees } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
 import { ParticleCloud, fbm, hash01, noise2 } from "../fx/particles";
 import { HAZARD_INFO, type HazardKind } from "./hazards-data";
@@ -1281,7 +1282,7 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   const finished = ran && done;
 
   return (
-    <div className="grid gap-4 md:grid-cols-[1fr_15rem]">
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_15rem]">
       <div>
         <div className="relative aspect-[440/260] w-full overflow-hidden rounded-lg bg-[linear-gradient(#cfe6f7,#eef6fb)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" role="img" aria-label={`ფერდობის მოდელი: ${info.name}`} />
@@ -1298,31 +1299,22 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
         </p>
       </div>
       <div className="flex flex-col gap-3">
-        <label className="block text-sm">
-          <span className="flex justify-between">
-            <span className="font-semibold">ფერდობის დახრილობა</span>
-            <span className="tabular-nums">{input.angle}°</span>
-          </span>
-          <input type="range" min={5} max={60} value={input.angle} onChange={(e) => set({ angle: Number(e.target.value) })} className="w-full" style={{ accentColor: info.color }} />
-        </label>
+        <LabeledSlider label="ფერდობის დახრილობა" value={input.angle} display={`${input.angle}°`} min={5} max={60} onChange={(angle) => set({ angle })} color={info.color} />
         {kind === "avalanche" ? (
-          <label className="block text-sm">
-            <span className="flex justify-between">
-              <span className="font-semibold">ახალი თოვლი</span>
-              <span className="tabular-nums">{input.snow} სმ</span>
-            </span>
-            <input type="range" min={0} max={150} step={5} value={input.snow} onChange={(e) => set({ snow: Number(e.target.value) })} className="w-full" style={{ accentColor: info.color }} />
-          </label>
+          <LabeledSlider label="ახალი თოვლი" value={input.snow} display={`${input.snow} სმ`} min={0} max={150} step={5} onChange={(snow) => set({ snow })} color={info.color} />
         ) : (
-          <label className="block text-sm">
-            <span className="flex justify-between">
-              <span className="font-semibold">{kind === "mudflow" ? "თავსხმა / მყინვარის დნობა" : "წვიმა — გრუნტის გაჯერება"}</span>
-              <span className="tabular-nums">{Math.round(input.water * 100)}%</span>
-            </span>
-            <input type="range" min={0} max={1} step={0.05} value={input.water} onChange={(e) => set({ water: Number(e.target.value) })} className="w-full" style={{ accentColor: info.color }} />
-          </label>
+          <LabeledSlider
+            label={kind === "mudflow" ? "თავსხმა / მყინვარის დნობა" : "წვიმა — გრუნტის გაჯერება"}
+            value={input.water}
+            display={`${Math.round(input.water * 100)}%`}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(water) => set({ water })}
+            color={info.color}
+          />
         )}
-        <button type="button" onClick={() => set({ forest: !input.forest })} aria-pressed={input.forest} className={cn("flex h-9 items-center justify-center gap-2 rounded-lg border text-sm font-semibold", input.forest ? "border-[#2f6b34] bg-[#e8f3e9] text-[#2f6b34]" : "border-[#d5dcd9] text-[#33413e]")}>
+        <button type="button" onClick={() => set({ forest: !input.forest })} aria-pressed={input.forest} className={cn("flex h-10 items-center justify-center gap-2 rounded-lg border text-sm font-semibold", input.forest ? "border-[#2f6b34] bg-[#e8f3e9] text-[#2f6b34]" : "border-[#d5dcd9] text-[#33413e]")}>
           <Trees className="size-4" />
           {input.forest ? "ფერდობზე ტყეა" : "ტყე გაჩეხილია"}
         </button>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { VolcanoScene, type VolcanoAnchor, type VolcanoStep } from "./VolcanoScene";
 
@@ -119,7 +120,7 @@ export function Volcanoes() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[#a9d4f0]">
+      <div className={cn("relative bg-[#a9d4f0]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ფილების საზღვრის ჭრილი: ვულკანი, მიწისძვრა, ცუნამი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (

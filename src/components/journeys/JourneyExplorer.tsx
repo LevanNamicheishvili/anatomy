@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
+import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { JourneyScene, type Builder } from "./JourneyScene";
 import { JOURNEYS, JOURNEY_BY_ID, type JourneyId } from "./journeys-data";
@@ -65,10 +67,10 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
   const last = stage === journey.stages.length - 1;
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="მოგზაურობა სხეულში" color={journey.color} icon="journey" />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_48dvh_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)_400px] lg:grid-rows-1">
+      <div className={cn(explorerGrid, "lg:grid-cols-[260px_minmax(0,1fr)_400px]")}>
         <nav aria-label="მოგზაურობები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-1 lg:p-3">
             {JOURNEYS.map((j) => (
@@ -88,7 +90,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
           </ol>
         </nav>
 
-        <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${journey.title} — ${current.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
@@ -120,7 +122,7 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
           {!playing && <p className="pointer-events-none absolute bottom-16 w-full text-center text-xs text-[#66736f]">პაუზისას მოდელი შეგიძლია მოატრიალო</p>}
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-s border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t">
+        <article className={explorerText}>
           <p className="text-xs font-semibold" style={{ color: journey.color }}>
             {journey.title}
           </p>
@@ -134,7 +136,10 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
               <li key={s.title}>
                 <button
                   type="button"
-                  onClick={() => go(i)}
+                  onClick={() => {
+                    go(i);
+                    revealScene();
+                  }}
                   aria-current={i === stage ? "step" : undefined}
                   className={cn("flex min-h-10 w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors", i === stage ? "bg-[#f5f7f6] font-semibold" : "text-[#33413e] hover:bg-[#f5f7f6]")}
                 >

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Crosshair, Grid3x3, MapPin, RotateCw } from "lucide-react";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { formatLat, formatLon, type LatLon } from "../globe/coords";
 import { buildCrosshair, buildGraticule, SPECIAL_LINES, type SpecialLine } from "../globe/graticule";
@@ -125,7 +126,7 @@ export function GraticuleGlobe() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-crosshair touch-none" aria-label="გლობუსი გრადუსთა ბადით" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {PARALLELS.map((v) => (

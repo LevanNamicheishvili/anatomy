@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Compass, MapPin, Pause, Play, Star } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { bearing, compassName, horizonDir, LATITUDES, POLARIS, TARGETS, TBILISI } from "./sky-data";
 import { SkyScene, type SkyAnchor } from "./SkyScene";
@@ -85,7 +87,7 @@ export function PolarisSky() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[#070d1f]">
+      <div className={cn("relative bg-[#070d1f]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing" aria-label="ღამის ცა და პოლარული ვარსკვლავი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
@@ -101,7 +103,7 @@ export function PolarisSky() {
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">განედი: {lat === 0 ? "0° (ეკვატორი)" : `${fmtDeg(Math.abs(lat))} ${lat > 0 ? "ჩ. გ." : "ს. გ."}`}</p>
           <p className="text-[13px] text-[#66736f]">
             პოლარულის სიმაღლე: <b className="text-[#111a18] tabular-nums">{polAlt > 0 ? fmtDeg(polAlt) : "ჰორიზონტს ქვემოთ"}</b>
@@ -152,20 +154,8 @@ export function PolarisSky() {
               </li>
             ))}
           </ol>
-          <label className="mt-4 block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">შენი განედი</span>
-              <span className="tabular-nums text-[#33413e]">{fmtDeg(lat)}</span>
-            </span>
-            <input type="range" min={-30} max={90} step={0.1} value={lat} onChange={(e) => setLat(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-          </label>
-          <label className="mt-3 block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">ცის ბრუნვა (ღამის საათები)</span>
-              <span className="tabular-nums text-[#33413e]">{Math.round(time * 15)}°</span>
-            </span>
-            <input type="range" min={0} max={23.95} step={0.05} value={time} onChange={(e) => setTime(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-          </label>
+          <LabeledSlider label="შენი განედი" value={lat} display={fmtDeg(lat)} min={-30} max={90} step={0.1} onChange={setLat} color="#2f6fb0" className="mt-4" />
+          <LabeledSlider label="ცის ბრუნვა (ღამის საათები)" value={time} display={`${Math.round(time * 15)}°`} min={0} max={23.95} step={0.05} onChange={setTime} color="#2f6fb0" className="mt-3" />
           <p className="mt-2 text-[13px] leading-5 text-[#66736f]">
             {lat < 0
               ? "სამხრეთ ნახევარსფეროში პოლარული ვარსკვლავი არ ჩანს — იქ სამხრეთს სამხრეთის ჯვრით პოულობენ."
@@ -180,13 +170,7 @@ export function PolarisSky() {
               აზიმუტი
             </p>
             <p className="mt-1 text-[13px] leading-5 text-[#66736f]">კუთხე ჩრდილოეთის მიმართულებიდან საგნის მიმართულებამდე, საათის ისრის მოძრაობით (0°–360°).</p>
-            <label className="mt-2 block">
-              <span className="flex justify-between text-sm">
-                <span className="font-semibold">{compassName(az)}</span>
-                <span className="tabular-nums text-[#33413e]">{Math.round(az)}°</span>
-              </span>
-              <input type="range" min={0} max={359} value={Math.round(az)} onChange={(e) => setAz(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-            </label>
+            <LabeledSlider label={compassName(az)} value={Math.round(az)} display={`${Math.round(az)}°`} min={0} max={359} onChange={setAz} color="#2f6fb0" className="mt-2" />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {[0, 90, 180, 270].map((a) => (
                 <button key={a} type="button" onClick={() => setAz(a)} className={cn("h-8 rounded-full px-3 text-sm", Math.round(az) === a ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}>

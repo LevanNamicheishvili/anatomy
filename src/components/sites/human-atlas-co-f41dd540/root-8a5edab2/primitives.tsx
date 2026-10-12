@@ -87,8 +87,8 @@ export function SwitchRow({
       )}
     >
       {lead}
-      <span className={cn("min-w-0 flex-1 py-2 text-sm leading-5", checked ? "font-medium text-[#111a18]" : "text-[#33413e]")}>{label}</span>
-      {meta && <span className="text-xs text-[#97a29e] tabular-nums">{meta}</span>}
+      <span className={cn("min-w-0 flex-1 py-2 text-sm leading-5 [overflow-wrap:anywhere]", checked ? "font-medium text-[#111a18]" : "text-[#33413e]")}>{label}</span>
+      {meta && <span className="shrink-0 text-xs text-[#97a29e] tabular-nums">{meta}</span>}
       <SwitchTrack checked={checked} />
     </button>
   );

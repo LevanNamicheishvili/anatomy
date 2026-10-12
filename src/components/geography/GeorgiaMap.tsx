@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Droplets, Layers, Loader2, MapPin, Minus, Mountain, Navigation2, Plus, RotateCcw, RotateCw, ShieldAlert, Undo2, Waves } from "lucide-react";
+import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
+import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import {
   BASIN_NAMES,
@@ -211,12 +213,15 @@ function ListItem({
     <li>
       <button
         type="button"
-        onClick={onClick}
+        onClick={() => {
+          onClick();
+          revealScene();
+        }}
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
         aria-current={active ? "true" : undefined}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
+          "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
           active ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : "text-[#33413e] hover:bg-[#f5f7f6]",
         )}
       >
@@ -483,11 +488,12 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
   })();
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f6f5] font-sans text-[#111a18]">
+    <div className={explorerPage}>
       <TopicHeader subject={{ name: "გეოგრაფია", href: "/geography" }} topic="საქართველოს რუკა" color="#2f6fb0" icon="map" />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[58dvh_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-1">
-        <div className="relative min-h-0 overflow-hidden bg-[#dfeaf1]">
+      {/* No sections strip here, so the map is the first row. */}
+      <div className={cn(explorerGrid, "grid-rows-[minmax(18rem,58svh)_auto] lg:grid-cols-[minmax(0,1fr)_400px]")}>
+        <div className="relative isolate min-h-0 overflow-hidden bg-[#dfeaf1]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს 3D რუკა" />
           <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
             {REGIONS.filter((r) => r.id !== "tbilisi").map((r) => (
@@ -746,7 +752,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           )}
         </div>
 
-        <article className="atlas-scroll min-h-0 overflow-y-auto border-[#e2e7e5] bg-white px-6 py-6 max-lg:border-t lg:border-s">
+        <article className={explorerText}>
           {detail ? (
             <>
               {detailMedia?.image && <Photo key={detailMedia.image.src} image={detailMedia.image} alt={detail.title} />}
@@ -823,7 +829,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                   aria-selected={tab === t.id}
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    "h-8 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium transition-colors",
+                    "h-10 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium transition-colors",
                     tab === t.id ? "bg-[#111a18] text-white" : "text-[#33413e] hover:bg-[#f1f4f3]",
                   )}
                 >

@@ -15,7 +15,7 @@ export function PageSkeleton({ cards = 2, grid = false }: { cards?: number; grid
           <span className={`${bar} h-4 w-40`} />
           <span className={`${bar} ms-auto size-9 rounded-full`} />
         </div>
-        <div className="mx-auto flex h-11 max-w-6xl items-center gap-6 px-5 sm:px-7">
+        <div className="mx-auto flex h-11 max-w-6xl items-center gap-6 px-4 sm:px-6">
           <span className={`${bar} h-3 w-16`} />
           <span className={`${bar} h-3 w-24`} />
         </div>

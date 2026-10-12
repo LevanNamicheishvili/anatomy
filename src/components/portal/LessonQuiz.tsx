@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LessonContent } from "@/lib/lessons/types";
+import { btn } from "./ui";
 
 const LETTERS = ["ა", "ბ", "გ", "დ", "ე", "ვ"];
 
@@ -32,7 +33,7 @@ export function LessonQuiz({ quiz }: { quiz: LessonContent["quiz"] }) {
             <li key={item.q} className="rounded-xl border border-line-strong bg-white p-5 shadow-card sm:p-6">
               <p className="flex gap-3 text-base leading-7 font-semibold text-ink">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-chip text-sm tabular-nums">{qi + 1}</span>
-                <span>{item.q}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{item.q}</span>
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2" role="group" aria-label={`პასუხები: კითხვა ${qi + 1}`}>
                 {item.options.map((o, oi) => {
@@ -65,7 +66,7 @@ export function LessonQuiz({ quiz }: { quiz: LessonContent["quiz"] }) {
                       >
                         {state === "right" ? <Check className="size-3.5" /> : state === "wrong" ? <X className="size-3.5" /> : LETTERS[oi]}
                       </span>
-                      <span className="min-w-0">{o}</span>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{o}</span>
                     </button>
                   );
                 })}
@@ -85,11 +86,7 @@ export function LessonQuiz({ quiz }: { quiz: LessonContent["quiz"] }) {
           <p className="text-base font-semibold">
             შედეგი: {right} / {quiz.length}
           </p>
-          <button
-            type="button"
-            onClick={() => setPicked(quiz.map(() => null))}
-            className="inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-4 text-sm font-semibold transition-colors hover:bg-subtle"
-          >
+          <button type="button" onClick={() => setPicked(quiz.map(() => null))} className={cn(btn.secondary, "h-11")}>
             <RotateCcw className="size-4" aria-hidden />
             თავიდან
           </button>

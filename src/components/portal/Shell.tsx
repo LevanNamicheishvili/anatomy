@@ -37,15 +37,15 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
             </span>
           </Link>
 
-          <div className="ms-auto flex items-center gap-3">
-            <div className="hidden text-end leading-tight sm:block">
-              <span className="block text-sm font-semibold">{user.fullName}</span>
-              <span className="block text-xs text-[#66736f]">
+          <div className="ms-auto flex min-w-0 items-center gap-3">
+            <div className="hidden max-w-56 min-w-0 text-end leading-tight sm:block">
+              <span className="block truncate text-sm font-semibold">{user.fullName}</span>
+              <span className="block truncate text-xs text-mute">
                 {ROLE_NAMES[user.role]}
                 {user.classLabel ? ` · ${user.classLabel}` : ""}
               </span>
             </div>
-            <span className="flex size-9 items-center justify-center rounded-full bg-[#e6f3ef] text-sm font-semibold text-[#0c7563]" aria-hidden>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong" aria-hidden>
               {initials(user.fullName)}
             </span>
             <form action={signOut}>
@@ -55,7 +55,8 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden" aria-label="ნავიგაცია">
+        {/* px-1 / px-3 plus each item's px-3 puts the first label on the page's content edge (px-4 / px-6). */}
+        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-1 [scrollbar-width:none] sm:px-3 [&::-webkit-scrollbar]:hidden" aria-label="ნავიგაცია">
           {navFor(user).map((item) => (
             <Link
               key={item.href}

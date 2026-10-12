@@ -44,8 +44,8 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
   }, [id]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_17rem]">
-      <div className="relative h-[50dvh] min-h-72 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[60dvh] overflow-hidden rounded-lg bg-[#c4dcea]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="relative h-[50svh] min-h-72 w-full overflow-hidden rounded-lg bg-[#c4dcea] sm:h-auto sm:min-h-0 sm:aspect-[16/10] sm:max-h-[60svh]">
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ჩანჩქერის 3D მოდელი: ${NAMES[id]}`} />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (

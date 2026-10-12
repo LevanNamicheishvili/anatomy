@@ -75,9 +75,9 @@ export function DeepDivePanel({
           onChange={switchLevel}
         />
 
-        <div className="mt-5 flex items-center justify-between">
-          <h3 className={sectionLabel}>{level === "section" ? t.outsideIn : template.microTitle}</h3>
-          {level === "micro" && <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{template.magnification}</span>}
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <h3 className={cn(sectionLabel, "min-w-0")}>{level === "section" ? t.outsideIn : template.microTitle}</h3>
+          {level === "micro" && <span className="shrink-0 rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{template.magnification}</span>}
         </div>
         <div className="mt-2 rounded-xl border border-[#e2e7e5] bg-[#fbfcfc] p-2">
           {level === "section" ? (
@@ -92,7 +92,7 @@ export function DeepDivePanel({
           <div className="mt-4 rounded-xl border border-[#d5dcd9] bg-white shadow-[0_1px_2px_rgba(17,26,24,0.04)]">
             <div className="flex items-center gap-2 border-b border-[#e2e7e5] py-1.5 ps-3 pe-1.5">
               {current.color && <span className="size-3 shrink-0 rounded-sm" style={{ backgroundColor: current.color }} />}
-              <span className="flex-1 text-sm font-semibold text-[#111a18]">
+              <span className="min-w-0 flex-1 py-1 text-sm leading-5 font-semibold text-[#111a18] [overflow-wrap:anywhere]">
                 {index + 1}. {current.name}
               </span>
               <button type="button" aria-label={t.previous} onClick={() => step(-1)} className={iconBtn}>
@@ -126,9 +126,9 @@ export function DeepDivePanel({
                   it.id === active ? "bg-[#e6f3ef] font-medium text-[#0c7563]" : "text-[#33413e] hover:bg-[#f5f7f6]",
                 )}
               >
-                <span className="w-5 text-end text-xs text-[#97a29e] tabular-nums">{i + 1}</span>
+                <span className="w-5 shrink-0 text-end text-xs text-[#97a29e] tabular-nums">{i + 1}</span>
                 {it.color && <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: it.color }} />}
-                <span className="py-2">{it.name}</span>
+                <span className="min-w-0 flex-1 py-2 [overflow-wrap:anywhere]">{it.name}</span>
               </button>
             </li>
           ))}

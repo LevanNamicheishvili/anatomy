@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Moon, Pause, Play, Sun, Thermometer, Wind } from "lucide-react";
+import { LabeledSlider } from "@/components/portal/controls";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { breeze, LAPSE } from "./breeze-math";
 import { CoastScene, type CoastAnchor } from "./CoastScene";
@@ -68,7 +70,7 @@ export function SeaBreeze() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh]">
+      <div className={cn("relative", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
@@ -105,7 +107,7 @@ export function SeaBreeze() {
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
           <p className="flex items-center gap-1.5 font-semibold">
             {day ? <Sun className="size-4 text-[#c08a00]" /> : <Moon className="size-4 text-[#5b6bb5]" />}
             {clock(hour)} · {b.kind === "sea" ? "დღის (ზღვის) ბრიზი" : b.kind === "land" ? "ღამის (ხმელეთის) ბრიზი" : "შტილი — ქარი ცვლის მიმართულებას"}
@@ -137,15 +139,9 @@ export function SeaBreeze() {
               </button>
             ))}
           </div>
-          <label className="block">
-            <span className="flex justify-between text-sm">
-              <span className="font-semibold">დღე-ღამის დრო</span>
-              <span className="tabular-nums text-[#33413e]">{clock(hour)}</span>
-            </span>
-            <input type="range" min={0} max={23.75} step={0.25} value={hour} onChange={(e) => setHour(Number(e.target.value))} className="mt-1 w-full accent-[#2f6fb0]" />
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={pressure} onChange={(e) => setPressure(e.target.checked)} className="size-4 accent-[#2f6fb0]" />
+          <LabeledSlider label="დღე-ღამის დრო" value={hour} display={clock(hour)} min={0} max={23.75} step={0.25} onChange={setHour} color="#2f6fb0" />
+          <label className="flex min-h-10 items-center gap-2 text-sm">
+            <input type="checkbox" checked={pressure} onChange={(e) => setPressure(e.target.checked)} className="size-4 shrink-0 accent-[#2f6fb0]" />
             წნევის არეები (მ — მაღალი, დ — დაბალი)
           </label>
           <p className="text-[15px] leading-7 text-[#33413e]">
@@ -167,7 +163,7 @@ export function SeaBreeze() {
           ].map((x) => (
             <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
               <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
-              <dd className="mt-1 text-base leading-5 font-semibold tabular-nums">{x.v}</dd>
+              <dd className="mt-1 text-base leading-5 font-semibold tabular-nums [overflow-wrap:anywhere]">{x.v}</dd>
             </div>
           ))}
         </dl>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw, ShieldCheck } from "lucide-react";
+import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
 import { HAZARD_INFO, HAZARD_ZONES, type HazardKind, type HazardZone } from "./hazards-data";
@@ -73,7 +74,7 @@ export function GeorgiaHazards() {
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="relative h-[56dvh] min-h-80 w-full sm:h-auto sm:aspect-[16/10] sm:max-h-[72dvh] bg-[#dfe7ea]">
+      <div className={cn("relative bg-[#dfe7ea]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რუკა: მეწყრის, ღვარცოფისა და ზვავის საშიში ზონები" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
           {HAZARD_ZONES.map((z) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -161,11 +161,12 @@ export function LabeledSlider({
   const id = useId();
   return (
     <div className={cn("block", disabled && "opacity-50", className)}>
+      {/* Long labels wrap; the value keeps one line up to 60% of the row, past that it wraps at its spaces. */}
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <label htmlFor={id} className="font-semibold text-ink">
+        <label htmlFor={id} className="min-w-0 font-semibold text-ink [overflow-wrap:anywhere]">
           {label}
         </label>
-        <output htmlFor={id} className="tabular-nums text-copy">
+        <output htmlFor={id} className="max-w-[60%] shrink-0 text-end tabular-nums text-copy">
           {display ?? value}
         </output>
       </div>
@@ -198,11 +199,49 @@ export function Legend({
   return (
     <ul className={cn("flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-copy", className)}>
       {items.map((it) => (
-        <li key={it.label} className="flex items-center gap-1.5">
+        <li key={it.label} className="flex min-w-0 items-center gap-1.5 [overflow-wrap:anywhere]">
           <span className={cn("shrink-0", swatch === "dot" ? "size-2.5 rounded-full" : "h-1.5 w-4 rounded-full")} style={{ backgroundColor: it.color }} aria-hidden />
           {it.label}
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Below `lg` the explorer pages scroll as one column with the 3D view on top. After a choice made
+ * further down (next section, a stage in the list), scroll back up so the change is actually seen.
+ */
+export function revealScene() {
+  if (window.matchMedia("(max-width: 63.99rem)").matches) window.scrollTo({ top: 0 });
+}
+
+/** Previous / next section at the end of an explorer's text column. */
+export function SectionPager({ index, count, onGo }: { index: number; count: number; onGo: (i: number) => void }) {
+  const go = (i: number) => {
+    onGo(i);
+    revealScene();
+  };
+  return (
+    <div className="mt-8 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        disabled={index === 0}
+        onClick={() => go(index - 1)}
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-white text-sm font-semibold transition-colors hover:bg-subtle disabled:opacity-40"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        წინა
+      </button>
+      <button
+        type="button"
+        disabled={index === count - 1}
+        onClick={() => go(index + 1)}
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-ink text-sm font-semibold text-white transition-colors hover:bg-[#2a3532] disabled:opacity-40"
+      >
+        შემდეგი
+        <ChevronRight className="size-4" aria-hidden />
+      </button>
+    </div>
   );
 }

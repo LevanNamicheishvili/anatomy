@@ -41,7 +41,7 @@ export function LessonHeader({
         {eyebrow && <span className="text-sm font-semibold text-mute">{eyebrow}</span>}
         {grades && <Chip>{grades} კლასი</Chip>}
       </div>
-      <h1 className="mt-2 text-[1.75rem] leading-tight text-ink sm:text-4xl">{title}</h1>
+      <h1 className="mt-2 text-[1.75rem] leading-tight text-ink [overflow-wrap:anywhere] sm:text-4xl">{title}</h1>
       {intro && <p className="mt-3 max-w-3xl text-base leading-7 text-copy sm:text-lg sm:leading-8">{intro}</p>}
     </header>
   );
@@ -71,8 +71,8 @@ export function TermsList({ terms }: { terms: { term: string; meaning: string }[
       <h2 className="text-lg text-ink">მთავარი ტერმინები</h2>
       <dl className="mt-3 flex flex-col divide-y divide-chip">
         {terms.map((t) => (
-          <div key={t.term} className="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:gap-5">
-            <dt className="font-semibold text-ink">{t.term}</dt>
+          <div key={t.term} className="grid gap-1 py-3 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-5">
+            <dt className="min-w-0 font-semibold text-ink [overflow-wrap:anywhere]">{t.term}</dt>
             <dd className="text-[15px] leading-7 text-copy">{t.meaning}</dd>
           </div>
         ))}
@@ -114,11 +114,12 @@ export function LessonNav({ prev, next, back, color }: { prev: LessonLink | null
     <nav className="mt-14 border-t border-line pt-6" aria-label="გაკვეთილები">
       <div className="grid gap-3 sm:grid-cols-2">
         {prev ? (
-          <Link href={prev.href} className={cn(cardBase, "border-line-strong bg-white hover:border-faint")}>
+          <Link href={prev.href} title={prev.title} className={cn(cardBase, "border-line-strong bg-white hover:border-faint")}>
             <ArrowLeft className="size-5 shrink-0 text-faint transition-transform group-hover:-translate-x-0.5" aria-hidden />
             <span className="min-w-0">
               <span className="block text-xs text-mute">წინა{prev.n ? ` · გაკვეთილი ${prev.n}` : ""}</span>
-              <span className="block truncate font-semibold text-ink">{prev.title}</span>
+              {/* Two lines before cutting: a long Georgian title stays readable on a phone. */}
+              <span className="line-clamp-2 leading-6 font-semibold text-ink [overflow-wrap:anywhere]">{prev.title}</span>
             </span>
           </Link>
         ) : (
@@ -126,10 +127,10 @@ export function LessonNav({ prev, next, back, color }: { prev: LessonLink | null
         )}
         {next ? (
           // On phones the cards stack, so the next lesson comes first.
-          <Link href={next.href} className={cn(cardBase, "justify-end border-transparent text-end text-white max-sm:order-first")} style={{ backgroundColor: color }}>
+          <Link href={next.href} title={next.title} className={cn(cardBase, "justify-end border-transparent text-end text-white max-sm:order-first")} style={{ backgroundColor: color }}>
             <span className="min-w-0">
               <span className="block text-xs text-white/85">შემდეგი{next.n ? ` · გაკვეთილი ${next.n}` : ""}</span>
-              <span className="block truncate font-semibold">{next.title}</span>
+              <span className="line-clamp-2 leading-6 font-semibold [overflow-wrap:anywhere]">{next.title}</span>
             </span>
             <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
@@ -137,8 +138,8 @@ export function LessonNav({ prev, next, back, color }: { prev: LessonLink | null
           <span className="hidden sm:block" />
         )}
       </div>
-      <Link href={back.href} className="mx-auto mt-5 flex w-fit items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-copy hover:bg-chip">
-        <ArrowLeft className="size-4" aria-hidden />
+      <Link href={back.href} className="mx-auto mt-5 flex min-h-11 w-fit max-w-full items-center gap-2 rounded-lg px-3 py-2 text-center text-sm font-semibold text-copy hover:bg-chip">
+        <ArrowLeft className="size-4 shrink-0" aria-hidden />
         {back.label}
       </Link>
     </nav>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Box, Map as MapIcon, Route } from "lucide-react";
+import { ToolCard } from "@/components/portal/cards";
 import { PortalShell } from "@/components/portal/Shell";
 import { PageHero } from "@/components/portal/SubjectHero";
 import { TOPIC_ICONS } from "@/components/portal/TopicHeader";
@@ -43,25 +44,9 @@ export default async function Page({ params }: { params: Params }) {
         <section className="mt-10">
           <SectionTitle>3D მოდელები და მოგზაურობები</SectionTitle>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {topic.tools.map((t) => {
-              const K = KIND[t.kind];
-              return (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  className="group flex items-center gap-3 rounded-xl bg-ink p-4 text-white outline-none transition-colors hover:bg-[#25302d] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-                >
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
-                    <K.icon className="size-5" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{t.label}</span>
-                    <span className="block text-xs text-white/70">{K.name}</span>
-                  </span>
-                  <ArrowRight className="size-4 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </Link>
-              );
-            })}
+            {topic.tools.map((t) => (
+              <ToolCard key={t.href} href={t.href} title={t.label} sub={KIND[t.kind].name} icon={KIND[t.kind].icon} />
+            ))}
           </div>
         </section>
       )}
@@ -77,7 +62,7 @@ export default async function Page({ params }: { params: Params }) {
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-chip text-sm font-semibold text-copy tabular-nums">{i + 1}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base leading-6 font-semibold">{l.title}</span>
+                  <span className="block text-base leading-6 font-semibold [overflow-wrap:anywhere]">{l.title}</span>
                   {l.aka.length > 0 && <span className="block text-sm text-mute">{l.aka.join(" · ")}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-strong max-sm:sr-only">

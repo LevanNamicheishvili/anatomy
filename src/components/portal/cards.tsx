@@ -82,6 +82,25 @@ export function FeaturedCard({ href, title, description, icon: Icon, color, grad
   );
 }
 
+/** Dark shortcut into a 3D model or journey: icon tile, name, one muted line, arrow. */
+export function ToolCard({ href, title, sub, icon: Icon }: { href: string; title: string; sub: string; icon: LucideIcon }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl bg-ink p-4 text-white outline-none transition-colors hover:bg-[#2a3532] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+    >
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block leading-6 font-semibold [overflow-wrap:anywhere]">{title}</span>
+        <span className="block truncate text-xs text-white/70">{sub}</span>
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
+    </Link>
+  );
+}
+
 /** A topic that is not ready yet: same footprint as a topic card, visibly inactive. */
 export function SoonCard({ title, description, icon: Icon }: Pick<CardBase, "title" | "description" | "icon">) {
   return (
