@@ -87,16 +87,16 @@ export function ToolCard({ href, title, sub, icon: Icon }: { href: string; title
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-2xl bg-deep p-5 shadow-card text-white outline-none transition-colors hover:bg-deep-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      className="group flex items-center gap-3 rounded-2xl border border-[#17364a] bg-[#17364a] p-5 text-[#ffffff] shadow-card outline-none transition-colors hover:bg-[#244b61] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
     >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-card/10">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#ffffff]/15 text-[#ffffff]">
         <Icon className="size-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block leading-6 font-semibold [overflow-wrap:anywhere]">{title}</span>
-        <span className="block break-words text-xs text-white/70">{sub}</span>
+        <span className="block break-words text-xs text-[#d6e3e8]">{sub}</span>
       </span>
-      <ArrowRight className="size-4 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
+      <ArrowRight className="size-4 shrink-0 text-[#c5d4d9] transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
   );
 }
