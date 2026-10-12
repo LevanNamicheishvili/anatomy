@@ -267,6 +267,7 @@ const DICT: Record<string, string> = {
   "subscapularis": "მხრის პირის ქვედა კუნთი",
   "levator scapulae": "მხრის პირის ამწევი კუნთი",
   "tensor fasciae latae": "ფართო ფასციის დამჭიმავი კუნთი",
+  platysma: "კისრის კანქვეშა კუნთი",
   "adductor longus": "გრძელი მომზიდველი კუნთი",
   "adductor magnus": "დიდი მომზიდველი კუნთი",
   brachialis: "მხრის კუნთი",
@@ -610,7 +611,6 @@ export function georgianName(
     return { name: `${side}${n.startsWith("superior") ? "ზედა" : "ქვედა"} ენისებრი ბრონქული ხე`, exact: true };
   }
   if (n === "digastric") return { name: `${side}ორმუცელა კუნთი`, exact: true };
-  if (n === "platysma") return { name: `${side}კანქვეშა კუნთი`, exact: true };
 
   let category = SYSTEM_FALLBACK[system];
   let matched = false;
