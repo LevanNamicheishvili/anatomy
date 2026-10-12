@@ -993,6 +993,10 @@ export class AnatomyViewer {
     const r = Math.max(sphere.radius, 0.03);
     const distance = Math.max(0.2, this.fitDistance(r, r) * 1.2);
     const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+    // A part off the midline (left masseter, right temporalis…) must be seen from its own side; flying in
+    // from the opposite side puts the head, or the near plane inside the skull, between camera and part.
+    const side = Math.sign(sphere.center.x);
+    if (Math.abs(sphere.center.x) > 0.02 && dir.x * side < 0.25) dir.set(side, 0.15, 0.9).normalize();
     this.animateTo(sphere.center, sphere.center.clone().add(dir.multiplyScalar(distance)));
   }
 
