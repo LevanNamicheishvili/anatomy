@@ -71,7 +71,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
       </main>
 
-      <footer className="border-t border-[#e2e7e5] px-4 py-5 text-center text-xs leading-5 text-[#97a29e]">{PORTAL_NAME} · მხოლოდ საგანმანათლებლო დაწესებულებებისთვის</footer>
+      <footer className="border-t border-[#e2e7e5] px-4 py-5 text-center text-xs leading-5 text-[#5b6763]">{PORTAL_NAME} · მხოლოდ საგანმანათლებლო დაწესებულებებისთვის</footer>
     </div>
   );
 }

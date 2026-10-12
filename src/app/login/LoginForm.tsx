@@ -6,7 +6,7 @@ import { signIn, type FormState } from "@/app/actions/auth";
 import { Alert } from "@/components/portal/ui";
 
 const field =
-  "peer h-12 w-full rounded-lg border border-[#d5dcd9] bg-white ps-11 pe-3 text-[15px] text-[#111a18] outline-none transition-[border-color,box-shadow] placeholder:text-[#97a29e] hover:border-[#c3ccc9] focus:border-[#0f8a74] focus:ring-4 focus:ring-[#0f8a74]/12";
+  "peer h-12 w-full rounded-lg border border-[#d5dcd9] bg-white ps-11 pe-3 text-base text-[#111a18] outline-none transition-[border-color,box-shadow] placeholder:text-[#97a29e] hover:border-[#c3ccc9] focus:border-[#0f8a74] focus:ring-4 focus:ring-[#0f8a74]/12";
 const icon = "pointer-events-none absolute start-3.5 top-1/2 size-[18px] -translate-y-1/2 text-[#97a29e] transition-colors peer-focus:text-[#0f8a74]";
 
 export function LoginForm({ next }: { next: string }) {

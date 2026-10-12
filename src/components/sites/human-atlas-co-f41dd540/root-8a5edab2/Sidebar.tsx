@@ -95,7 +95,7 @@ function ActionCard({
     >
       {lead}
       <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-        <span className={cn("block text-sm leading-5 font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")}>{title}</span>
+        <span className={cn("block text-sm leading-5 font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")} title={typeof title === "string" ? title : undefined}>{title}</span>
         {body && <span className="mt-0.5 block text-[13px] leading-5 text-[#66736f]">{body}</span>}
       </span>
       {chevron && <ChevronRight className="size-4 shrink-0 text-[#97a29e]" aria-hidden />}
@@ -448,10 +448,11 @@ export function Sidebar({
                 key={key}
                 type="button"
                 role="tab"
+                title={label}
                 aria-selected={on}
                 onClick={() => onTab(key)}
                 className={cn(
-                  "relative flex min-h-14 min-w-0 flex-auto flex-col items-center justify-center gap-1 px-1.5 text-xs transition-colors",
+                  "relative flex min-h-14 min-w-0 flex-auto flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-4 tracking-tight transition-colors",
                   on ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]",
                 )}
               >

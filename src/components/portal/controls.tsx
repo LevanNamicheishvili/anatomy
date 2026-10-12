@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -218,12 +218,23 @@ export function revealScene() {
 
 /** Previous / next section at the end of an explorer's text column. */
 export function SectionPager({ index, count, onGo }: { index: number; count: number; onGo: (i: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
   const go = (i: number) => {
     onGo(i);
     revealScene();
+    // On desktop the text column scrolls on its own: start the new section at its top, not where the pager was.
+    requestAnimationFrame(() => {
+      for (let el = ref.current?.parentElement; el; el = el.parentElement) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) {
+          el.scrollTo({ top: 0 });
+          return;
+        }
+      }
+    });
   };
   return (
-    <div className="mt-8 grid grid-cols-2 gap-2">
+    <div ref={ref} className="mt-8 grid grid-cols-2 gap-2">
       <button
         type="button"
         disabled={index === 0}

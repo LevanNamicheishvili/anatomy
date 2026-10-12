@@ -45,11 +45,12 @@ export function SheetHeader({
       <div className="min-w-0 flex-1 pt-1">
         <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#eef2f0] py-0.5 ps-2 pe-2.5 text-xs font-semibold text-[#33413e]">
           <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
-          <span className="truncate">{label}</span>
+          <span className="truncate" title={label}>{label}</span>
         </span>
         <h2
           ref={titleRef}
           tabIndex={-1}
+          title={typeof title === "string" ? title : undefined}
           className="mt-2 text-xl leading-7 font-semibold text-[#111a18] outline-none [overflow-wrap:anywhere]"
         >
           {title}

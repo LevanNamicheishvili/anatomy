@@ -62,7 +62,7 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
               key={item.href}
               href={item.href}
               aria-current={active === item.href ? "page" : undefined}
-              className={`relative flex min-h-11 items-center px-3 text-sm whitespace-nowrap transition-colors ${
+              className={`relative flex min-h-11 items-center rounded-md px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
                 active === item.href ? "font-semibold text-ink" : "text-mute hover:text-ink"
               }`}
             >

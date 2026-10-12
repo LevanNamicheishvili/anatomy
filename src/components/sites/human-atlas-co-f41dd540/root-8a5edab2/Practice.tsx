@@ -312,7 +312,7 @@ function Cards({ items, host, levelName, onClose }: { items: LearnItem[]; host: 
                 <p className="mt-3 text-2xl leading-9 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{card.name}</p>
                 {info && <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{info}</p>}
                 {/* In the 340px sheet "ვერ გავიხსენე" needs two lines rather than spilling out of its button. */}
-                <div className="mt-5 grid grid-cols-2 gap-2">
+                <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2">
                   <button type="button" onClick={() => grade(false)} className={cn(btnSecondary, "h-auto min-h-11 py-2 leading-5 whitespace-normal")}>
                     <X className="size-4 shrink-0" aria-hidden />
                     ვერ გავიხსენე

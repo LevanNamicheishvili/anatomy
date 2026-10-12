@@ -60,7 +60,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
           <ul className="mt-3 overflow-hidden rounded-xl border border-line-strong bg-white">
             {hits.map(({ topic, title, href, is3d }, i) => (
               <li key={`${topic.slug}-${href}`}>
-                <Link href={href} className={cn("group flex min-h-14 items-center gap-3 px-5 py-2.5 transition-colors hover:bg-subtle focus-visible:bg-subtle", i > 0 && "border-t border-chip")}>
+                <Link href={href} className={cn("group flex min-h-14 items-center gap-3 px-5 py-2.5 transition-colors hover:bg-subtle focus-visible:bg-subtle outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand", i > 0 && "border-t border-chip")}>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-semibold [overflow-wrap:anywhere]">{title}</span>
                     <span className="block text-xs text-mute">

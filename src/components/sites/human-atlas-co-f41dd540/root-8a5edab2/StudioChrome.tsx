@@ -40,7 +40,7 @@ export function AppBar({
           <LayoutGrid className="hidden size-[18px] group-hover:block" strokeWidth={2} />
         </Link>
         <div className="min-w-0 leading-tight">
-          <h1 className="truncate text-[15px] font-semibold text-[#111a18]">{t.title}</h1>
+          <h1 className="truncate text-[15px] font-semibold text-[#111a18]" title={t.title}>{t.title}</h1>
           <p className="truncate text-xs text-[#66736f] max-md:hidden">
             3D · {pieces} {t.modeledPieces}
           </p>

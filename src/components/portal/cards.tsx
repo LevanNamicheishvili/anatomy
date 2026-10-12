@@ -36,9 +36,9 @@ export function TopicCard({ href, title, description, icon: Icon, color, grades,
       </span>
       <span className="mt-4 text-base leading-snug font-semibold text-ink">{title}</span>
       <span className="mt-1.5 line-clamp-2 text-sm leading-6 text-mute">{description}</span>
-      <span className="mt-auto flex items-center justify-between gap-2 pt-4">
-        {meta ? <Chip>{meta}</Chip> : grades ? <Chip>{grades} კლასი</Chip> : <span />}
-        <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color }}>
+      <span className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2 pt-4">
+        {meta ? <Chip className="max-w-full">{meta}</Chip> : grades ? <Chip>{grades} კლასი</Chip> : <span />}
+        <span className="ms-auto flex shrink-0 items-center gap-1.5 text-sm font-semibold whitespace-nowrap" style={{ color }}>
           გახსნა
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
