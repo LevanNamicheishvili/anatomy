@@ -275,6 +275,7 @@ const DICT: Record<string, string> = {
   temporalis: "საფეთქლის კუნთი",
   "orbicularis oculi": "თვალის წრიული კუნთი",
   frontalis: "შუბლის კუნთი",
+  "zygomaticus major": "დიდი ნიკაპის ძვლის კუნთი",
   "orbicularis oris": "პირის წრიული კუნთი",
   // Nerves
   "sciatic nerve": "საჯდომი ნერვი",
