@@ -474,9 +474,9 @@ export class AnatomyViewer {
       m.emissive = new THREE.Color(tissue);
       m.emissiveIntensity = 0.22;
     } else if (state === "selected") {
-      // Keep the real tissue color; add a faint mint glow and a mint edge sheen.
+      // Keep the real tissue color; a mint glow strong enough to read on thin face muscles, plus a mint edge sheen.
       m.emissive = new THREE.Color(SELECTED_GLOW);
-      m.emissiveIntensity = 0.1;
+      m.emissiveIntensity = 0.3;
       m.sheen = 1;
       m.sheenRoughness = 0.3;
       m.sheenColor = new THREE.Color("#5ff2cf");
