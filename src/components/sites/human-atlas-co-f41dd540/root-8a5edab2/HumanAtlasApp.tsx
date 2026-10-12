@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { withFaceMuscles } from "./face-muscles";
 import {
   lessonFocusParts,
   lessonParts,
@@ -230,6 +231,7 @@ export function HumanAtlasApp({
         if (!r.ok) throw new Error("manifest");
         return r.json() as Promise<AtlasManifest>;
       })
+      .then((raw) => withFaceMuscles(raw))
       .then(async (m) => {
         if (cancelled) return;
         setManifest(m);

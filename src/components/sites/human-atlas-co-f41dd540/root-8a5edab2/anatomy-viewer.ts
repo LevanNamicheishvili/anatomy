@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { CUSTOM_CHUNK, FACE_MUSCLE_BY_ID } from "./face-muscles";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { animGroup, animationAnchors, type AnimGroup } from "./anatomy-groups";
 import {
@@ -623,23 +626,71 @@ export class AnatomyViewer {
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);
+    await this.loadCustomParts(manifest.parts.filter((p) => p.chunk === CUSTOM_CHUNK));
   }
 
-  private addPart(part: AtlasPart, buffer: ArrayBuffer, baked: { buffer: ArrayBuffer; entry: SkinEntry } | null) {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(buffer, part.positions, part.vertexCount * 3);
-    const normals = new Int16Array(buffer.slice(part.normals, part.normals + part.vertexCount * 6));
-    const indices = new Uint32Array(buffer, part.indices, part.indexCount);
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3, true));
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  /** Face muscles shipped as separate Draco GLBs, already in atlas space; they move rigidly with the head. */
+  private async loadCustomParts(parts: AtlasPart[]) {
+    if (!parts.length || this.disposed) return;
+    const draco = new DRACOLoader().setDecoderPath("/draco/");
+    const loader = new GLTFLoader().setDRACOLoader(draco);
+    const byUrl = new Map<string, AtlasPart[]>();
+    for (const p of parts) {
+      const def = FACE_MUSCLE_BY_ID.get(p.id);
+      if (!def) continue;
+      byUrl.set(def.url, [...(byUrl.get(def.url) ?? []), p]);
+    }
+    try {
+      await Promise.all(
+        [...byUrl].map(async ([url, list]) => {
+          const gltf = await loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null);
+          if (!gltf || this.disposed) return;
+          gltf.scene.updateMatrixWorld(true);
+          for (const part of list) {
+            const def = FACE_MUSCLE_BY_ID.get(part.id);
+            const obj = def && gltf.scene.getObjectByName(def.mesh);
+            const src = obj && (obj as THREE.Mesh).isMesh ? (obj as THREE.Mesh) : null;
+            if (!src) continue;
+            const g = src.geometry.clone();
+            g.applyMatrix4(src.matrixWorld);
+            g.deleteAttribute("uv");
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute("position", g.getAttribute("position"));
+            geometry.setAttribute("normal", g.getAttribute("normal"));
+            if (g.index) geometry.setIndex(g.index);
+            this.addPart(part, null, null, geometry);
+          }
+          this.dirty = true;
+        }),
+      );
+    } finally {
+      draco.dispose();
+    }
+  }
+
+  private addPart(
+    part: AtlasPart,
+    buffer: ArrayBuffer | null,
+    baked: { buffer: ArrayBuffer; entry: SkinEntry } | null,
+    prebuilt?: THREE.BufferGeometry,
+  ) {
+    const geometry = prebuilt ?? new THREE.BufferGeometry();
+    if (!prebuilt && buffer) {
+      const positions = new Float32Array(buffer, part.positions, part.vertexCount * 3);
+      const normals = new Int16Array(buffer.slice(part.normals, part.normals + part.vertexCount * 6));
+      const indices = new Uint32Array(buffer, part.indices, part.indexCount);
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3, true));
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    }
+    const vertexCount = geometry.getAttribute("position").count;
     // Bones move rigidly with their segment. Everything else uses baked weights: the skin's own smoothed
     // weights, and for tissue under it the weights of the nearest skin, so it all moves together.
     const rigid = !baked;
     if (rigid) {
-      const idx = new Uint8Array(part.vertexCount * 4).fill(IDENTITY_SLOT);
-      const wts = new Uint8Array(part.vertexCount * 4);
-      for (let i = 0; i < part.vertexCount; i++) wts[i * 4] = 255;
+      const idx = new Uint8Array(vertexCount * 4).fill(IDENTITY_SLOT);
+      const wts = new Uint8Array(vertexCount * 4);
+      for (let i = 0; i < vertexCount; i++) wts[i * 4] = 255;
       geometry.setAttribute("aSegI", new THREE.BufferAttribute(idx, 4));
       geometry.setAttribute("aSegW", new THREE.BufferAttribute(wts, 4, true));
     } else {
