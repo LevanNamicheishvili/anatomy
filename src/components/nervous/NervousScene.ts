@@ -661,7 +661,7 @@ export class NervousScene {
     for (const l of this.labels) {
       l.target.getWorldPosition(this.tmp);
       this.tmp.project(this.camera);
-      const x = ((this.tmp.x + 1) / 2) * w;
+      let x = ((this.tmp.x + 1) / 2) * w;
       const y = ((1 - this.tmp.y) / 2) * h;
       let visible = l.target.visible && this.tmp.z < 1 && Math.abs(this.tmp.x) < 1.05 && Math.abs(this.tmp.y) < 1.05;
       if (visible) {
@@ -670,6 +670,8 @@ export class NervousScene {
           size = { w: l.el.offsetWidth, h: l.el.offsetHeight };
           this.sizes.set(l.el, size);
         }
+        // Keep centred tags fully inside the canvas so edge labels (e.g. „Na⁺ ბევრია“) are never clipped.
+        if (l.el.classList.contains("dna-tag") && w > size.w + 8) x = Math.min(Math.max(x, size.w / 2 + 4), w - size.w / 2 - 4);
         const box = l.el.classList.contains("dna-tag") ? { x: x - size.w / 2, y: y - size.h / 2, w: size.w, h: size.h } : { x: x - 6, y: y - size.h / 2, w: size.w, h: size.h };
         if (placed.some((q) => box.x < q.x + q.w + 2 && q.x < box.x + box.w + 2 && box.y < q.y + q.h + 1 && q.y < box.y + box.h + 1)) visible = false;
         else placed.push(box);

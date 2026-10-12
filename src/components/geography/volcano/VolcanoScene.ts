@@ -383,6 +383,8 @@ export class VolcanoScene {
   private observer: ResizeObserver;
   private frame = 0;
   private disposed = false;
+  private wheelGate: ((e: WheelEvent) => void) | null = null;
+  private wheelHost: HTMLElement | null = null;
   private timer = new THREE.Timer();
   private reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   private step: VolcanoStep = "plates";
@@ -478,7 +480,7 @@ export class VolcanoScene {
     this.waterTop = this.strip(0, false);
     this.scene.add(new THREE.Mesh(this.waterFront, this.seaFront), new THREE.Mesh(this.waterTop, this.seaTop));
 
-    // Plates: arrows of motion, trench.
+    // Plates: arrows of motion, trench. Arrows sit below their HTML labels so they never cover the text.
     const arrowMat = (dir: 1 | -1, x: number, y: number, color: string) => {
       const m = decal(arrow(0, 0, dir), color, 1, 0.01);
       m.position.x = x;
@@ -486,7 +488,7 @@ export class VolcanoScene {
       this.plateArrows.push(m);
       return m;
     };
-    this.groups.plates.add(arrowMat(1, -12, -1.75, "#ffffff"), arrowMat(-1, 13.2, -2.6, "#ffffff"), arrowMat(1, -5, -7.9, "#ffd8b0"));
+    this.groups.plates.add(arrowMat(1, -12, -2.85, "#ffffff"), arrowMat(-1, 13.2, -3.5, "#ffffff"), arrowMat(1, -5, -8.75, "#ffd8b0"));
 
     // Magma: melting zone, rising blobs, chamber, conduit.
     const meltY = slabTop(5.2) + 0.35;
@@ -600,6 +602,12 @@ export class VolcanoScene {
     this.controls.minAzimuthAngle = -Math.PI / 3;
     this.controls.maxAzimuthAngle = Math.PI / 3;
     this.controls.maxPolarAngle = Math.PI * 0.62;
+    // Plain wheel scrolls the page; zoom only with Ctrl/Cmd + wheel (trackpad pinch sends ctrlKey).
+    this.wheelGate = (e: WheelEvent) => {
+      this.controls.enableZoom = e.ctrlKey || e.metaKey;
+    };
+    canvas.parentElement?.addEventListener("wheel", this.wheelGate, { capture: true, passive: true });
+    this.wheelHost = canvas.parentElement;
 
     this.setStep("plates");
     this.observer = new ResizeObserver(() => this.resize());
@@ -1039,6 +1047,7 @@ export class VolcanoScene {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
+    if (this.wheelGate) this.wheelHost?.removeEventListener("wheel", this.wheelGate, { capture: true });
     this.controls.dispose();
     this.timer.dispose();
     this.bombs.dispose();

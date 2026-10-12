@@ -112,7 +112,7 @@ export function SoonCard({ title, description, icon: Icon }: Pick<CardBase, "tit
         <Chip>მალე</Chip>
       </span>
       <span className="mt-5 text-lg leading-7 font-semibold text-copy">{title}</span>
-      <span className="mt-1.5 [overflow-wrap:anywhere] text-sm leading-6 text-faint">{description}</span>
+      <span className="mt-1.5 [overflow-wrap:anywhere] text-sm leading-6 text-mute">{description}</span>
     </div>
   );
 }

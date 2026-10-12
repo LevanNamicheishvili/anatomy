@@ -7,6 +7,7 @@ import { Chip, SectionTitle, cardLink } from "@/components/portal/ui";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { collections } from "@/lib/db";
 import { cn } from "@/lib/utils";
+import { BIO_TOPICS } from "@/lib/biology-topics";
 import { SUBJECTS, type Subject, type SubjectIcon } from "@/lib/subjects";
 
 export const metadata: Metadata = { title: "მთავარი — სასწავლო პორტალი" };
@@ -32,7 +33,8 @@ function SubjectMark({ subject, size = "md" }: { subject: Subject; size?: "md" |
 /** One card per subject, all the same shape; ready subjects open their page. */
 function SubjectCard({ subject }: { subject: Subject }) {
   const ready = !!subject.href;
-  const topics = subject.topics.filter((t) => t.href && !t.staffOnly).length;
+  // Biology lists its themes from BIO_TOPICS (the same source as /biology), not the featured tiles.
+  const topics = subject.icon === "biology" ? BIO_TOPICS.length : subject.topics.filter((t) => t.href && !t.staffOnly).length;
   const body = (
     <>
       {subject.image ? (

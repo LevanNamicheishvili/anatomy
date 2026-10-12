@@ -251,7 +251,7 @@ export function HeartExplorer({ initial }: { initial?: string }) {
           </div>
 
           {(section.view === "structure" || section.view === "cycle" || section.view === "circulation") && (
-            <p className="mt-6 text-[11px] leading-5 text-faint">გულისა და ფილტვების მოდელი: BodyParts3D © DBCLS (CC BY 4.0), Z-Anatomy (CC BY-SA 4.0).</p>
+            <p className="mt-6 text-xs leading-5 text-mute">გულისა და ფილტვების მოდელი: BodyParts3D © DBCLS (CC BY 4.0), Z-Anatomy (CC BY-SA 4.0).</p>
           )}
 
           <SectionPager index={index} count={SECTIONS.length} onGo={go} />
