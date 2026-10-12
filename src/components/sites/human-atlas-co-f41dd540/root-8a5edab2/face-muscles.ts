@@ -22,6 +22,7 @@ const MASSETER_L: B = [[0.039, 1.525, -0.005], [0.061, 1.574, 0.049]];
 const TEMPORALIS_L: B = [[0.032, 1.556, -0.059], [0.079, 1.66, 0.043]];
 const OCULI_L: B = [[0.0067, 1.5725, 0.0443], [0.0622, 1.6231, 0.0814]];
 const ORIS_L: B = [[0, 1.5125, 0.0591], [0.0345, 1.553, 0.097]];
+const FRONTALIS_L: B = [[0.0038, 1.6164, 0.051], [0.0497, 1.6904, 0.0795]];
 
 export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9001", name: "Left masseter", url: `${FACE_MUSCLE_DIR}/masseter.glb`, mesh: "masseter_L", bounds: MASSETER_L },
@@ -32,6 +33,8 @@ export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9003M", name: "Right orbicularis oculi", url: `${FACE_MUSCLE_DIR}/orbicularis_oculi.glb`, mesh: "orbicularis_oculi_R", bounds: mirror(OCULI_L) },
   { id: "FX9004", name: "Left orbicularis oris", url: `${FACE_MUSCLE_DIR}/orbicularis_oris.glb`, mesh: "orbicularis_oris_L", bounds: ORIS_L },
   { id: "FX9004M", name: "Right orbicularis oris", url: `${FACE_MUSCLE_DIR}/orbicularis_oris.glb`, mesh: "orbicularis_oris_R", bounds: mirror(ORIS_L) },
+  { id: "FX9005", name: "Left frontalis", url: `${FACE_MUSCLE_DIR}/frontalis.glb`, mesh: "frontalis_L", bounds: FRONTALIS_L },
+  { id: "FX9005M", name: "Right frontalis", url: `${FACE_MUSCLE_DIR}/frontalis.glb`, mesh: "frontalis_R", bounds: mirror(FRONTALIS_L) },
 ];
 
 export const FACE_MUSCLE_BY_ID = new Map(FACE_MUSCLES.map((d) => [d.id, d]));
