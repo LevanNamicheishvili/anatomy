@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLSL_NOISE, ParticleCloud, fbm, hash01, noise2 } from "../fx/particles";
 import type { WaterfallPreset } from "./waterfall-data";
 
@@ -40,6 +42,12 @@ interface P {
   size: number;
   seed: number;
 }
+
+/** Hero models (David's Draco GLBs): LOD0 for the close-up, LOD1 once the camera is pulled back. */
+const HERO_DIR = "/models/geography/waterfalls/";
+const DRACO_DIR = "/draco/";
+/** Camera-to-target distance beyond which LOD1 replaces LOD0 (orbit range is 6…40). */
+const LOD1_DISTANCE = 26;
 
 const smooth = (a: number, b: number, x: number) => {
   if (a === b) return x < a ? 0 : 1;
@@ -272,6 +280,12 @@ export class WaterfallScene {
   private mistP: P[] = [];
   private foamP: P[] = [];
   private splashP: P[] = [];
+  /** Procedural rock, ledges, boulders and trees — hidden once the hero model has loaded. */
+  private procedural = new THREE.Group();
+  /** Procedural animated water (sheets + pools) — replaced by the hero's own water meshes. */
+  private proceduralWater = new THREE.Group();
+  private heroes: { lod0: THREE.Object3D | null; lod1: THREE.Object3D | null } = { lod0: null, lod1: null };
+  private draco: DRACOLoader | null = null;
   private sunDir = new THREE.Vector3(-8, 18, 10).normalize();
   private fogUniforms: Record<string, THREE.IUniform>;
   private tmpC = new THREE.Color();
@@ -312,10 +326,14 @@ export class WaterfallScene {
     this.zEnd = z + 4;
     this.upstreamHalf = preset.tiers[0].width * 0.6 + 0.5;
 
-    this.scene.add(this.buildTerrain());
-    for (const f of this.falls) this.scene.add(this.buildLedge(f), this.buildSheet(f, this.falls.indexOf(f)));
-    this.scene.add(this.buildRocks());
-    if (preset.trees) this.scene.add(this.buildTrees());
+    this.procedural.add(this.buildTerrain());
+    for (const f of this.falls) {
+      this.procedural.add(this.buildLedge(f));
+      this.proceduralWater.add(this.buildSheet(f, this.falls.indexOf(f)));
+    }
+    this.procedural.add(this.buildRocks());
+    if (preset.trees) this.procedural.add(this.buildTrees());
+    this.scene.add(this.procedural, this.proceduralWater);
 
     // Water: the stream above the first fall, then one pool / bench per tier.
     const foam = [0, 1, 2, 3].map((i) => {
@@ -348,12 +366,12 @@ export class WaterfallScene {
       m.renderOrder = 1;
       return m;
     };
-    this.scene.add(level(Z_START, this.falls[0].lipZ - 0.1, this.falls[0].top + 0.14, this.upstreamHalf + 0.6));
+    this.proceduralWater.add(level(Z_START, this.falls[0].lipZ - 0.1, this.falls[0].top + 0.14, this.upstreamHalf + 0.6));
     this.falls.forEach((f, i) => {
       const next = this.falls[i + 1];
       // Between two falls the water only covers the bench in front of the next ledge.
       const half = next ? Math.max(f.width, next.width) * 0.75 + 0.6 : preset.halfValley + 1.2;
-      this.scene.add(level(f.face + 0.05, next ? next.lipZ - 0.1 : this.zEnd + 30, f.bottom + 0.14, half));
+      this.proceduralWater.add(level(f.face + 0.05, next ? next.lipZ - 0.1 : this.zEnd + 30, f.bottom + 0.14, half));
     });
 
     // Particles. Each fall gets a share by its size.
@@ -410,6 +428,59 @@ export class WaterfallScene {
     this.observer.observe(canvas);
     this.resize();
     this.loop();
+    this.loadHeroes();
+  }
+
+  /**
+   * Swap the procedural valley for the hero model. The procedural scene stays up until LOD0 arrives
+   * (and stays for good if loading fails, e.g. 401 when signed out). Particles keep running on top.
+   */
+  private loadHeroes() {
+    this.draco = new DRACOLoader().setDecoderPath(DRACO_DIR);
+    const loader = new GLTFLoader().setDRACOLoader(this.draco);
+    const id = this.preset.id;
+    const prep = (root: THREE.Object3D) => {
+      root.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        m.geometry.computeVertexNormals();
+        const mats = Array.isArray(m.material) ? m.material : [m.material];
+        for (const mat of mats) {
+          if (/water|mist/i.test(mat.name)) {
+            mat.depthWrite = false;
+            mat.transparent = true;
+            m.renderOrder = /mist/i.test(mat.name) ? 5 : 1;
+          }
+        }
+      });
+      root.visible = false;
+      this.scene.add(root);
+      return root;
+    };
+    const load = (file: string) =>
+      new Promise<THREE.Object3D | null>((res) => loader.load(HERO_DIR + file, (g) => res(this.disposed ? null : prep(g.scene)), undefined, () => res(null)));
+    load(`${id}.glb`).then((lod0) => {
+      if (!lod0 || this.disposed) return;
+      this.heroes.lod0 = lod0;
+      this.procedural.visible = false;
+      this.proceduralWater.visible = false;
+      this.updateLod();
+      // LOD1 only matters once the user zooms out, so fetch it after LOD0 is on screen.
+      load(`${id}-lod1.glb`).then((lod1) => {
+        if (!lod1 || this.disposed) return;
+        this.heroes.lod1 = lod1;
+        this.updateLod();
+      });
+    });
+  }
+
+  /** Exactly one hero visible: LOD1 when far and loaded, otherwise LOD0. */
+  private updateLod() {
+    const { lod0, lod1 } = this.heroes;
+    if (!lod0) return;
+    const far = !!lod1 && this.camera.position.distanceTo(this.controls.target) > LOD1_DISTANCE;
+    lod0.visible = !far;
+    if (lod1) lod1.visible = far;
   }
 
   private pickFall(r: number) {
@@ -842,6 +913,7 @@ export class WaterfallScene {
     for (const m of this.sheetMats) m.uniforms.uTime.value = this.t;
     this.poolMat.uniforms.uTime.value = this.t;
     this.controls.update();
+    this.updateLod();
     this.renderer.render(this.scene, this.camera);
     this.onFrame?.(this.project, this.anchors);
   };
@@ -858,6 +930,7 @@ export class WaterfallScene {
       const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
       for (const mat of mats) mat.dispose();
     });
+    this.draco?.dispose();
     this.renderer.dispose();
   }
 }
