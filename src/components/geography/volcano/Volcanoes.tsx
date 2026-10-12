@@ -5,6 +5,8 @@ import { RotateCcw } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
+import { ConeView } from "./ConeView";
+import type { ConeId } from "./ConeScene";
 import { VolcanoScene, type VolcanoAnchor, type VolcanoStep } from "./VolcanoScene";
 
 /*
@@ -85,6 +87,7 @@ export function Volcanoes() {
   const [step, setStep] = useState<VolcanoStep>("plates");
   const [depth, setDepth] = useState(4000);
   const [distance, setDistance] = useState(600);
+  const [cone, setCone] = useState<ConeId | null>(null);
   const info = STEPS.find((s) => s.id === step)!;
   const v = Math.sqrt(G * depth); // m/s
   const kmh = v * 3.6;
@@ -170,9 +173,18 @@ export function Volcanoes() {
           )}
           <div className="rounded-lg bg-[#fdf3e8] p-3 text-[14px] leading-6 text-copy">
             <p className="text-sm font-semibold text-[#9a3412]">საქართველოში</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <PillButton onClick={() => setCone("kazbegi")} pressed={cone === "kazbegi"} color="#c2410c">ყაზბეგი</PillButton>
+              <PillButton onClick={() => setCone("javakheti")} pressed={cone === "javakheti"} color="#c2410c">ჯავახეთი</PillButton>
+              <PillButton onClick={() => setCone(null)} pressed={cone === null} color="#c2410c">ზედაპირი (ჭრილი)</PillButton>
+            </div>
+            {cone ? (
+              <ConeView id={cone} />
+            ) : (
             <p className="mt-1">
-              <b>ყაზბეგი</b> (5047 მ) — „მძინარე“ ვულკანი; ბოლოს დაახლოებით 3 ათასი წლის წინ ამოიფრქვა. <b>ჯავახეთის ზეგანი</b> ლავის ნაკადებითაა აგებული; <b>აბული</b> (3301 მ) და <b>სამსარი</b> ვულკანური მთებია. საქართველო სეისმურად აქტიურია: <b>რაჭის მიწისძვრა</b> (1991, მაგნიტუდა 7,0) ერთ-ერთი უძლიერესი იყო კავკასიაში.
-            </p>
+                <b>ყაზბეგი</b> (5047 მ) — „მძინარე“ ვულკანი; ბოლოს დაახლოებით 3 ათასი წლის წინ ამოიფრქვა. <b>ჯავახეთის ზეგანი</b> ლავის ნაკადებითაა აგებული; <b>აბული</b> (3301 მ) და <b>სამსარი</b> ვულკანური მთებია. საქართველო სეისმურად აქტიურია: <b>რაჭის მიწისძვრა</b> (1991, მაგნიტუდა 7,0) ერთ-ერთი უძლიერესი იყო კავკასიაში.
+              </p>
+            )}
           </div>
         </div>
       </div>
