@@ -784,8 +784,10 @@ export class WaterfallScene {
     const across = (r(1) - 0.5) * f.width;
     if (kind === "drop") {
       // Drops break off the edges and the face of the sheet.
-      const edge = r(2) < 0.5 ? Math.sign(across || 1) * f.width * (0.42 + r(3) * 0.15) : across;
-      p.p.set(edge, f.top + 0.1, f.lipZ + 0.05);
+      // On the hero GLB the baked water is static, so most drops form a thin sheet across the face.
+      const edgeShare = this.heroes.lod0 ? 0.2 : 0.5;
+      const edge = r(2) < edgeShare ? Math.sign(across || 1) * f.width * (0.42 + r(3) * 0.15) : across * (this.heroes.lod0 ? 0.9 : 1);
+      p.p.set(edge, f.top + 0.1, f.lipZ + 0.05 + (this.heroes.lod0 ? 0.08 : 0));
       p.v.set((r(4) - 0.5) * 0.5, -r(5) * 0.6, f.vz * (0.85 + r(6) * 0.35));
       p.life = f.T * (1 + r(7) * 0.25);
     } else if (kind === "spray") {
@@ -828,7 +830,9 @@ export class WaterfallScene {
       p.v.y -= G * dt;
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      this.drops.set(i, p.p, 0.04 + 0.06 * p.size, 0.5 * smooth(0, 0.6, k * p.size) * (1 - k * 0.5), this.white);
+      // Hero visible: slightly larger, brighter streaks so motion reads over the static GLB water.
+      const hb = this.heroes.lod0 ? 1 : 0;
+      this.drops.set(i, p.p, (0.04 + 0.06 * p.size) * (1 + 0.35 * hb), Math.min(0.85, 0.5 * (1 + 0.5 * hb) * smooth(0, 0.6 - 0.25 * hb, k * p.size) * (1 - k * 0.5)), this.white);
     });
     // Spray: thrown out of the plunge pool, falls back.
     this.sprayP.forEach((p, i) => {
@@ -840,7 +844,7 @@ export class WaterfallScene {
       p.v.multiplyScalar(1 - 0.6 * dt);
       p.p.addScaledVector(p.v, dt);
       const k = p.age / p.life;
-      this.spray.set(i, p.p, (0.1 + 0.24 * p.size) * (0.7 + 0.6 * k), 0.7 * (1 - k) * (1 - k * 0.4), this.white);
+      this.spray.set(i, p.p, (0.1 + 0.24 * p.size) * (0.7 + 0.6 * k), Math.min(0.85, 0.7 * (this.heroes.lod0 ? 1.15 : 1) * (1 - k) * (1 - k * 0.4)), this.white);
     });
     // Splash droplets: small, bright, clean parabolas.
     this.splashP.forEach((p, i) => {
