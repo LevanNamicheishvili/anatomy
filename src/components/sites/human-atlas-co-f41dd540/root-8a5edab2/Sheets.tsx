@@ -9,6 +9,7 @@ import type { Strings } from "./i18n";
 import { SwitchRow, btnPrimary, btnSecondary, floating, iconBtn, sectionLabel } from "./primitives";
 import { searchIndex, type SearchEntry } from "./search-index";
 import { structureInfo } from "./structure-info";
+import { TOPIC_BY_SLUG } from "./topics";
 
 export interface Selection {
   name: string;
@@ -224,15 +225,27 @@ export function SearchPanel({
 
 export function AskPanel({
   t,
+  ready,
   onAsk,
+  onShow,
   onClose,
 }: {
   t: Strings;
-  onAsk: (question: string) => boolean;
+  /** False while the atlas manifest is still loading (or failed), so there is nothing to search yet. */
+  ready: boolean;
+  onAsk: (question: string) => SearchEntry | null;
+  onShow: (entry: SearchEntry) => void;
   onClose: () => void;
 }) {
   const [question, setQuestion] = useState("");
-  const [missed, setMissed] = useState(false);
+  const [result, setResult] = useState<{ entry: SearchEntry | null } | null>(null);
+  const answer = result?.entry ?? null;
+  const info = answer ? (answer.topic ? TOPIC_BY_SLUG[answer.topic]?.subtitle : null) ?? structureInfo(answer.name) : null;
+
+  const submit = () => {
+    if (!question.trim() || !ready) return;
+    setResult({ entry: onAsk(question) });
+  };
 
   return (
     <div role="dialog" aria-label={t.askAnatomy} className={cn(floating, popover)}>
@@ -246,25 +259,45 @@ export function AskPanel({
         className="mt-2 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!question.trim()) return;
-          setMissed(!onAsk(question));
+          e.stopPropagation();
+          submit();
         }}
       >
         <input
           autoFocus
           value={question}
+          enterKeyHint="send"
           onChange={(e) => {
             setQuestion(e.target.value);
-            setMissed(false);
+            setResult(null);
+          }}
+          onKeyDown={(e) => {
+            // Georgian/IME keyboards: ignore the Enter that only confirms composition.
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            e.stopPropagation();
+            submit();
           }}
           placeholder={t.askPlaceholder}
           className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong bg-card px-3 text-sm text-ink outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/20 max-md:h-11 max-md:text-base"
         />
-        <button type="submit" disabled={!question.trim()} className={btnPrimary}>
+        <button type="submit" disabled={!question.trim() || !ready} className={btnPrimary}>
           {t.ask}
         </button>
       </form>
-      {missed && <p className="mt-2 text-[13px] text-danger">{t.askNoMatch}</p>}
+      <div aria-live="polite">
+        {!ready && <p className="mt-2 text-[13px] text-mute">{t.askNotReady}</p>}
+        {result && !answer && <p className="mt-2 text-[13px] text-danger">{t.askNoMatch}</p>}
+        {answer && (
+          <div className="mt-3 rounded-lg border border-line bg-card p-3">
+            <p className="text-sm font-semibold text-ink">{titleCase(answer.name)}</p>
+            <p className="mt-1 text-[13px] leading-5 text-copy">{info ?? t.askNoInfo}</p>
+            <button type="button" onClick={() => onShow(answer)} className={cn(btnSecondary, "mt-2")}>
+              {t.askShow}
+            </button>
+          </div>
+        )}
+      </div>
       <p className="mt-2 text-xs leading-5 text-mute">{t.askNote}</p>
     </div>
   );

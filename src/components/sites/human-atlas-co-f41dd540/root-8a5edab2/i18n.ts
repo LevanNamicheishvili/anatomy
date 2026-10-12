@@ -31,6 +31,9 @@ export interface Strings {
   ask: string;
   askNote: string;
   askNoMatch: string;
+  askNoInfo: string;
+  askNotReady: string;
+  askShow: string;
   close: string;
   systemOverview: string;
   atlasReference: string;
@@ -133,6 +136,9 @@ const en: Strings = {
   ask: "Ask",
   askNote: "Answers are limited to structures in this atlas and are not medical advice.",
   askNoMatch: "No structure in this atlas matches that question yet.",
+  askNoInfo: "Show it on the model to see its system and position.",
+  askNotReady: "The atlas is still loading — try again in a moment.",
+  askShow: "Show on model",
   close: "Close",
   systemOverview: "System overview · structure identified from source anatomy",
   atlasReference: "Atlas reference",
@@ -289,6 +295,9 @@ const ka: Strings = {
   ask: "კითხვა",
   askNote: "პასუხები მხოლოდ ამ ატლასის სტრუქტურებს ეხება და სამედიცინო რჩევა არ არის.",
   askNoMatch: "ამ კითხვისთვის ატლასში შესაბამისი სტრუქტურა ვერ მოიძებნა.",
+  askNoInfo: "აჩვენე მოდელზე, რომ ნახო მისი სისტემა და მდებარეობა.",
+  askNotReady: "ატლასი ჯერ იტვირთება — სცადე ცოტა ხანში.",
+  askShow: "მოდელზე ჩვენება",
   close: "დახურვა",
   systemOverview: "სისტემის მიმოხილვა · სტრუქტურა განსაზღვრულია წყაროს მონაცემებით",
   atlasReference: "ატლასის კოდი",

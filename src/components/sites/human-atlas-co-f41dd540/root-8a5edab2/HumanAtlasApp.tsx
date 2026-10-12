@@ -617,11 +617,8 @@ export function HumanAtlasApp({
     goHome();
   };
 
-  const ask = (q: string) => {
-    const hit = answerQuestion(index, q);
-    if (hit) pickEntry(hit);
-    return !!hit;
-  };
+  // Answer inline in the Ask popover; the user then chooses "show on model" (which closes it).
+  const ask = (q: string) => answerQuestion(index, q);
 
   // Keyboard: "/" search · arrows rotate · +/- zoom · Escape closes the top-most layer.
   useEffect(() => {
@@ -824,7 +821,7 @@ export function HumanAtlasApp({
         />
       )}
       {popover === "ask" && (
-        <AskPanel t={t} onAsk={ask} onClose={() => setPopover(null)} />
+        <AskPanel t={t} ready={index.length > 0} onAsk={ask} onShow={pickEntry} onClose={() => setPopover(null)} />
       )}
       {dive && (
         <DeepDivePanel
