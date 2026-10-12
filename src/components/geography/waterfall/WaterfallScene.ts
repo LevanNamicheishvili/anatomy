@@ -252,6 +252,8 @@ function rockMaterial(vertexColors: boolean, roughness: number) {
 }
 
 export class WaterfallScene {
+  /** Fires once the hero GLB (LOD0) replaces the procedural scene. */
+  onHeroLoaded: (() => void) | null = null;
   onFrame: ((project: Projector, anchors: Record<WaterfallAnchor, THREE.Vector3>) => void) | null = null;
   readonly anchors: Record<WaterfallAnchor, THREE.Vector3>;
 
@@ -465,6 +467,7 @@ export class WaterfallScene {
       this.procedural.visible = false;
       this.proceduralWater.visible = false;
       this.updateLod();
+      this.onHeroLoaded?.();
       // LOD1 only matters once the user zooms out, so fetch it after LOD0 is on screen.
       load(`${id}-lod1.glb`).then((lod1) => {
         if (!lod1 || this.disposed) return;

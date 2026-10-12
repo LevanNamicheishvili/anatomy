@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PillButton } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
 import { WaterfallScene, type WaterfallAnchor } from "./WaterfallScene";
@@ -26,12 +26,15 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const preset = WATERFALLS[id];
+  const [heroFor, setHeroFor] = useState<WaterfallId | null>(null);
+  const hero = heroFor === id;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const layer = labelsRef.current;
     if (!canvas || !layer) return;
     const scene = new WaterfallScene(canvas, WATERFALLS[id]);
+    scene.onHeroLoaded = () => setHeroFor(id);
     const els = [...layer.querySelectorAll<HTMLElement>("[data-at]")];
     scene.onFrame = (project, anchors) => {
       for (const el of els) {
@@ -75,7 +78,7 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
         <p className="mt-3 rounded-lg bg-[#eef6fb] p-2.5 text-[13px] leading-5">
           წყალი კიდიდან ისე ვარდება, როგორც ნასროლი ქვა: წინ მიდის და თან სულ უფრო სწრაფად ეშვება — ამიტომ ნაკადი მრუდია. ძირში დარტყმისას წყალი ქვაბულს ამოთხრის, შხეფები კი ჰაერში წყლის მტვრად იფანტება.
         </p>
-        <p className="mt-2 text-[11px] leading-4 text-faint">მოდელი სქემატურია: ფორმა და ქანი მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
+        <p className="mt-2 text-[11px] leading-4 text-faint">{hero ? "ინტერაქტიული 3D მოდელი" : "მოდელი სქემატურია: ფორმა და ქანი მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის"}. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
       </div>
     </div>
   );

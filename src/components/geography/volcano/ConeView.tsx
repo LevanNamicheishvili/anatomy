@@ -34,7 +34,7 @@ export function ConeView({ id }: { id: ConeId }) {
         {status === "loading" && <span className="pointer-events-none absolute right-2 bottom-2 text-[11px] text-faint">იტვირთება…</span>}
       </div>
       <p className="mt-2">{CAPTIONS[id]}</p>
-      <p className="mt-1 text-[11px] leading-4 text-faint">მოდელი სქემატურია: ფორმა მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
+      <p className="mt-1 text-[11px] leading-4 text-faint">{status === "loaded" ? "ინტერაქტიული 3D მოდელი" : "მოდელი სქემატურია: ფორმა მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის"}. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
     </div>
   );
 }
