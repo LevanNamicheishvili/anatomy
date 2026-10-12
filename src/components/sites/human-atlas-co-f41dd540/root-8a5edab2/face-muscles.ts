@@ -6,7 +6,7 @@ import type { AtlasManifest, AtlasPart } from "./atlas-data";
  * (identity transform). Only parts with chunk === CUSTOM_CHUNK are loaded from GLB.
  */
 export const CUSTOM_CHUNK = -1;
-export const FACE_MUSCLE_DIR = "/models/anatomy/muscles/face";
+export const FACE_MUSCLE_DIR = "/models/anatomy/muscles/face_v2";
 
 export interface CustomPartDef {
   id: string;
@@ -18,22 +18,24 @@ export interface CustomPartDef {
 
 type B = AtlasPart["bounds"];
 const mirror = ([[x0, y0, z0], [x1, y1, z1]]: B): B => [[-x1, y0, z0], [-x0, y1, z1]];
-const MASSETER_L: B = [[0.039, 1.525, -0.005], [0.061, 1.574, 0.049]];
-const TEMPORALIS_L: B = [[0.032, 1.556, -0.059], [0.079, 1.66, 0.043]];
-const OCULI_L: B = [[0.0067, 1.5725, 0.0443], [0.0622, 1.6231, 0.0814]];
-const ORIS_L: B = [[0, 1.5125, 0.0591], [0.0345, 1.553, 0.097]];
-const FRONTALIS_L: B = [[0.0038, 1.6164, 0.051], [0.0497, 1.6904, 0.0795]];
-const DAO_L: B = [[0.0184, 1.5065, 0.0336], [0.0408, 1.5285, 0.0602]];
-const MENTALIS_L: B = [[0.0018, 1.5028, 0.0617], [0.015, 1.5108, 0.0743]];
-const BUCCINATOR_L: B = [[0.024, 1.5292, 0.0291], [0.0395, 1.553, 0.0622]];
-const CORRUGATOR_L: B = [[0.0026, 1.6137, 0.0709], [0.0226, 1.6212, 0.0768]];
-const ZYGO_MINOR_L: B = [[0.0225, 1.5461, 0.0485], [0.039, 1.5913, 0.0694]];
-const NASALIS_L: B = [[0.0023, 1.5499, 0.0678], [0.0189, 1.5804, 0.1035]];
-const PROCERUS_L: B = [[0.0009, 1.583, 0.0727], [0.007, 1.6217, 0.0953]];
-const SEPTI_L: B = [[0.0013, 1.5458, 0.077], [0.0055, 1.554, 0.0884]];
-const LLS_L: B = [[0.0106, 1.5466, 0.0636], [0.025, 1.5747, 0.0874]];
-const DLI_L: B = [[0.0045, 1.5048, 0.0624], [0.0181, 1.5259, 0.0949]];
-const ZYGOMATICUS_L: B = [[0.0302, 1.5324, 0.0337], [0.0548, 1.5879, 0.0659]];
+const MASSETER_L: B = [[0.0385, 1.517, -0.0022], [0.0658, 1.584, 0.0465]];
+const TEMPORALIS_L: B = [[0.0354, 1.5517, -0.0644], [0.0793, 1.6711, 0.0538]];
+const OCULI_L: B = [[0.0102, 1.5741, 0.0457], [0.0559, 1.6243, 0.0768]];
+const ORIS_L: B = [[0, 1.5137, 0.0573], [0.032, 1.5733, 0.0946]];
+const FRONTALIS_L: B = [[0, 1.6109, 0.0318], [0.06, 1.6833, 0.0803]];
+const DAO_L: B = [[0.0132, 1.5018, 0.0408], [0.0372, 1.5448, 0.0654]];
+const MENTALIS_L: B = [[0.0012, 1.5027, 0.0668], [0.015, 1.5171, 0.0738]];
+const BUCCINATOR_L: B = [[0.0271, 1.5252, 0.0278], [0.0429, 1.5513, 0.054]];
+const CORRUGATOR_L: B = [[0.01, 1.6084, 0.0671], [0.0319, 1.628, 0.0754]];
+const ZYGO_MINOR_L: B = [[0.0128, 1.5528, 0.0512], [0.0522, 1.5837, 0.0751]];
+const NASALIS_L: B = [[0, 1.5681, 0.0689], [0.0168, 1.6104, 0.091]];
+const PROCERUS_L: B = [[0, 1.6014, 0.0743], [0.0234, 1.6379, 0.0807]];
+const SEPTI_L: B = [[0.0006, 1.5485, 0.0738], [0.0163, 1.5642, 0.0806]];
+const LLS_L: B = [[0.0129, 1.5528, 0.0593], [0.0387, 1.5831, 0.076]];
+const DLI_L: B = [[0, 1.5052, 0.0497], [0.0323, 1.5351, 0.0765]];
+const MEDPTER_L: B = [[0.0156, 1.5325, -0.0002], [0.0362, 1.5802, 0.0292]];
+const LATPTER_L: B = [[0.0234, 1.5549, -0.0046], [0.0545, 1.5881, 0.0388]];
+const ZYGOMATICUS_L: B = [[0.0261, 1.5296, 0.0406], [0.0582, 1.5855, 0.0658]];
 
 export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9001", name: "Left masseter", url: `${FACE_MUSCLE_DIR}/masseter.glb`, mesh: "masseter_L", bounds: MASSETER_L },
@@ -68,6 +70,10 @@ export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9015M", name: "Right levator labii superioris", url: `${FACE_MUSCLE_DIR}/levator_labii_superioris.glb`, mesh: "levator_labii_superioris_R", bounds: mirror(LLS_L) },
   { id: "FX9016", name: "Left depressor labii inferioris", url: `${FACE_MUSCLE_DIR}/depressor_labii_inferioris.glb`, mesh: "depressor_labii_inferioris_L", bounds: DLI_L },
   { id: "FX9016M", name: "Right depressor labii inferioris", url: `${FACE_MUSCLE_DIR}/depressor_labii_inferioris.glb`, mesh: "depressor_labii_inferioris_R", bounds: mirror(DLI_L) },
+  { id: "FX9017", name: "Left medial pterygoid", url: `${FACE_MUSCLE_DIR}/medial_pterygoid.glb`, mesh: "medial_pterygoid_L", bounds: MEDPTER_L },
+  { id: "FX9017M", name: "Right medial pterygoid", url: `${FACE_MUSCLE_DIR}/medial_pterygoid.glb`, mesh: "medial_pterygoid_R", bounds: mirror(MEDPTER_L) },
+  { id: "FX9018", name: "Left lateral pterygoid", url: `${FACE_MUSCLE_DIR}/lateral_pterygoid.glb`, mesh: "lateral_pterygoid_L", bounds: LATPTER_L },
+  { id: "FX9018M", name: "Right lateral pterygoid", url: `${FACE_MUSCLE_DIR}/lateral_pterygoid.glb`, mesh: "lateral_pterygoid_R", bounds: mirror(LATPTER_L) },
 ];
 
 export const FACE_MUSCLE_BY_ID = new Map(FACE_MUSCLES.map((d) => [d.id, d]));

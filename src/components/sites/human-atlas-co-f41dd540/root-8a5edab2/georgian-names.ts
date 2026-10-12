@@ -283,6 +283,8 @@ const DICT: Record<string, string> = {
   "orbicularis oris": "პირის წრიული კუნთი",
   "zygomaticus minor": "ყვრიმალის მცირე კუნთი",
   nasalis: "ცხვირის კუნთი",
+  "medial pterygoid": "მედიალური ფრთისებრი კუნთი",
+  "lateral pterygoid": "ლატერალური ფრთისებრი კუნთი",
   procerus: "ამაყის კუნთი",
   "depressor septi nasi": "ცხვირის ძგიდის დამწევი კუნთი",
   "levator labii superioris": "ზედა ტუჩის ამწევი კუნთი",
