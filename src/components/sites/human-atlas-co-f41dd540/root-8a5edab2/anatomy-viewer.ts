@@ -626,9 +626,9 @@ export class AnatomyViewer {
         this.dirty = true;
       }
     };
-    await Promise.all([worker(), worker(), worker(), worker()]);
-    // Face muscles stream in after the atlas is usable: the UI never waits on Draco.
+    // Face muscles start alongside the body chunks (Draco decodes in workers); nothing waits on them.
     void this.loadCustomParts(manifest.parts.filter((p) => p.chunk === CUSTOM_CHUNK)).catch(() => undefined);
+    await Promise.all([worker(), worker(), worker(), worker()]);
   }
 
   /** Face muscles shipped as separate Draco GLBs, already in atlas space; they move rigidly with the head. */

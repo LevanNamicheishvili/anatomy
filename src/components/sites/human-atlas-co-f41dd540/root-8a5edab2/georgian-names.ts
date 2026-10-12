@@ -281,6 +281,12 @@ const DICT: Record<string, string> = {
   mentalis: "ნიკაპის კუნთი",
   "corrugator supercilii": "წარბის შეკუმშვის კუნთი",
   "orbicularis oris": "პირის წრიული კუნთი",
+  "zygomaticus minor": "პატარა ნიკაპის ძვლის კუნთი",
+  nasalis: "ცხვირის კუნთი",
+  procerus: "ამაყის კუნთი",
+  "depressor septi nasi": "ცხვირის ძგიდის დამწევი კუნთი",
+  "levator labii superioris": "ზედა ტუჩის ამწევი კუნთი",
+  "depressor labii inferioris": "ქვედა ტუჩის დამწევი კუნთი",
   // Nerves
   "sciatic nerve": "საჯდომი ნერვი",
   "femoral nerve": "ბარძაყის ნერვი",
