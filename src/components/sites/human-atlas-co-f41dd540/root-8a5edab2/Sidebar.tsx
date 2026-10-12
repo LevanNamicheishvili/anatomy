@@ -1,27 +1,107 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, EyeOff, GalleryVerticalEnd, HeartPulse, ListChecks, Pause, PenLine, PersonStanding, Play, Presentation, QrCode, Waves, Wind, X } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  ChevronRight,
+  EyeOff,
+  GalleryVerticalEnd,
+  GraduationCap,
+  HeartPulse,
+  Layers,
+  ListChecks,
+  Pause,
+  PenLine,
+  PersonStanding,
+  Play,
+  Presentation,
+  QrCode,
+  Waves,
+  Wind,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LabeledSlider, PillButton, SegmentedTabs } from "@/components/portal/controls";
 import type { LessonKey } from "./anatomy-groups";
 import type { AnimationSettings } from "./anatomy-viewer";
 import { SYSTEMS, type PresetKey, type SystemKey } from "./atlas-data";
 import type { Strings } from "./i18n";
-import { Slider, Switch, btnGhost, btnPrimary, btnSecondary, iconBtn, sectionLabel } from "./primitives";
+import { SwitchRow, btnGhost, btnPrimary, btnSecondary, iconBtn, sectionLabel } from "./primitives";
 import { ANIMATED_POSES, STATIC_POSES, type PoseKey } from "./rig";
 import { LEVELS, topicFitsLevel, type Level } from "./learn-data";
 import { TOPICS } from "./topics";
 
 export type SidebarTab = "systems" | "animations" | "topics" | "learn";
 
-const LESSON_ICONS: Record<LessonKey, typeof HeartPulse> = {
+const LESSON_ICONS: Record<LessonKey, LucideIcon> = {
   heart: HeartPulse,
   breathing: Wind,
   circulation: Waves,
 };
 
-// Shared row grid so every list in the sidebar has the same left/right edges.
-const row = "grid min-h-10 grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-x-3 px-4 py-1.5";
+const ACCENT = "#0f8a74";
+
+/*
+ * Every tab has the same rhythm: a padded scroll area, a small heading per block, and either rows grouped
+ * in one rounded card (switches) or separate cards (things that open or start something).
+ * Actions that end a state ("stop animations") sit in a footer that never scrolls away.
+ */
+const scrollArea = "atlas-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5";
+const blockTitle = cn(sectionLabel, "mt-5 mb-2");
+const group = "divide-y divide-[#e2e7e5] overflow-hidden rounded-xl border border-[#e2e7e5] bg-white";
+const footer = "flex shrink-0 flex-col gap-2 border-t border-[#e2e7e5] px-4 py-3";
+
+/** Tinted square at the start of a card: an icon or a letter in the item's colour. */
+function Tile({ color = ACCENT, children }: { color?: string; children: React.ReactNode }) {
+  return (
+    <span
+      className="flex size-10 shrink-0 items-center justify-center rounded-lg text-[15px] font-semibold"
+      style={{ backgroundColor: `${color}1a`, color }}
+      aria-hidden
+    >
+      {children}
+    </span>
+  );
+}
+
+/** A card that opens or starts something: tile, title, one line of explanation, optional chevron. */
+function ActionCard({
+  lead,
+  title,
+  body,
+  active,
+  chevron = false,
+  onClick,
+}: {
+  lead: React.ReactNode;
+  title: string;
+  body?: string;
+  /** Set for cards that show the current choice (lesson, topic); left out for plain actions. */
+  active?: boolean;
+  chevron?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-16 w-full items-center gap-3 rounded-xl border p-3 text-start transition-[background-color,border-color] outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50",
+        active ? "border-[#0f8a74]/45 bg-[#e6f3ef]" : "border-[#e2e7e5] bg-white hover:border-[#d5dcd9] hover:bg-[#f5f7f6]",
+      )}
+    >
+      {lead}
+      <span className="min-w-0 flex-1">
+        <span className={cn("block text-sm font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")}>{title}</span>
+        {body && <span className="mt-0.5 block text-[13px] leading-5 text-[#66736f]">{body}</span>}
+      </span>
+      {chevron && <ChevronRight className="size-4 shrink-0 text-[#97a29e]" aria-hidden />}
+    </button>
+  );
+}
 
 function SystemsTab({
   t,
@@ -49,48 +129,37 @@ function SystemsTab({
 }) {
   return (
     <>
-      <div className="px-4 pt-4 pb-3">
-        <div className="grid grid-cols-3 overflow-hidden rounded-md border border-[#d5dcd9]">
-          {(["all", "skeleton", "organs"] as const).map((key, i) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={activePreset === key}
-              onClick={() => onPreset(key)}
-              className={cn(
-                "h-8 px-1 text-[13px] transition-colors max-md:h-11",
-                i > 0 && "border-s border-[#d5dcd9]",
-                activePreset === key ? "bg-[#eef2f0] font-semibold text-[#111a18]" : "text-[#33413e] hover:bg-[#f5f7f6]",
-              )}
-            >
-              {t.presets[key]}
-            </button>
-          ))}
-        </div>
+      <div className="shrink-0 px-4 pt-4 pb-3">
+        <SegmentedTabs<PresetKey>
+          equal
+          label={t.systems}
+          options={(["all", "skeleton", "organs"] as const).map((key) => ({ id: key, label: t.presets[key] }))}
+          value={activePreset}
+          onChange={onPreset}
+        />
       </div>
 
-      <ul className="atlas-scroll min-h-0 flex-1 overflow-y-auto border-t border-[#e2e7e5] py-1">
-        {SYSTEMS.filter((s) => !hiddenSystems.includes(s.key)).map((s) => {
-          const on = enabled.has(s.key);
-          return (
-            <li key={s.key} className={cn(row, "hover:bg-[#f5f7f6]")}>
-              <span className="size-2.5 rounded-full" style={{ backgroundColor: s.dot, opacity: on ? 1 : 0.4 }} />
-              <button
-                type="button"
-                onClick={() => onToggle(s.key, !on)}
-                className={cn("py-1 text-start text-sm leading-5", on ? "text-[#111a18]" : "text-[#97a29e]")}
-              >
-                {t.systemNames[s.key]}
-              </button>
-              <span className="w-8 text-end text-xs text-[#97a29e] tabular-nums">{counts[s.key]}</span>
-              <Switch checked={on} onChange={(v) => onToggle(s.key, v)} label={t.systemNames[s.key]} />
-            </li>
-          );
-        })}
-      </ul>
+      <div className={scrollArea}>
+        <ul className={group}>
+          {SYSTEMS.filter((s) => !hiddenSystems.includes(s.key)).map((s) => {
+            const on = enabled.has(s.key);
+            return (
+              <li key={s.key}>
+                <SwitchRow
+                  checked={on}
+                  onChange={(v) => onToggle(s.key, v)}
+                  label={t.systemNames[s.key]}
+                  meta={counts[s.key]}
+                  lead={<span className="size-3 shrink-0 rounded-full transition-opacity" style={{ backgroundColor: s.dot, opacity: on ? 1 : 0.35 }} aria-hidden />}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
-      <div className="flex h-12 shrink-0 items-center justify-between border-t border-[#e2e7e5] ps-4 pe-2">
-        <span className="text-xs text-[#66736f] tabular-nums">{visibleLabel}</span>
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-t border-[#e2e7e5] ps-4 pe-2">
+        <span className="text-[13px] text-[#66736f] tabular-nums">{visibleLabel}</span>
         <button type="button" onClick={onToggleAll} className={btnGhost}>
           {anyVisible ? t.hideAll : t.showAll}
         </button>
@@ -99,31 +168,21 @@ function SystemsTab({
   );
 }
 
-function PoseList({ t, pose, keys, onPose }: { t: Strings; pose: PoseKey; keys: PoseKey[]; onPose: (key: PoseKey) => void }) {
+function PoseGrid({ t, pose, keys, onPose }: { t: Strings; pose: PoseKey; keys: PoseKey[]; onPose: (key: PoseKey) => void }) {
   return (
-    <ul className="border-y border-[#e2e7e5]">
-      {keys.map((key, i) => {
-        const active = pose === key;
-        const Icon = ANIMATED_POSES.includes(key) ? Play : PersonStanding;
-        return (
-          <li key={key} className={cn(i > 0 && "border-t border-[#e2e7e5]")}>
-            <button
-              type="button"
-              aria-pressed={active}
-              onClick={() => onPose(key)}
-              className={cn(
-                "relative flex h-10 w-full items-center gap-3 px-4 text-start text-sm transition-colors max-md:h-12",
-                active ? "bg-[#e6f3ef] font-medium text-[#0c7563]" : "text-[#111a18] hover:bg-[#f5f7f6]",
-              )}
-            >
-              {active && <span className="absolute inset-y-0 start-0 w-0.5 bg-[#0f8a74]" />}
-              <Icon className={cn("size-4 shrink-0", active ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} />
-              <span className="truncate">{t.poses[key]}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="grid grid-cols-2 gap-2">
+      {keys.map((key) => (
+        <PillButton
+          key={key}
+          icon={ANIMATED_POSES.includes(key) ? Play : PersonStanding}
+          pressed={pose === key}
+          onClick={() => onPose(key)}
+          className="min-h-11 justify-start rounded-lg px-3 py-2 text-start leading-5 whitespace-normal"
+        >
+          {t.poses[key]}
+        </PillButton>
+      ))}
+    </div>
   );
 }
 
@@ -156,114 +215,99 @@ function AnimationsTab({
   ] as const;
 
   return (
-    <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto">
-      <h3 className={cn(sectionLabel, "px-4 pt-4 pb-2")}>{t.lessonsTitle}</h3>
-      <ul className="border-y border-[#e2e7e5]">
-        {(["heart", "breathing", "circulation"] as const).map((key, i) => {
-          const Icon = LESSON_ICONS[key];
-          const active = lesson === key;
-          return (
-            <li key={key} className={cn(i > 0 && "border-t border-[#e2e7e5]")}>
-              <button
-                type="button"
-                aria-pressed={active}
+    <>
+      <div className={scrollArea}>
+        <h3 className={blockTitle}>{t.lessonsTitle}</h3>
+        <div className="flex flex-col gap-2">
+          {(["heart", "breathing", "circulation"] as const).map((key) => {
+            const Icon = LESSON_ICONS[key];
+            return (
+              <ActionCard
+                key={key}
+                lead={
+                  <Tile>
+                    <Icon className="size-5" strokeWidth={2} />
+                  </Tile>
+                }
+                title={t.lessons[key].title}
+                body={t.lessons[key].body}
+                active={lesson === key}
                 onClick={() => onLesson(key)}
-                className={cn(
-                  "relative flex w-full items-start gap-3 px-4 py-3 text-start transition-colors",
-                  active ? "bg-[#e6f3ef]" : "hover:bg-[#f5f7f6]",
-                )}
-              >
-                {active && <span className="absolute inset-y-0 start-0 w-0.5 bg-[#0f8a74]" />}
-                <Icon className={cn("mt-0.5 size-[18px] shrink-0", active ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-[#111a18]">{t.lessons[key].title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-5 text-[#66736f]">{t.lessons[key].body}</span>
-                </span>
-              </button>
+              />
+            );
+          })}
+        </div>
+
+        <h3 className={blockTitle}>{t.animations}</h3>
+        <ul className={group}>
+          {toggles.map(({ key, icon: Icon }) => (
+            <li key={key}>
+              <SwitchRow
+                checked={anim[key]}
+                onChange={(v) => onAnim({ ...anim, [key]: v })}
+                label={t[key]}
+                lead={<Icon className={cn("size-[18px] shrink-0", anim[key] ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} aria-hidden />}
+              />
             </li>
-          );
-        })}
-      </ul>
-
-      <h3 className={cn(sectionLabel, "px-4 pt-5 pb-2")}>{t.animations}</h3>
-      <ul className="border-y border-[#e2e7e5]">
-        {toggles.map(({ key, icon: Icon }, i) => (
-          <li key={key} className={cn("flex h-11 items-center gap-3 px-4", i > 0 && "border-t border-[#e2e7e5]")}>
-            <Icon className="size-[18px] text-[#66736f]" strokeWidth={2} />
-            <span className="flex-1 text-sm text-[#111a18]">{t[key]}</span>
-            <Switch checked={anim[key]} onChange={(v) => onAnim({ ...anim, [key]: v })} label={t[key]} />
+          ))}
+          <li className="px-3 pt-3 pb-2">
+            <LabeledSlider
+              label={t.heartRate}
+              value={anim.bpm}
+              display={`${anim.bpm} ${t.bpmUnit}`}
+              min={40}
+              max={160}
+              onChange={(bpm) => onAnim({ ...anim, bpm })}
+            />
           </li>
-        ))}
-        <li className="border-t border-[#e2e7e5] px-4 pt-3 pb-1">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-[#111a18]">{t.heartRate}</span>
-            <span className="text-[13px] text-[#66736f] tabular-nums">
-              {anim.bpm} {t.bpmUnit}
-            </span>
-          </div>
-          <div className="-mx-2">
-            <Slider value={anim.bpm} min={40} max={160} onChange={(bpm) => onAnim({ ...anim, bpm })} label={t.heartRate} />
-          </div>
-        </li>
-      </ul>
+        </ul>
 
-      <h3 className={cn(sectionLabel, "px-4 pt-5 pb-2")}>{t.posesTitle}</h3>
-      <PoseList t={t} pose={pose} keys={STATIC_POSES} onPose={onPose} />
-      <h3 className={cn(sectionLabel, "px-4 pt-5 pb-2")}>{t.movesTitle}</h3>
-      <PoseList t={t} pose={pose} keys={ANIMATED_POSES} onPose={onPose} />
+        <h3 className={blockTitle}>{t.posesTitle}</h3>
+        <PoseGrid t={t} pose={pose} keys={STATIC_POSES} onPose={onPose} />
+        <h3 className={blockTitle}>{t.movesTitle}</h3>
+        <PoseGrid t={t} pose={pose} keys={ANIMATED_POSES} onPose={onPose} />
+      </div>
 
       {(lesson || animating) && (
-        <div className="flex flex-col gap-2 p-4">
-          {lesson && (
-            <button type="button" onClick={onWholeBody} className={cn(btnSecondary, "w-full")}>
-              {t.wholeBody}
-            </button>
-          )}
+        <div className={footer}>
           {animating && (
             <button type="button" onClick={onStop} className={cn(btnPrimary, "w-full")}>
               <Pause className="size-4" />
               {t.stopAll}
             </button>
           )}
+          {lesson && (
+            <button type="button" onClick={onWholeBody} className={cn(btnSecondary, "w-full")}>
+              {t.wholeBody}
+            </button>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 function TopicsTab({ t, active, level, onOpen }: { t: Strings; active: string | null; level: Level; onOpen: (slug: string) => void }) {
   return (
     <>
-      <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto">
-        <h3 className={cn(sectionLabel, "px-4 pt-4 pb-2")}>{t.topicsTitle}</h3>
-        <ul className="border-t border-[#e2e7e5]">
-          {TOPICS.filter((topic) => topicFitsLevel(topic.slug, level)).map((topic) => {
-            const isActive = active === topic.slug;
-            return (
-              <li key={topic.slug} className="border-b border-[#e2e7e5]">
-                <button
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => onOpen(topic.slug)}
-                  className={cn(
-                    "relative flex min-h-14 w-full items-center gap-3 px-4 text-start transition-colors",
-                    isActive ? "bg-[#e6f3ef]" : "hover:bg-[#f5f7f6]",
-                  )}
-                >
-                  {isActive && <span className="absolute inset-y-0 start-0 w-0.5 bg-[#0f8a74]" />}
-                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: topic.color }} />
-                  <span className="min-w-0 flex-1 py-2">
-                    <span className="block text-sm font-medium text-[#111a18]">{topic.title}</span>
-                    <span className="block text-[13px] leading-5 text-[#66736f]">{topic.subtitle}</span>
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-[#97a29e]" />
-                </button>
-              </li>
-            );
-          })}
+      <div className={scrollArea}>
+        <h3 className={blockTitle}>{t.topicsTitle}</h3>
+        <ul className="flex flex-col gap-2">
+          {TOPICS.filter((topic) => topicFitsLevel(topic.slug, level)).map((topic) => (
+            <li key={topic.slug}>
+              <ActionCard
+                lead={<Tile color={topic.color}>{topic.title.charAt(0)}</Tile>}
+                title={topic.title}
+                body={topic.subtitle}
+                active={active === topic.slug}
+                chevron
+                onClick={() => onOpen(topic.slug)}
+              />
+            </li>
+          ))}
         </ul>
       </div>
-      <div className="shrink-0 border-t border-[#e2e7e5] p-4">
+      <div className={footer}>
         <Link href="/qr" className={cn(btnSecondary, "w-full")}>
           <QrCode className="size-4" />
           {t.printQr}
@@ -295,79 +339,61 @@ function LearnTab({
   /** Only for teachers and admins: whether the reproductive organs are shown. */
   sensitive?: { on: boolean; onToggle: () => void };
 }) {
-  const action = "flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-[#f5f7f6]";
+  const lead = (Icon: LucideIcon, on: boolean) => (
+    <Icon className={cn("size-[18px] shrink-0", on ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} aria-hidden />
+  );
   return (
-    <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto">
-      <h3 className={cn(sectionLabel, "px-4 pt-4 pb-2")}>საფეხური</h3>
-      <div className="px-4 pb-4">
-        <div className="grid grid-cols-3 overflow-hidden rounded-md border border-[#d5dcd9]">
-          {LEVELS.map((l, i) => (
-            <button
-              key={l.key}
-              type="button"
-              aria-pressed={level === l.key}
-              onClick={() => onLevel(l.key)}
-              className={cn(
-                "flex flex-col items-center px-1 py-1.5 transition-colors max-md:py-2.5",
-                i > 0 && "border-s border-[#d5dcd9]",
-                level === l.key ? "bg-[#e6f3ef] text-[#0c7563]" : "text-[#33413e] hover:bg-[#f5f7f6]",
-              )}
-            >
-              <span className={cn("text-[13px]", level === l.key && "font-semibold")}>{l.name}</span>
-              <span className="text-[11px] text-[#66736f]">{l.grades}</span>
-            </button>
-          ))}
-        </div>
+    <div className={scrollArea}>
+      <h3 className={blockTitle}>საფეხური</h3>
+      <SegmentedTabs<Level>
+        equal
+        label="საფეხური"
+        options={LEVELS.map((l) => ({ id: l.key, label: l.name, hint: l.grades }))}
+        value={level}
+        onChange={onLevel}
+      />
+
+      <h3 className={blockTitle}>ვარჯიში</h3>
+      <div className="flex flex-col gap-2">
+        <ActionCard
+          lead={
+            <Tile>
+              <ListChecks className="size-5" />
+            </Tile>
+          }
+          title="ქვიზი"
+          body="10 კითხვა: იპოვე მოდელზე და დაასახელე"
+          chevron
+          onClick={onQuiz}
+        />
+        <ActionCard
+          lead={
+            <Tile>
+              <GalleryVerticalEnd className="size-5" />
+            </Tile>
+          }
+          title="ბარათები"
+          body="ტერმინების დამახსოვრება გამეორებით"
+          chevron
+          onClick={onCards}
+        />
       </div>
 
-      <h3 className={cn(sectionLabel, "border-t border-[#e2e7e5] px-4 pt-4 pb-1")}>ვარჯიში</h3>
-      <button type="button" onClick={onQuiz} className={action}>
-        <ListChecks className="size-5 shrink-0 text-[#0f8a74]" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-[#111a18]">ქვიზი</span>
-          <span className="block text-[13px] leading-5 text-[#66736f]">10 კითხვა: იპოვე მოდელზე და დაასახელე</span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-[#97a29e]" />
-      </button>
-      <button type="button" onClick={onCards} className={action}>
-        <GalleryVerticalEnd className="size-5 shrink-0 text-[#0f8a74]" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-[#111a18]">ბარათები</span>
-          <span className="block text-[13px] leading-5 text-[#66736f]">ტერმინების დამახსოვრება გამეორებით</span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-[#97a29e]" />
-      </button>
-
-      <h3 className={cn(sectionLabel, "mt-2 border-t border-[#e2e7e5] px-4 pt-4 pb-1")}>მასწავლებლისთვის</h3>
-      <div className={cn(row, "hover:bg-[#f5f7f6]")}>
-        <Presentation className="size-4 text-[#33413e]" />
-        <button type="button" onClick={onBoard} className="py-1 text-start text-sm leading-5 text-[#111a18]">
-          დაფის რეჟიმი
-        </button>
-        <span />
-        <Switch checked={board} onChange={onBoard} label="დაფის რეჟიმი" />
-      </div>
-      <div className={cn(row, "hover:bg-[#f5f7f6]")}>
-        <PenLine className="size-4 text-[#33413e]" />
-        <button type="button" onClick={onDraw} className="py-1 text-start text-sm leading-5 text-[#111a18]">
-          ეკრანზე ხატვა
-        </button>
-        <span />
-        <Switch checked={drawing} onChange={onDraw} label="ეკრანზე ხატვა" />
-      </div>
-      {sensitive && (
-        <div className={cn(row, "hover:bg-[#f5f7f6]")}>
-          <EyeOff className="size-4 text-[#33413e]" />
-          <button type="button" onClick={sensitive.onToggle} className="py-1 text-start text-sm leading-5 text-[#111a18]">
-            რეპროდუქციული ორგანოები
-          </button>
-          <span />
-          <Switch checked={sensitive.on} onChange={sensitive.onToggle} label="რეპროდუქციული ორგანოების ჩვენება" />
-        </div>
-      )}
-      <p className="px-4 pt-1 pb-4 text-xs leading-5 text-[#66736f]">
-        დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.
-      </p>
+      <h3 className={blockTitle}>მასწავლებლისთვის</h3>
+      <ul className={group}>
+        <li>
+          <SwitchRow checked={board} onChange={onBoard} label="დაფის რეჟიმი" lead={lead(Presentation, board)} />
+        </li>
+        <li>
+          <SwitchRow checked={drawing} onChange={onDraw} label="ეკრანზე ხატვა" lead={lead(PenLine, drawing)} />
+        </li>
+        {sensitive && (
+          <li>
+            <SwitchRow checked={sensitive.on} onChange={sensitive.onToggle} label="რეპროდუქციული ორგანოები" lead={lead(EyeOff, sensitive.on)} />
+          </li>
+        )}
+      </ul>
+      <p className="mt-2 px-1 text-xs leading-5 text-[#66736f]">დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.</p>
     </div>
   );
 }
@@ -393,43 +419,47 @@ export function Sidebar({
   topics: Parameters<typeof TopicsTab>[0];
   learn: Parameters<typeof LearnTab>[0];
 }) {
-  const tabs: [SidebarTab, string][] = [
-    ["systems", t.systems],
-    ["animations", t.animations],
-    ["topics", t.topics],
-    ["learn", "სწავლა"],
+  const tabs: { key: SidebarTab; label: string; icon: LucideIcon }[] = [
+    { key: "systems", label: t.systems, icon: Layers },
+    { key: "animations", label: t.animations, icon: Activity },
+    { key: "topics", label: t.topics, icon: BookOpen },
+    { key: "learn", label: "სწავლა", icon: GraduationCap },
   ];
 
   return (
     <section
       aria-label={t.systems}
       className={cn(
-        "absolute start-0 top-14 bottom-0 z-20 flex w-[320px] flex-col border-e border-[#e2e7e5] bg-white max-[1100px]:w-[288px]",
+        "absolute start-0 top-14 bottom-0 z-20 flex w-[320px] flex-col border-e border-[#e2e7e5] bg-[#fbfcfc] max-[1100px]:w-[288px]",
         mobileOpen
-          ? "max-md:inset-x-0 max-md:top-auto max-md:bottom-16 max-md:h-[60dvh] max-md:w-auto max-md:rounded-t-xl max-md:border-e-0 max-md:border-t max-md:shadow-[0_-8px_24px_rgba(17,26,24,0.1)]"
+          ? "max-md:inset-x-0 max-md:top-auto max-md:bottom-16 max-md:h-[60dvh] max-md:w-auto max-md:rounded-t-2xl max-md:border-e-0 max-md:border-t max-md:shadow-[0_-8px_24px_rgba(17,26,24,0.1)]"
           : "max-md:hidden",
       )}
     >
-      <div className="flex shrink-0 items-stretch border-b border-[#e2e7e5]">
-        <div role="tablist" className="grid flex-1 grid-cols-4">
-          {tabs.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => onTab(key)}
-              className={cn(
-                "relative h-11 px-1 text-[13px] transition-colors",
-                tab === key ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]",
-              )}
-            >
-              {label}
-              {tab === key && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#0f8a74]" />}
-            </button>
-          ))}
+      <div className="flex shrink-0 items-stretch border-b border-[#e2e7e5] bg-white max-md:rounded-t-2xl">
+        <div role="tablist" aria-label={t.systems} className="grid flex-1 grid-cols-4">
+          {tabs.map(({ key, label, icon: Icon }) => {
+            const on = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => onTab(key)}
+                className={cn(
+                  "relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-xs transition-colors",
+                  on ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]",
+                )}
+              >
+                <Icon className={cn("size-[18px]", on ? "text-[#0f8a74]" : "text-[#97a29e]")} strokeWidth={2} aria-hidden />
+                {label}
+                {on && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#0f8a74]" />}
+              </button>
+            );
+          })}
         </div>
-        <button type="button" onClick={onCloseMobile} aria-label={t.close} className={cn(iconBtn, "m-0 hidden self-center max-md:inline-flex")}>
+        <button type="button" onClick={onCloseMobile} aria-label={t.close} className={cn(iconBtn, "me-1 hidden self-center max-md:inline-flex")}>
           <X className="size-5" />
         </button>
       </div>

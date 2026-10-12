@@ -2,8 +2,9 @@
 
 import { Layers, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PillButton } from "@/components/portal/controls";
 import type { Strings } from "./i18n";
-import { Slider, btnSecondary, iconBtn } from "./primitives";
+import { Slider, btnSecondary } from "./primitives";
 
 /** Bottom bar docked under the 3D view, spanning exactly from the sidebar to the rail (or open sheet). */
 export function BottomDock({
@@ -31,15 +32,15 @@ export function BottomDock({
         "max-md:inset-x-0 max-md:gap-2 max-md:px-2",
       )}
     >
-      <button
-        type="button"
+      {/* Phones: the only way into systems, animations, topics and learning, so it carries a label. */}
+      <PillButton
+        icon={Layers}
         onClick={onLayers}
         aria-expanded={layersOpen}
-        aria-label={t.systems}
-        className={cn(iconBtn, "hidden max-md:inline-flex", layersOpen && "bg-[#e6f3ef] text-[#0f8a74]")}
+        className={cn("min-h-11 px-3.5 md:hidden", layersOpen && "border-[#0f8a74]/40 bg-[#e6f3ef] text-[#0c7563] hover:bg-[#e6f3ef]")}
       >
-        <Layers className="size-5" strokeWidth={2} />
-      </button>
+        {t.systems}
+      </PillButton>
 
       <label htmlFor="explode-slider" className="shrink-0 text-[13px] font-medium text-[#111a18] max-md:hidden">
         {t.explode}

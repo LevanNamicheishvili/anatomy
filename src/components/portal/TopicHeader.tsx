@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Compass, Earth, Flame, Ship, SolarPanel, Waves, Swords, Atom, Baby, Bone, Droplets, Eye, Fish, FlaskConical, Layers, ShieldPlus, Shuffle, Sprout, Trees, Utensils, Wind, Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Clock, Compass, Earth, Flame, Ship, SolarPanel, Waves, Swords, Atom, Baby, Bone, Droplets, Eye, Fish, FlaskConical, Layers, ShieldPlus, Shuffle, Sprout, Trees, Utensils, Wind, Brain, ChevronRight, Dna, Heart, Droplet, Globe2, HeartPulse, Landmark, Map, Microscope, Mountain, PersonStanding, QrCode, Route, Sun, type LucideIcon } from "lucide-react";
 import type { SubjectIcon, TopicIcon } from "@/lib/subjects";
 import { Logo } from "./ui";
 
@@ -44,25 +44,37 @@ export const TOPIC_ICONS: Record<TopicIcon, LucideIcon> = {
 
 /**
  * The same top bar on every topic page: portal mark, the path (Subjects › Biology › Blood) and
- * room for the topic's own buttons on the right.
+ * room for the topic's own buttons on the right. On phones the mark and the path give way to a
+ * back arrow, so the topic name has the room.
  */
 export function TopicHeader({
   subject,
   topic,
   color,
   icon,
+  back = subject,
   children,
 }: {
   subject: { name: string; href: string };
   topic: string;
   color: string;
   icon: TopicIcon;
+  /** Where the phone back arrow leads; the subject hub unless the page sits deeper (a lesson in a topic). */
+  back?: { name: string; href: string };
   children?: React.ReactNode;
 }) {
   const Icon = TOPIC_ICONS[icon];
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-line bg-white px-3 sm:px-4 [view-transition-name:site-header]">
-      <Link href="/dashboard" aria-label="მთავარი" title="მთავარი" className="shrink-0 rounded-md">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-2 sm:gap-3 sm:px-4 [view-transition-name:site-header]">
+      <Link
+        href={back.href}
+        aria-label={`უკან: ${back.name}`}
+        title={back.name}
+        className="flex size-10 shrink-0 items-center justify-center rounded-lg text-copy transition-colors hover:bg-chip sm:hidden"
+      >
+        <ArrowLeft className="size-5" aria-hidden />
+      </Link>
+      <Link href="/dashboard" aria-label="მთავარი" title="მთავარი" className="shrink-0 rounded-md max-sm:hidden">
         <Logo className="size-8" />
       </Link>
       <nav aria-label="გზა" className="flex min-w-0 items-center gap-1.5 text-sm">
@@ -70,10 +82,10 @@ export function TopicHeader({
           საგნები
         </Link>
         <ChevronRight className="size-4 shrink-0 text-[#c3ccc9] max-sm:hidden" aria-hidden />
-        <Link href={subject.href} className="shrink-0 rounded py-2 text-mute hover:text-ink">
+        <Link href={subject.href} className="shrink-0 rounded py-2 text-mute hover:text-ink max-sm:hidden">
           {subject.name}
         </Link>
-        <ChevronRight className="size-4 shrink-0 text-[#c3ccc9]" aria-hidden />
+        <ChevronRight className="size-4 shrink-0 text-[#c3ccc9] max-sm:hidden" aria-hidden />
         <span aria-current="page" className="flex min-w-0 items-center gap-2 font-semibold">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-md text-white" style={{ backgroundColor: color }}>
             <Icon className="size-3.5" />

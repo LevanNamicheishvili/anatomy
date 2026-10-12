@@ -26,6 +26,8 @@ export interface SegmentOption<T extends string> {
   id: T;
   label: string;
   icon?: LucideIcon;
+  /** Smaller second line under the label, e.g. "VII–IX კლასი". */
+  hint?: string;
 }
 
 /** A row of mutually exclusive choices that wraps on narrow screens. */
@@ -37,9 +39,11 @@ export function SegmentedTabs<T extends string>({
   label,
   className,
   iconOnlyOnSmall = false,
+  equal = false,
 }: {
   options: SegmentOption<T>[];
-  value: T;
+  /** `null` when none of the options matches the current state. */
+  value: T | null;
   onChange: (id: T) => void;
   color?: string;
   /** Accessible name of the group. */
@@ -47,9 +51,11 @@ export function SegmentedTabs<T extends string>({
   className?: string;
   /** Hide the text below `sm`, keeping icons (only for options that have one). */
   iconOnlyOnSmall?: boolean;
+  /** One row of equal columns whose labels may wrap, for narrow side panels. */
+  equal?: boolean;
 }) {
   return (
-    <div role="group" aria-label={label} className={cn("flex flex-wrap gap-1 rounded-xl bg-chip p-1", className)}>
+    <div role="group" aria-label={label} className={cn("gap-1 rounded-xl bg-chip p-1", equal ? "grid auto-cols-[minmax(0,1fr)] grid-flow-col" : "flex flex-wrap", className)}>
       {options.map((o) => {
         const on = o.id === value;
         const Icon = o.icon;
@@ -60,13 +66,22 @@ export function SegmentedTabs<T extends string>({
             aria-pressed={on}
             onClick={() => onChange(o.id)}
             className={cn(
-              "inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold whitespace-nowrap transition-colors",
+              "inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors",
+              // Equal columns: icon above the label and tighter type, so long Georgian words fit a 280px panel.
+              equal ? "min-w-0 flex-col gap-0.5 px-1 py-1.5 text-center text-[13px] leading-5 [overflow-wrap:anywhere]" : "px-3 whitespace-nowrap",
               on ? "text-white shadow-sm" : "text-copy hover:bg-white/80",
             )}
             style={on ? { backgroundColor: color } : undefined}
           >
             {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
-            <span className={cn(iconOnlyOnSmall && Icon && "max-sm:sr-only")}>{o.label}</span>
+            {o.hint ? (
+              <span className="flex flex-col items-center">
+                {o.label}
+                <span className={cn("text-[11px] leading-4 font-medium", on ? "text-white/85" : "text-mute")}>{o.hint}</span>
+              </span>
+            ) : (
+              <span className={cn(iconOnlyOnSmall && Icon && "max-sm:sr-only")}>{o.label}</span>
+            )}
           </button>
         );
       })}

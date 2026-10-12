@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { HeartPulse, Info, LayoutGrid, MessageCircleQuestionMark, QrCode, Search, Wind } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Panel } from "@/components/portal/controls";
 import type { BreathPhase, HeartPhase } from "./anatomy-viewer";
 import type { Strings } from "./i18n";
-import { btnGhost, btnPrimary, floating, iconBtn } from "./primitives";
+import { btnGhost, btnPrimary, iconBtn } from "./primitives";
 
 export function AppBar({
   t,
@@ -100,7 +101,11 @@ export function PhaseIndicator({
 }) {
   if (!heart && !breath) return null;
   return (
-    <div role="status" aria-live="polite" className={cn(floating, "pointer-events-none flex h-10 items-center gap-3 px-3 text-[13px]")}>
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none flex h-11 items-center gap-3 rounded-full border border-[#d5dcd9] bg-white/95 px-4 text-[13px] shadow-panel"
+    >
       {heart && (
         <span className="flex items-center gap-2">
           <HeartPulse
@@ -145,7 +150,7 @@ export function LoadingCard({
 }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
-    <div role="status" className={cn(floating, "pointer-events-auto w-[320px] max-w-[calc(100%-32px)] p-5")}>
+    <Panel role="status" className="pointer-events-auto w-[320px] max-w-[calc(100%-32px)] bg-white p-5">
       {error ? (
         <div className="flex flex-col items-start gap-4">
           <p className="text-sm font-medium text-[#111a18]">{t.loadError}</p>
@@ -155,13 +160,16 @@ export function LoadingCard({
         </div>
       ) : (
         <>
-          <p className="text-sm font-semibold text-[#111a18]">{t.loading}</p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm font-semibold text-[#111a18]">{t.loading}</p>
+            <span className="text-[13px] font-semibold text-[#0f8a74] tabular-nums">{pct}%</span>
+          </div>
           <p className="mt-1 text-[13px] text-[#66736f] tabular-nums">{t.loadingDetail(done, total)}</p>
-          <div className="mt-4 h-1 overflow-hidden rounded-full bg-[#e2e7e5]">
-            <i className="block h-full bg-[#0f8a74] transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#e2e7e5]">
+            <i className="block h-full rounded-full bg-[#0f8a74] transition-[width] duration-300" style={{ width: `${pct}%` }} />
           </div>
         </>
       )}
-    </div>
+    </Panel>
   );
 }

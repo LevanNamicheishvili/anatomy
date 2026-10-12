@@ -23,7 +23,7 @@ export const LAYOUT = {
 } as const;
 
 /** Floating surfaces (popovers, menus, the loading card). Docked panels use plain borders instead. */
-export const floating = "rounded-lg border border-[#d5dcd9] bg-white shadow-[0_12px_32px_rgba(17,26,24,0.12)]";
+export const floating = "rounded-xl border border-[#d5dcd9] bg-white shadow-[0_12px_32px_rgba(17,26,24,0.12)]";
 
 export const sectionLabel = "text-xs font-semibold text-[#66736f]";
 
@@ -36,34 +36,60 @@ export const btnGhost = cn(btnBase, "text-[#33413e] hover:bg-[#eef2f0]");
 export const iconBtn =
   "inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-[#33413e] transition-colors outline-none hover:bg-[#eef2f0] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 max-md:size-11";
 
-export function Switch({
+/** The look of a switch on its own; the control is the row around it (see `SwitchRow`). */
+export function SwitchTrack({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors duration-150",
+        checked ? "bg-[#0f8a74]" : "bg-[#cdd5d2]",
+      )}
+    >
+      <span
+        className={cn(
+          "block size-5 rounded-full bg-white shadow-[0_1px_2px_rgba(17,26,24,0.25)] transition-transform duration-150",
+          checked ? "translate-x-4 rtl:-translate-x-4" : "translate-x-0",
+        )}
+      />
+    </span>
+  );
+}
+
+/**
+ * A whole row that is one switch: a leading icon or colour dot, the name, an optional count and the
+ * switch. The full row is the touch target, so it works with a finger on a smart board.
+ */
+export function SwitchRow({
   checked,
   onChange,
   label,
+  lead,
+  meta,
+  className,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label: string;
+  lead?: React.ReactNode;
+  meta?: string;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/40",
-        "after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']",
-        checked ? "bg-[#0f8a74]" : "bg-[#cdd5d2]",
+        "flex min-h-12 w-full items-center gap-3 px-3 text-start transition-colors outline-none hover:bg-[#f5f7f6] focus-visible:bg-[#f5f7f6] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 focus-visible:ring-inset",
+        className,
       )}
     >
-      <span
-        className={cn(
-          "pointer-events-none block size-4 rounded-full bg-white shadow-[0_1px_2px_rgba(17,26,24,0.25)] transition-transform duration-150",
-          checked ? "translate-x-4 rtl:-translate-x-4" : "translate-x-0",
-        )}
-      />
+      {lead}
+      <span className={cn("min-w-0 flex-1 py-2 text-sm leading-5", checked ? "font-medium text-[#111a18]" : "text-[#33413e]")}>{label}</span>
+      {meta && <span className="text-xs text-[#97a29e] tabular-nums">{meta}</span>}
+      <SwitchTrack checked={checked} />
     </button>
   );
 }

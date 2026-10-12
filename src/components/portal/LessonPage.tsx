@@ -44,8 +44,14 @@ export function LessonPage({
 
   return (
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink">
-      <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic={topic?.title ?? title} color={COLOR} icon={topic?.icon ?? "body"} />
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <TopicHeader
+        subject={{ name: "ბიოლოგია", href: "/biology" }}
+        back={topic ? { name: topic.title, href: back } : undefined}
+        topic={topic?.title ?? title}
+        color={COLOR}
+        icon={topic?.icon ?? "body"}
+      />
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-10">
         <Reading>
           <LessonHeader
             path={[{ label: "ბიოლოგია", href: "/biology" }, ...(topic ? [{ label: topic.title, href: back }] : []), { label: title }]}

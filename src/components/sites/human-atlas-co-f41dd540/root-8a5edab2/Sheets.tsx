@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, EyeOff, Microscope, Scan, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Chip } from "@/components/portal/ui";
 import { SYSTEM_BY_KEY, titleCase, type SystemKey } from "./atlas-data";
 import type { Strings } from "./i18n";
-import { btnPrimary, btnSecondary, floating, iconBtn, sectionLabel } from "./primitives";
+import { SwitchRow, btnPrimary, btnSecondary, floating, iconBtn, sectionLabel } from "./primitives";
 import { searchIndex, type SearchEntry } from "./search-index";
 import { structureInfo } from "./structure-info";
 
@@ -19,7 +20,7 @@ export interface Selection {
 /** Right-hand panel docked between the 3D view and the camera rail (bottom sheet on phones). */
 export const dockedSheet = cn(
   "absolute end-14 top-14 bottom-0 z-20 flex w-[400px] flex-col border-s border-[#e2e7e5] bg-white max-[1100px]:w-[340px]",
-  "max-md:inset-x-0 max-md:top-auto max-md:z-30 max-md:w-auto max-md:rounded-t-xl max-md:border-s-0 max-md:border-t max-md:shadow-[0_-8px_24px_rgba(17,26,24,0.12)]",
+  "max-md:inset-x-0 max-md:top-auto max-md:z-30 max-md:w-auto max-md:rounded-t-2xl max-md:border-s-0 max-md:border-t max-md:shadow-[0_-8px_24px_rgba(17,26,24,0.12)]",
 );
 
 export function SheetHeader({
@@ -40,20 +41,20 @@ export function SheetHeader({
   titleRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
-    <div className="flex shrink-0 items-start gap-3 border-b border-[#e2e7e5] py-4 ps-6 pe-3">
+    <div className="flex shrink-0 items-start gap-3 border-b border-[#e2e7e5] py-4 ps-6 pe-3 max-md:ps-5">
       <div className="min-w-0 flex-1 pt-1">
-        <div className="flex items-center gap-2">
-          <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
-          <span className={sectionLabel}>{label}</span>
-        </div>
+        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#eef2f0] py-0.5 ps-2 pe-2.5 text-xs font-semibold text-[#33413e]">
+          <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
+          <span className="truncate">{label}</span>
+        </span>
         <h2
           ref={titleRef}
           tabIndex={-1}
-          className="mt-1.5 text-xl leading-7 font-semibold text-[#111a18] outline-none [overflow-wrap:anywhere]"
+          className="mt-2 text-xl leading-7 font-semibold text-[#111a18] outline-none [overflow-wrap:anywhere]"
         >
           {title}
         </h2>
-        {subtitle && <p className="mt-0.5 text-sm text-[#66736f]">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-sm leading-6 text-[#66736f]">{subtitle}</p>}
       </div>
       <button type="button" onClick={onClose} aria-label={closeLabel} className={iconBtn}>
         <X className="size-5" />
@@ -95,7 +96,7 @@ export function DetailSheet({
         titleRef={titleRef}
       />
 
-      <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5 max-md:px-5">
         {info ? (
           <p className="text-[15px] leading-7 text-[#33413e]">{info}</p>
         ) : (
@@ -104,12 +105,20 @@ export function DetailSheet({
             <p className="mt-2 text-xs leading-5 text-[#97a29e]">{t.systemOverview}</p>
           </>
         )}
-        <dl className="mt-5 border-y border-[#e2e7e5] text-sm">
-          <div className="flex h-10 items-center justify-between">
-            <dt className="text-[#66736f]">{t.selectedPieces}</dt>
-            <dd className="font-medium text-[#111a18] tabular-nums">{selection.ids.length}</dd>
-          </div>
-        </dl>
+        <p className="mt-4">
+          <Chip>
+            {t.selectedPieces}: <span className="tabular-nums">{selection.ids.length}</span>
+          </Chip>
+        </p>
+        {/* Isolating is a state you switch on and off, so it reads as a switch rather than two different buttons. */}
+        <div className="mt-5 overflow-hidden rounded-xl border border-[#e2e7e5]">
+          <SwitchRow
+            checked={isolated}
+            onChange={onIsolate}
+            label={t.isolate}
+            lead={<Scan className={cn("size-[18px] shrink-0", isolated ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} aria-hidden />}
+          />
+        </div>
       </div>
 
       <div className="flex shrink-0 flex-col gap-2 border-t border-[#e2e7e5] p-4">
@@ -117,16 +126,14 @@ export function DetailSheet({
           <Microscope className="size-4" strokeWidth={2} />
           {t.deepDive}
         </button>
-        <button type="button" onClick={onIsolate} className={cn(btnSecondary, "w-full")}>
-          <Scan className="size-4" strokeWidth={2} />
-          {isolated ? t.showSurrounding : t.isolate}
-        </button>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onHide} className={btnSecondary}>
-            <EyeOff className="size-4" strokeWidth={2} />
+          {/* Long Georgian labels may take two lines in the narrow sheet instead of being cut off. */}
+          <button type="button" onClick={onHide} className={cn(btnSecondary, "h-auto min-h-10 py-2 leading-5 whitespace-normal max-md:min-h-11")}>
+            <EyeOff className="size-4 shrink-0" strokeWidth={2} />
             {t.hideStructure}
           </button>
-          <button type="button" onClick={onClear} className={btnSecondary}>
+          <button type="button" onClick={onClear} className={cn(btnSecondary, "h-auto min-h-10 py-2 leading-5 whitespace-normal max-md:min-h-11")}>
+            <X className="size-4 shrink-0" strokeWidth={2} />
             {t.clearSelection}
           </button>
         </div>
@@ -177,7 +184,7 @@ export function SearchPanel({
               else return;
               e.preventDefault();
             }}
-            className="h-10 w-full rounded-md border border-[#d5dcd9] bg-white ps-9 pe-3 text-[15px] text-[#111a18] outline-none placeholder:text-[#97a29e] focus:border-[#0f8a74] focus:ring-2 focus:ring-[#0f8a74]/20 max-md:h-11 max-md:text-base"
+            className="h-11 w-full rounded-lg border border-[#d5dcd9] bg-white ps-9 pe-3 text-[15px] text-[#111a18] outline-none placeholder:text-[#97a29e] focus:border-[#0f8a74] focus:ring-2 focus:ring-[#0f8a74]/20 max-md:text-base"
           />
         </div>
         <button type="button" onClick={onClose} aria-label={t.close} className={iconBtn}>
@@ -194,12 +201,12 @@ export function SearchPanel({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => onChoose(r)}
                   className={cn(
-                    "flex min-h-10 w-full items-center gap-3 px-4 text-start text-sm text-[#111a18] [overflow-wrap:anywhere]",
+                    "flex min-h-11 w-full items-center gap-3 px-4 text-start text-sm text-[#111a18] [overflow-wrap:anywhere]",
                     i === active && "bg-[#eef2f0]",
                   )}
                 >
                   <span className="flex-1 py-2">{titleCase(r.name)}</span>
-                  <span className="text-xs text-[#97a29e] tabular-nums">{r.ids.length}</span>
+                  <span className="rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{r.ids.length}</span>
                 </button>
               </li>
             ))
@@ -250,7 +257,7 @@ export function AskPanel({
             setMissed(false);
           }}
           placeholder={t.askPlaceholder}
-          className="h-9 min-w-0 flex-1 rounded-md border border-[#d5dcd9] bg-white px-3 text-sm text-[#111a18] outline-none placeholder:text-[#97a29e] focus:border-[#0f8a74] focus:ring-2 focus:ring-[#0f8a74]/20 max-md:h-11 max-md:text-base"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-[#d5dcd9] bg-white px-3 text-sm text-[#111a18] outline-none placeholder:text-[#97a29e] focus:border-[#0f8a74] focus:ring-2 focus:ring-[#0f8a74]/20 max-md:h-11 max-md:text-base"
         />
         <button type="submit" disabled={!question.trim()} className={btnPrimary}>
           {t.ask}

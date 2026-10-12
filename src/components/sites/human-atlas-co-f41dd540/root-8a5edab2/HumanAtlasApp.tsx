@@ -378,8 +378,10 @@ export function HumanAtlasApp({
 
   const toggleIsolate = () => {
     if (!selection) return;
+    // Same condition as the switch in the detail sheet: a lesson's own isolation doesn't count as "on".
+    const on = !!isolated && !lesson;
     setLesson(null);
-    if (isolated) {
+    if (on) {
       setIsolated(null);
     } else {
       setIsolated(selection.ids);

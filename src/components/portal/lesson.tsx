@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lightbulb, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs, Chip } from "./ui";
 
@@ -35,13 +35,14 @@ export function LessonHeader({
 }) {
   return (
     <header>
-      <Breadcrumbs items={path} />
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* On phones the sticky top bar already shows the path and a back arrow. */}
+      <Breadcrumbs items={path} className="max-sm:hidden" />
+      <div className="flex flex-wrap items-center gap-2 sm:mt-4">
         {eyebrow && <span className="text-sm font-semibold text-mute">{eyebrow}</span>}
         {grades && <Chip>{grades} კლასი</Chip>}
       </div>
-      <h1 className="mt-2 text-3xl leading-tight text-ink sm:text-4xl">{title}</h1>
-      {intro && <p className="mt-3 max-w-3xl text-lg leading-8 text-copy">{intro}</p>}
+      <h1 className="mt-2 text-[1.75rem] leading-tight text-ink sm:text-4xl">{title}</h1>
+      {intro && <p className="mt-3 max-w-3xl text-base leading-7 text-copy sm:text-lg sm:leading-8">{intro}</p>}
     </header>
   );
 }
@@ -80,12 +81,13 @@ export function TermsList({ terms }: { terms: { term: string; meaning: string }[
   );
 }
 
-export function RememberCallout({ items }: { items: string[] }) {
+/** Yellow box with a short list; "remember" on lessons, also used for the atlas's interesting facts. */
+export function RememberCallout({ items, title = "დაიმახსოვრე", icon: Icon = Lightbulb }: { items: string[]; title?: string; icon?: LucideIcon }) {
   return (
     <section className="mt-5 rounded-xl border border-[#f2d98a] bg-[#fdf8e6] p-5 sm:p-6">
       <h2 className="flex items-center gap-2 text-lg text-ink">
-        <Lightbulb className="size-5 text-[#c08a00]" aria-hidden />
-        დაიმახსოვრე
+        <Icon className="size-5 text-[#c08a00]" aria-hidden />
+        {title}
       </h2>
       <ul className="mt-3 flex list-disc flex-col gap-2 ps-5 text-[15px] leading-7 text-copy marker:text-[#c08a00]">
         {items.map((r) => (
@@ -123,7 +125,8 @@ export function LessonNav({ prev, next, back, color }: { prev: LessonLink | null
           <span className="hidden sm:block" />
         )}
         {next ? (
-          <Link href={next.href} className={cn(cardBase, "justify-end border-transparent text-end text-white")} style={{ backgroundColor: color }}>
+          // On phones the cards stack, so the next lesson comes first.
+          <Link href={next.href} className={cn(cardBase, "justify-end border-transparent text-end text-white max-sm:order-first")} style={{ backgroundColor: color }}>
             <span className="min-w-0">
               <span className="block text-xs text-white/85">შემდეგი{next.n ? ` · გაკვეთილი ${next.n}` : ""}</span>
               <span className="block truncate font-semibold">{next.title}</span>
