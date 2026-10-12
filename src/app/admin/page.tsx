@@ -48,28 +48,28 @@ export default async function AdminPage() {
           title="ახალი განაცხადები"
           description={pending?.length ? `${pending.length} განაცხადი ელოდება განხილვას` : "ახალი განაცხადი არ არის"}
         />
-        {pending.length === 0 && <p className="px-5 py-8 text-center text-sm text-[#66736f]">ახალი განაცხადი არ არის.</p>}
-        <ul className="divide-y divide-[#e2e7e5]">
+        {pending.length === 0 && <p className="px-5 py-8 text-center text-sm text-mute">ახალი განაცხადი არ არის.</p>}
+        <ul className="divide-y divide-line">
           {(pending ?? []).map((r) => (
             <li key={r.id} className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,1fr)_auto]">
               <div className="min-w-0">
                 <p className="text-base font-semibold">{r.school_name}</p>
-                <p className="mt-0.5 text-sm text-[#66736f]">
+                <p className="mt-0.5 text-sm text-mute">
                   {r.city}
                   {r.address ? ` · ${r.address}` : ""} · {date(r.created_at)}
                 </p>
                 <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-                  <dt className="text-[#66736f]">საკონტაქტო პირი</dt>
+                  <dt className="text-mute">საკონტაქტო პირი</dt>
                   <dd>
                     {r.contact_name}, {r.contact_position}
                   </dd>
-                  <dt className="text-[#66736f]">კონტაქტი</dt>
+                  <dt className="text-mute">კონტაქტი</dt>
                   <dd>
                     {r.email} · {r.phone}
                   </dd>
                   {r.message && (
                     <>
-                      <dt className="text-[#66736f]">შენიშვნა</dt>
+                      <dt className="text-mute">შენიშვნა</dt>
                       <dd className="whitespace-pre-line">{r.message}</dd>
                     </>
                   )}
@@ -94,7 +94,7 @@ export default async function AdminPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-[#e2e7e5] text-left text-xs font-semibold text-[#66736f]">
+              <tr className="border-b border-line text-left text-xs font-semibold text-mute">
                 <th className="px-5 py-3">სკოლა</th>
                 <th className="px-5 py-3">მასწავლებლები</th>
                 <th className="px-5 py-3">მოსწავლეები</th>
@@ -102,14 +102,14 @@ export default async function AdminPage() {
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e7e5]">
+            <tbody className="divide-y divide-line">
               {(schools ?? []).map((s) => {
                 const c = counts.get(s.id) ?? { teachers: 0, students: 0 };
                 return (
                   <tr key={s.id} className="align-top">
                     <td className="px-5 py-4">
                       <p className="font-semibold">{s.name}</p>
-                      <p className="text-[#66736f]">
+                      <p className="text-mute">
                         {s.city} · {date(s.created_at)}
                       </p>
                     </td>

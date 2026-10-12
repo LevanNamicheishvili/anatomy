@@ -11,12 +11,12 @@ import { cn } from "@/lib/utils";
  * `color` is the subject's accent (biology #0f8a74, geography #2f6fb0, history #a0662b).
  */
 
-const DEFAULT_COLOR = "#0f8a74";
+const DEFAULT_COLOR = "var(--color-brand)";
 
 /** Floating card over (or beside) a scene: light, slightly translucent, never wider than needed. */
 export function Panel({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-xl border border-line/80 bg-white/90 p-3 shadow-panel backdrop-blur-sm", className)} {...rest}>
+    <div className={cn("rounded-2xl border border-line bg-card/95 p-4 shadow-panel backdrop-blur-sm", className)} {...rest}>
       {children}
     </div>
   );
@@ -68,8 +68,8 @@ export function SegmentedTabs<T extends string>({
             className={cn(
               "inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors",
               // Equal columns: icon above the label and tighter type, so long Georgian words fit a 280px panel.
-              equal ? "min-w-0 flex-col gap-0.5 px-1 py-1.5 text-center text-[13px] leading-5 [overflow-wrap:anywhere]" : "px-3 whitespace-nowrap",
-              on ? "text-white shadow-sm" : "text-copy hover:bg-white/80",
+              equal ? "min-w-0 flex-col gap-0.5 px-1 py-1.5 text-center text-[13px] leading-5 [overflow-wrap:anywhere]" : "min-w-0 px-3 py-2 whitespace-normal [overflow-wrap:anywhere]",
+              on ? "text-white shadow-sm" : "text-copy hover:bg-card/80",
             )}
             style={on ? { backgroundColor: color } : undefined}
           >
@@ -119,8 +119,8 @@ export function PillButton({
       aria-pressed={toggle ? pressed : undefined}
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-45",
-        pressed ? "border-transparent text-white shadow-sm" : "border-line-strong bg-white/95 text-ink hover:bg-subtle",
+        "inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm leading-6 font-semibold whitespace-normal transition-colors disabled:pointer-events-none disabled:opacity-45",
+        pressed ? "border-transparent text-white shadow-sm" : "border-line-strong bg-card/95 text-ink hover:bg-subtle",
         !children && "w-10 px-0",
         className,
       )}
@@ -239,7 +239,7 @@ export function SectionPager({ index, count, onGo }: { index: number; count: num
         type="button"
         disabled={index === 0}
         onClick={() => go(index - 1)}
-        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-white text-sm font-semibold transition-colors hover:bg-subtle disabled:opacity-40"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-card text-sm font-semibold transition-colors hover:bg-subtle disabled:opacity-40"
       >
         <ChevronLeft className="size-4" aria-hidden />
         წინა
@@ -248,7 +248,7 @@ export function SectionPager({ index, count, onGo }: { index: number; count: num
         type="button"
         disabled={index === count - 1}
         onClick={() => go(index + 1)}
-        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-ink text-sm font-semibold text-white transition-colors hover:bg-[#2a3532] disabled:opacity-40"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-deep text-sm font-semibold text-white transition-colors hover:bg-deep-hover disabled:opacity-40"
       >
         შემდეგი
         <ChevronRight className="size-4" aria-hidden />

@@ -2,24 +2,20 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/*
- * Portal design tokens (same palette as the atlas) live in globals.css as Tailwind theme colors:
- * ink · copy (#33413e) · mute (#66736f) · faint (#97a29e) · line · line-strong · page · subtle · chip · brand · danger.
- * The class strings below are the shared building blocks: buttons, inputs, cards, chips, headings.
- */
+/* Shared semantic controls use the light/dark science palette in globals.css. */
 
 const button =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm leading-6 font-semibold whitespace-normal text-center transition-[background-color,border-color,color,transform] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
 export const btn = {
-  primary: cn(button, "bg-[#0f8a74] text-white hover:bg-[#0c7563]"),
-  dark: cn(button, "bg-[#111a18] text-white hover:bg-[#2a3532]"),
-  secondary: cn(button, "border border-[#d5dcd9] bg-white text-[#111a18] hover:bg-[#f5f7f6]"),
-  danger: cn(button, "border border-[#f1c7c3] bg-white text-[#b42318] hover:bg-[#fdf3f2]"),
-  ghost: cn(button, "font-medium text-[#33413e] hover:bg-[#eef2f0]"),
+  primary: cn(button, "bg-brand text-white hover:bg-brand/90"),
+  dark: cn(button, "bg-deep text-white hover:bg-deep-hover"),
+  secondary: cn(button, "border border-line-strong bg-card text-ink hover:bg-subtle"),
+  danger: cn(button, "border border-danger/30 bg-card text-danger hover:bg-danger-soft"),
+  ghost: cn(button, "font-medium text-copy hover:bg-chip"),
 };
 
 export const input =
-  "h-11 w-full rounded-lg border border-line-strong bg-white px-3 text-base text-ink outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-subtle disabled:text-mute aria-[invalid=true]:border-danger";
+  "min-h-12 w-full rounded-xl border border-line-strong bg-card px-3 text-base text-ink outline-none transition-colors placeholder:text-faint hover:border-brand/40 focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-subtle disabled:text-mute aria-[invalid=true]:border-danger";
 
 export function Field({
   label,
@@ -40,7 +36,7 @@ export function Field({
 }
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <section className={cn("rounded-xl border border-line bg-white shadow-card", className)}>{children}</section>;
+  return <section className={cn("rounded-2xl border border-line bg-card shadow-card", className)}>{children}</section>;
 }
 
 /**
@@ -48,7 +44,7 @@ export function Card({ className, children }: { className?: string; children: Re
  * keyboard ring. Put it on a `Link` and lay the content out inside.
  */
 export const cardLink =
-  "group relative flex flex-col overflow-hidden rounded-xl border border-line-strong bg-white shadow-card outline-none transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-faint hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2";
+  "group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-card outline-none transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2";
 
 /**
  * Class string for the box around a lesson's 3D canvas. Phones: a fixed share of the small viewport
@@ -67,12 +63,12 @@ export const sceneFrame = "h-[60svh] min-h-72 w-full sm:h-auto sm:min-h-0 sm:asp
  */
 export const explorerPage = "flex min-h-dvh flex-col bg-page font-sans text-ink lg:h-dvh";
 export const explorerGrid = "grid flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(18rem,58svh)_auto] lg:min-h-0 lg:grid-rows-1";
-export const explorerText = "atlas-scroll border-s border-line bg-white px-6 py-6 max-lg:border-s-0 max-lg:border-t lg:min-h-0 lg:overflow-y-auto";
+export const explorerText = "atlas-scroll border-s border-line bg-card px-6 py-6 max-lg:border-s-0 max-lg:border-t lg:min-h-0 lg:overflow-y-auto";
 
 /** Small rounded label: grade, count, status. */
 export function Chip({ tone = "neutral", className, children }: { tone?: "neutral" | "accent" | "dark"; className?: string; children: React.ReactNode }) {
-  const tones = { neutral: "bg-chip text-copy", accent: "bg-brand-soft text-brand-strong", dark: "bg-ink text-white" };
-  return <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", tones[tone], className)}>{children}</span>;
+  const tones = { neutral: "bg-chip text-copy", accent: "bg-brand-soft text-brand-strong", dark: "bg-deep text-white" };
+  return <span className={cn("inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-xs leading-5 font-semibold whitespace-normal", tones[tone], className)}>{children}</span>;
 }
 
 /** Small kicker above a title: "გეოგრაფია · თემა 3". */
@@ -83,9 +79,9 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 /** Section title used between blocks on hubs and dashboards. */
 export function SectionTitle({ children, hint, className }: { children: React.ReactNode; hint?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-baseline justify-between gap-3", className)}>
-      <h2 className="min-w-0 text-lg text-ink">{children}</h2>
-      {hint && <span className="shrink-0 text-sm text-mute">{hint}</span>}
+    <div className={cn("flex flex-wrap items-baseline justify-between gap-3", className)}>
+      <h2 className="min-w-0 text-xl text-ink">{children}</h2>
+      {hint && <span className="text-sm text-mute">{hint}</span>}
     </div>
   );
 }
@@ -96,7 +92,7 @@ export function Breadcrumbs({ items, className }: { items: { label: string; href
     <nav aria-label="გზა" className={cn("flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-mute", className)}>
       {items.map((item, i) => (
         <span key={item.label} className="flex items-center gap-1.5">
-          {i > 0 && <ChevronRight className="size-4 shrink-0 text-[#c3ccc9]" aria-hidden />}
+          {i > 0 && <ChevronRight className="size-4 shrink-0 text-line-strong" aria-hidden />}
           {item.href ? (
             <Link href={item.href} className="rounded py-1 hover:text-ink">
               {item.label}
@@ -114,10 +110,10 @@ export function Breadcrumbs({ items, className }: { items: { label: string; href
 
 export function CardHeader({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e2e7e5] px-5 py-4">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
       <div className="min-w-0">
-        <h2 className="text-base font-semibold text-[#111a18]">{title}</h2>
-        {description && <p className="mt-0.5 text-sm text-[#66736f]">{description}</p>}
+        <h2 className="text-base font-semibold text-ink">{title}</h2>
+        {description && <p className="mt-0.5 text-sm text-mute">{description}</p>}
       </div>
       {action}
     </div>
@@ -126,19 +122,19 @@ export function CardHeader({ title, description, action }: { title: string; desc
 
 export function Badge({ tone = "neutral", children }: { tone?: "neutral" | "accent" | "warning" | "danger"; children: React.ReactNode }) {
   const tones = {
-    neutral: "bg-[#eef2f0] text-[#33413e]",
-    accent: "bg-[#e6f3ef] text-[#0c7563]",
-    warning: "bg-[#fdf6e3] text-[#8a6100]",
-    danger: "bg-[#fdf3f2] text-[#b42318]",
+    neutral: "bg-chip text-copy",
+    accent: "bg-brand-soft text-brand-strong",
+    warning: "bg-warning-soft text-warning",
+    danger: "bg-danger-soft text-danger",
   };
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", tones[tone])}>{children}</span>;
 }
 
 export function Alert({ tone = "danger", children }: { tone?: "danger" | "success" | "info"; children: React.ReactNode }) {
   const tones = {
-    danger: "border-[#f1c7c3] bg-[#fdf3f2] text-[#912018]",
-    success: "border-[#b9e2d5] bg-[#e6f3ef] text-[#0c5c4d]",
-    info: "border-[#d5dcd9] bg-[#f5f7f6] text-[#33413e]",
+    danger: "border-danger/30 bg-danger-soft text-danger",
+    success: "border-brand/30 bg-brand-soft text-brand-strong",
+    info: "border-line-strong bg-subtle text-copy",
   };
   return (
     <div role={tone === "danger" ? "alert" : "status"} className={cn("rounded-lg border px-3.5 py-3 text-sm leading-6", tones[tone])}>
@@ -162,7 +158,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
 /** The portal's mark: an open book on ink. */
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md bg-[#111a18] text-white", className)}>
+    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl bg-deep text-white shadow-card", className)}>
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M12 7v14" />
         <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />

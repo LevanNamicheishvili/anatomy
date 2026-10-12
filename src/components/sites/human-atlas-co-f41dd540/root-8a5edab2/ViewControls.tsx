@@ -13,7 +13,7 @@ const VIEWS: { key: ViewName; glyph: string }[] = [
   { key: "back", glyph: "უ" },
 ];
 
-const divider = "my-1 h-px w-6 bg-[#e2e7e5] max-md:mx-1 max-md:my-0 max-md:h-6 max-md:w-px";
+const divider = "my-1 h-px w-6 bg-line max-md:mx-1 max-md:my-0 max-md:h-6 max-md:w-px";
 
 /** Right-hand rail docked to the viewport edge (a toolbar under the header on phones). */
 export function ViewControls({
@@ -37,7 +37,7 @@ export function ViewControls({
     <nav
       aria-label="კამერა"
       className={cn(
-        "absolute end-0 top-14 bottom-0 z-20 flex w-14 flex-col items-center gap-1 border-s border-[#e2e7e5] bg-white py-2",
+        "absolute end-0 top-14 bottom-0 z-20 flex w-14 flex-col items-center gap-1 border-s border-line bg-subtle py-2",
         "max-md:inset-x-0 max-md:bottom-auto max-md:h-[52px] max-md:w-auto max-md:flex-row max-md:justify-center max-md:border-s-0 max-md:border-b max-md:py-0",
       )}
     >
@@ -52,7 +52,7 @@ export function ViewControls({
           className={cn(
             iconBtn,
             "text-[13px] font-semibold",
-            active === v.key && "bg-[#0f8a74] text-white hover:bg-[#0f8a74]",
+            active === v.key && "bg-brand text-white hover:bg-brand",
           )}
         >
           {v.glyph}
@@ -72,7 +72,7 @@ export function ViewControls({
         aria-label="წარწერები"
         aria-pressed={labelsOn}
         onClick={onLabels}
-        className={cn(iconBtn, labelsOn && "bg-[#0f8a74] text-white hover:bg-[#0f8a74]")}
+        className={cn(iconBtn, labelsOn && "bg-brand text-white hover:bg-brand")}
       >
         <Tags className="size-[18px]" strokeWidth={2} />
       </button>

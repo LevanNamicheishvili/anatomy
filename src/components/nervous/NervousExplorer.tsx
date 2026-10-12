@@ -43,16 +43,16 @@ export function NervousExplorer({ initial }: { initial?: string }) {
   return (
     <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="ნერვული სისტემა" color={ACCENT} icon="nerve">
-        <Link href="/topic/brain" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/topic/brain" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           თავის ტვინი ატლასში
         </Link>
-        <Link href="/biology/journeys?j=impulse" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/biology/journeys?j=impulse" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           იმპულსის გზა კუნთამდე
         </Link>
       </TopicHeader>
 
       <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
-        <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
+        <nav aria-label="თემის ნაწილები" className="border-e border-line bg-card max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
               <li key={s.view}>
@@ -62,11 +62,11 @@ export function NervousExplorer({ initial }: { initial?: string }) {
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
                     "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    i === index ? "bg-[#f1ebf8] font-semibold text-[#4f3478]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    i === index ? "bg-[#f1ebf8] font-semibold text-[#4f3478]" : "text-copy hover:bg-subtle",
                   )}
                 >
                   <span
-                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-[#eef2f0] text-[#66736f]")}
+                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-chip text-mute")}
                     style={i === index ? { backgroundColor: ACCENT } : undefined}
                   >
                     {i + 1}
@@ -83,7 +83,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {step && (
             <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3 max-sm:top-[88px] max-sm:justify-end">
-              <span className="rounded-full bg-[#111a18]/85 px-4 py-1.5 text-sm font-semibold text-white max-sm:text-xs">{step}</span>
+              <span className="rounded-full bg-deep/85 px-4 py-1.5 text-sm font-semibold text-white max-sm:text-xs">{step}</span>
             </div>
           )}
           <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
@@ -91,7 +91,7 @@ export function NervousExplorer({ initial }: { initial?: string }) {
               type="button"
               onClick={() => setPlaying(!playing)}
               aria-label={playing ? "პაუზა" : "გაგრძელება"}
-              className="flex h-11 items-center gap-2 rounded-lg bg-[#111a18] px-5 text-sm font-semibold text-white shadow-panel"
+              className="flex h-11 items-center gap-2 rounded-lg bg-deep px-5 text-sm font-semibold text-white shadow-panel"
             >
               {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
               {playing ? "პაუზა" : "გაგრძელება"}
@@ -104,18 +104,18 @@ export function NervousExplorer({ initial }: { initial?: string }) {
             {index + 1} / {SECTIONS.length}
           </p>
           <h2 className="mt-1 text-2xl">{section.title}</h2>
-          <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
+          <p className="mt-1 text-sm text-mute">{section.subtitle}</p>
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
-              <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
+              <div key={f.label} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{f.label}</dt>
                 <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
           </dl>
           <div className="mt-5 flex flex-col gap-4">
             {section.paragraphs.map((p) => (
-              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-[#33413e]">
+              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-copy">
                 {p}
               </p>
             ))}

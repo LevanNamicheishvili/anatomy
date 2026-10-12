@@ -112,11 +112,11 @@ export function EchoSounder() {
               <Radio className="size-4" />
               ბგერითი სიგნალი
             </button>
-            <span className="text-sm text-[#33413e] tabular-nums">
+            <span className="text-sm text-copy tabular-nums">
               წამზომი: <b>{anim === null ? "0,00" : f2(t * anim)} წმ</b>
             </span>
           </div>
-          <p className="min-h-14 rounded-lg bg-[#f5f7f6] px-3 py-2.5 text-[15px] leading-7 text-[#33413e] tabular-nums">
+          <p className="min-h-14 rounded-lg bg-subtle px-3 py-2.5 text-[15px] leading-7 text-copy tabular-nums">
             {done ? (
               <>
                 ექო დაბრუნდა <b>{f2(t)} წმ</b>-ში. სიღრმე = 1500 მ/წმ × {f2(t)} წმ ÷ 2 = <b>{nf(depth)} მ</b>
@@ -126,12 +126,12 @@ export function EchoSounder() {
             )}
           </p>
           {part && (
-            <p className="text-[15px] leading-7 text-[#33413e]">
+            <p className="text-[15px] leading-7 text-copy">
               <b>{part.name}:</b> {part.note}
             </p>
           )}
         </div>
-        <ul className="flex flex-col gap-1.5 rounded-lg border border-[#e2e7e5] p-3 text-[14px] leading-6 text-[#33413e]">
+        <ul className="flex flex-col gap-1.5 rounded-lg border border-line p-3 text-[14px] leading-6 text-copy">
           <li>მსოფლიო ოკეანის საშუალო სიღრმე — <b>~3700 მ</b></li>
           <li>მარიანის ღარი (წყნარი ოკ.) — <b>~10 994 მ</b>, ყველაზე ღრმა ადგილი დედამიწაზე</li>
           <li>შავი ზღვა — <b>2212 მ</b>-მდე; ~150–200 მ-ის ქვემოთ წყალში გოგირდწყალბადია და თითქმის არაფერი ცოცხლობს</li>

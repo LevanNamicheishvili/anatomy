@@ -43,9 +43,9 @@ export default async function SchoolPage() {
       <div className="min-w-0">
         <p className="font-medium">
           {m.full_name}
-          {m.id === user.id && <span className="ms-2 text-xs font-normal text-[#66736f]">(შენ)</span>}
+          {m.id === user.id && <span className="ms-2 text-xs font-normal text-mute">(შენ)</span>}
         </p>
-        <p className="flex flex-wrap items-center gap-2 text-sm text-[#66736f]">
+        <p className="flex flex-wrap items-center gap-2 text-sm text-mute">
           <span className="font-mono">{m.username}</span>
           {m.role === "school_admin" && <Badge>ადმინისტრატორი</Badge>}
           {m.must_change_password && <Badge tone="warning">ჯერ არ შესულა</Badge>}
@@ -74,17 +74,17 @@ export default async function SchoolPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <Card className="h-fit">
           <CardHeader title="მასწავლებლები" description={`${teachers.length}`} />
-          {teachers.length === 0 && <p className="px-5 py-6 text-sm text-[#66736f]">მასწავლებელი ჯერ არ არის დამატებული.</p>}
-          <ul className="divide-y divide-[#e2e7e5]">{teachers.map(row)}</ul>
+          {teachers.length === 0 && <p className="px-5 py-6 text-sm text-mute">მასწავლებელი ჯერ არ არის დამატებული.</p>}
+          <ul className="divide-y divide-line">{teachers.map(row)}</ul>
         </Card>
         <Card className="h-fit">
           <CardHeader title="მოსწავლეები" description={classes.size ? `${classes.size} კლასი` : "ჯერ არ არის დამატებული"} />
           {[...classes.keys()].sort(byClass).map((label) => (
             <div key={label}>
-              <h3 className="border-y border-[#e2e7e5] bg-[#f5f7f6] px-5 py-2 text-[13px] font-semibold text-[#66736f]">
+              <h3 className="border-y border-line bg-subtle px-5 py-2 text-[13px] font-semibold text-mute">
                 {label} კლასი · {classes.get(label)?.length}
               </h3>
-              <ul className="divide-y divide-[#e2e7e5]">{classes.get(label)?.map(row)}</ul>
+              <ul className="divide-y divide-line">{classes.get(label)?.map(row)}</ul>
             </div>
           ))}
         </Card>

@@ -9,7 +9,7 @@ import type { GeoVisualKind } from "@/lib/geography-lessons";
 function Loading() {
   return (
     <div className={`mt-6 flex animate-pulse items-center justify-center rounded-2xl border border-line-strong bg-chip ${sceneFrame}`} role="status" aria-label="იტვირთება">
-      <span className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">იტვირთება…</span>
+      <span className="rounded-full bg-card/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">იტვირთება…</span>
     </div>
   );
 }

@@ -12,12 +12,12 @@ import type { Topic } from "./topics";
 /** Green box with the topic's health advice. */
 function HealthNote({ title, text, large = false }: { title: string; text: string; large?: boolean }) {
   return (
-    <section className="mt-4 rounded-xl border border-[#b9e2d5] bg-[#e6f3ef] p-4">
-      <h3 className={cn("flex items-center gap-2 font-semibold text-[#0c5c4d]", large ? "text-lg" : "text-sm")}>
+    <section className="mt-4 rounded-2xl border border-brand/30 bg-brand-soft p-4">
+      <h3 className={cn("flex items-center gap-2 font-semibold text-brand-strong", large ? "text-lg" : "text-sm")}>
         <ShieldPlus className={large ? "size-5" : "size-4"} strokeWidth={2} aria-hidden />
         {title}
       </h3>
-      <p className={cn("mt-1.5 text-[#33413e]", large ? "text-xl leading-9" : "text-[15px] leading-7")}>{text}</p>
+      <p className={cn("mt-1.5 text-copy", large ? "text-xl leading-9" : "text-[15px] leading-7")}>{text}</p>
     </section>
   );
 }
@@ -48,13 +48,13 @@ export function TopicSheet({
   if (steps) {
     // Sections, then the facts, then the health note — each its own slide.
     const slides = [
-      ...topic.sections.map((s) => ({ heading: s.heading, body: <p className="text-xl leading-9 text-[#33413e]">{s.body}</p> })),
+      ...topic.sections.map((s) => ({ heading: s.heading, body: <p className="text-xl leading-9 text-copy">{s.body}</p> })),
       {
         heading: t.topicFacts,
         body: (
           <ul className="flex flex-col gap-4">
             {topic.facts.map((f) => (
-              <li key={f} className="grid grid-cols-[8px_1fr] gap-3 text-xl leading-9 text-[#33413e]">
+              <li key={f} className="grid grid-cols-[8px_1fr] gap-3 text-xl leading-9 text-copy">
                 <span className="mt-[15px] size-2 rounded-full" style={{ backgroundColor: topic.color }} />
                 {f}
               </li>
@@ -73,7 +73,7 @@ export function TopicSheet({
           <div className="flex items-center gap-3">
             <div className="flex flex-1 gap-1" aria-hidden>
               {slides.map((s, k) => (
-                <span key={s.heading} className={cn("h-1.5 flex-1 rounded-full transition-colors", k <= i ? "bg-[#0f8a74]" : "bg-[#e2e7e5]")} />
+                <span key={s.heading} className={cn("h-1.5 flex-1 rounded-full transition-colors", k <= i ? "bg-brand" : "bg-line")} />
               ))}
             </div>
             <p className={cn(sectionLabel, "tabular-nums")}>
@@ -81,10 +81,10 @@ export function TopicSheet({
             </p>
           </div>
           {/* The health slide carries its own heading inside the green box. */}
-          {!last && <h3 className="mt-5 text-2xl font-semibold text-[#111a18] [overflow-wrap:anywhere]">{slides[i].heading}</h3>}
+          {!last && <h3 className="mt-5 text-2xl font-semibold text-ink [overflow-wrap:anywhere]">{slides[i].heading}</h3>}
           <div className={last ? "mt-1" : "mt-4"}>{slides[i].body}</div>
         </div>
-        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-[#e2e7e5] p-4">
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-line p-4">
           <button type="button" disabled={i === 0} onClick={() => setStep(i - 1)} className={cn(btnSecondary, "h-12 text-base")}>
             <ChevronLeft className="size-5" />
             წინა
@@ -105,9 +105,9 @@ export function TopicSheet({
         type="button"
         onClick={() => setCollapsed((c) => !c)}
         aria-expanded={!collapsed}
-        className="hidden min-h-11 shrink-0 flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold text-[#0f8a74] max-md:flex"
+        className="hidden min-h-11 shrink-0 flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold text-brand max-md:flex"
       >
-        <span className="h-1 w-10 rounded-full bg-[#d5dcd9]" aria-hidden />
+        <span className="h-1 w-10 rounded-full bg-line-strong" aria-hidden />
         <span className="flex items-center gap-1">
           {collapsed ? t.expand : t.collapse}
           {collapsed ? <ChevronUp className="size-4" aria-hidden /> : <ChevronDown className="size-4" aria-hidden />}
@@ -118,8 +118,8 @@ export function TopicSheet({
       <div className={cn("atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5 max-md:px-5", collapsed && "max-md:hidden")}>
         {topic.sections.map((s, i) => (
           <section key={s.heading} className={cn(i > 0 && "mt-6")}>
-            <h3 className="text-base font-semibold text-[#111a18]">{s.heading}</h3>
-            <p className="mt-1.5 text-[15px] leading-7 text-[#33413e]">{s.body}</p>
+            <h3 className="text-base font-semibold text-ink">{s.heading}</h3>
+            <p className="mt-1.5 text-[15px] leading-7 text-copy">{s.body}</p>
           </section>
         ))}
 
@@ -127,7 +127,7 @@ export function TopicSheet({
         <HealthNote title={t.topicHealth} text={topic.health} />
       </div>
 
-      <div className={cn("shrink-0 border-t border-[#e2e7e5] p-4", collapsed && "max-md:hidden")}>
+      <div className={cn("shrink-0 border-t border-line p-4", collapsed && "max-md:hidden")}>
         <button type="button" onClick={onDeepDive} className={cn(btnPrimary, "w-full")}>
           <Microscope className="size-4" strokeWidth={2} />
           {t.deepDive}

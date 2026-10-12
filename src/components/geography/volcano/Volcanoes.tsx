@@ -72,7 +72,7 @@ const LABELS: { at: VolcanoAnchor; text: string; steps: VolcanoStep[]; tone?: "h
   { at: "tsunamiR", text: "ცუნამი →", steps: ["tsunami"], tone: "blue" },
   { at: "coast", text: "სანაპირო", steps: ["tsunami"] },
 ];
-const TONES = { hot: "bg-[#ff6a00] text-white", dark: "bg-[#111a18]/80 text-white", red: "bg-[#d61f1f] text-white", blue: "bg-[#1d5f99] text-white" };
+const TONES = { hot: "bg-[#ff6a00] text-white", dark: "bg-deep/80 text-white", red: "bg-[#d61f1f] text-white", blue: "bg-[#1d5f99] text-white" };
 
 const G = 9.81;
 /** 12345 → "12 345" (Georgian style: a space between thousands). */
@@ -119,12 +119,12 @@ export function Volcanoes() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#a9d4f0]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ფილების საზღვრის ჭრილი: ვულკანი, მიწისძვრა, ცუნამი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
-            <span key={l.at} data-at={l.at} data-on={l.steps.includes(step) ? "1" : "0"} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-white/90 text-[#111a18]")}>
+            <span key={l.at} data-at={l.at} data-on={l.steps.includes(step) ? "1" : "0"} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-card/90 text-ink")}>
               {l.text}
             </span>
           ))}
@@ -145,30 +145,30 @@ export function Volcanoes() {
         <div>
           <h2 className="text-lg">{info.name.slice(3)}: რა ხდება</h2>
           {info.how.map((h) => (
-            <p key={h.slice(0, 24)} className="mt-2 text-[15px] leading-7 text-[#33413e]">
+            <p key={h.slice(0, 24)} className="mt-2 text-[15px] leading-7 text-copy">
               {h}
             </p>
           ))}
         </div>
         <div className="flex flex-col gap-3">
           {step === "tsunami" || step === "quake" ? (
-            <div className="rounded-lg border border-[#e2e7e5] p-3">
+            <div className="rounded-lg border border-line p-3">
               <p className="text-sm font-semibold">ცუნამის სიჩქარე: v = √(g · h)</p>
               <LabeledSlider className="mt-2" label="ოკეანის სიღრმე" value={depth} display={`${nf(depth)} მ`} min={10} max={7000} step={10} onChange={setDepth} color="#1d5f99" />
               <LabeledSlider className="mt-1" label="მანძილი ნაპირამდე" value={distance} display={`${nf(distance)} კმ`} min={10} max={3000} step={10} onChange={setDistance} color="#1d5f99" />
-              <p className="mt-2 text-[14px] leading-6 text-[#33413e] tabular-nums">
+              <p className="mt-2 text-[14px] leading-6 text-copy tabular-nums">
                 v = √(9,8 × {nf(depth)}) ≈ <b>{nf(v)} მ/წმ</b> ≈ <b>{nf(kmh)} კმ/სთ</b>
                 <br />
                 ნაპირამდე მივა ~<b>{minutes < 90 ? `${nf(minutes)} წუთში` : `${(minutes / 60).toFixed(1).replace(".", ",")} საათში`}</b>
               </p>
             </div>
           ) : (
-            <div className="rounded-lg border border-[#e2e7e5] p-3 text-[14px] leading-6 text-[#33413e]">
+            <div className="rounded-lg border border-line p-3 text-[14px] leading-6 text-copy">
               <p className="text-sm font-semibold">ვულკანის ნაწილები</p>
               <p className="mt-1">მაგმის კერა → ყელი (არხი) → კრატერი → კონუსი. ამოფრქვევის პროდუქტები: ლავა, ფერფლი, ვულკანური ბომბები, აირები.</p>
             </div>
           )}
-          <div className="rounded-lg bg-[#fdf3e8] p-3 text-[14px] leading-6 text-[#33413e]">
+          <div className="rounded-lg bg-[#fdf3e8] p-3 text-[14px] leading-6 text-copy">
             <p className="text-sm font-semibold text-[#9a3412]">საქართველოში</p>
             <p className="mt-1">
               <b>ყაზბეგი</b> (5047 მ) — „მძინარე“ ვულკანი; ბოლოს დაახლოებით 3 ათასი წლის წინ ამოიფრქვა. <b>ჯავახეთის ზეგანი</b> ლავის ნაკადებითაა აგებული; <b>აბული</b> (3301 მ) და <b>სამსარი</b> ვულკანური მთებია. საქართველო სეისმურად აქტიურია: <b>რაჭის მიწისძვრა</b> (1991, მაგნიტუდა 7,0) ერთ-ერთი უძლიერესი იყო კავკასიაში.
@@ -176,7 +176,7 @@ export function Volcanoes() {
           </div>
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">ჭრილი სქემატურია: სიმაღლე გადიდებულია, ფენების სისქე — მიახლოებითი. ცუნამის სიჩქარის ფორმულა მართებულია, როცა ტალღის სიგრძე სიღრმეზე ბევრად დიდია.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">ჭრილი სქემატურია: სიმაღლე გადიდებულია, ფენების სისქე — მიახლოებითი. ცუნამის სიჩქარის ფორმულა მართებულია, როცა ტალღის სიგრძე სიღრმეზე ბევრად დიდია.</p>
     </section>
   );
 }

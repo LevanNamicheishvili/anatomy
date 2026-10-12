@@ -65,7 +65,7 @@ export function TopicHeader({
 }) {
   const Icon = TOPIC_ICONS[icon];
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-2 sm:gap-3 sm:px-4 [view-transition-name:site-header]">
+    <header className="sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-2 border-b border-line bg-card/95 px-3 py-2 shadow-card backdrop-blur-xl sm:gap-3 sm:px-5 [view-transition-name:site-header]">
       <Link
         href={back.href}
         aria-label={`უკან: ${back.name}`}
@@ -77,20 +77,20 @@ export function TopicHeader({
       <Link href="/dashboard" aria-label="მთავარი" title="მთავარი" className="shrink-0 rounded-md max-sm:hidden">
         <Logo className="size-8" />
       </Link>
-      <nav aria-label="გზა" className="flex min-w-0 items-center gap-1.5 text-sm">
+      <nav aria-label="გზა" className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-sm">
         <Link href="/dashboard" className="shrink-0 rounded py-2 text-mute hover:text-ink max-sm:hidden">
           საგნები
         </Link>
-        <ChevronRight className="size-4 shrink-0 text-[#c3ccc9] max-sm:hidden" aria-hidden />
+        <ChevronRight className="size-4 shrink-0 text-line-strong max-sm:hidden" aria-hidden />
         <Link href={subject.href} className="shrink-0 rounded py-2 text-mute hover:text-ink max-sm:hidden">
           {subject.name}
         </Link>
-        <ChevronRight className="size-4 shrink-0 text-[#c3ccc9] max-sm:hidden" aria-hidden />
+        <ChevronRight className="size-4 shrink-0 text-line-strong max-sm:hidden" aria-hidden />
         <span aria-current="page" className="flex min-w-0 items-center gap-2 font-semibold">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-md text-white" style={{ backgroundColor: color }}>
             <Icon className="size-3.5" />
           </span>
-          <span className="truncate">{topic}</span>
+          <span className="min-w-0 break-words leading-6">{topic}</span>
         </span>
       </nav>
       <div className="ms-auto flex items-center gap-1">{children}</div>

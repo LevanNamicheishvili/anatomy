@@ -41,7 +41,7 @@ function BaseLetter({ base }: { base: string }) {
 function Legend({ rna }: { rna?: boolean }) {
   const list: (Base | "U")[] = rna ? ["A", "U", "G", "C"] : BASES;
   return (
-    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+    <section className="mt-6 rounded-xl border border-line p-4">
       <h3 className="text-sm font-semibold">ფერები</h3>
       <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
         {list.map((b) => (
@@ -68,20 +68,20 @@ function GlobinStrip({ mutant }: { mutant: boolean }) {
   const codons = mutant ? GLOBIN.mutant : GLOBIN.normal;
   const amino = mutant ? GLOBIN.aminoMutant : GLOBIN.aminoNormal;
   return (
-    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+    <section className="mt-6 rounded-xl border border-line p-4">
       <h3 className="text-sm font-semibold">ჰემოგლობინის გენი · კოდონები 1–7</h3>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {codons.map((c, i) => {
           const changed = i === 5;
           return (
-            <div key={i} className={cn("rounded-md border px-2 py-1.5 text-center", changed ? (mutant ? "border-[#d9434f] bg-[#fdf3f2]" : "border-[#2f9e62] bg-[#e6f3ef]") : "border-[#e2e7e5]")}>
+            <div key={i} className={cn("rounded-md border px-2 py-1.5 text-center", changed ? (mutant ? "border-[#d9434f] bg-danger-soft" : "border-[#2f9e62] bg-brand-soft") : "border-line")}>
               <div className="font-mono text-sm font-semibold tracking-wider">{c}</div>
-              <div className={cn("mt-0.5 text-xs", changed ? "font-semibold" : "text-[#66736f]")}>{amino[i]}</div>
+              <div className={cn("mt-0.5 text-xs", changed ? "font-semibold" : "text-mute")}>{amino[i]}</div>
             </div>
           );
         })}
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#33413e]">
+      <p className="mt-3 text-sm leading-6 text-copy">
         {mutant
           ? "მე-6 კოდონში A შეიცვალა T-თი: GAG → GTG. გლუტამინის მჟავის (Glu) ნაცვლად ვალინი (Val) ჩაერთვება."
           : "ნორმალურ გენში მე-6 კოდონი GAG-ია და გლუტამინის მჟავას (Glu) შიფრავს. გადართე „მუტაცია“."}
@@ -92,22 +92,22 @@ function GlobinStrip({ mutant }: { mutant: boolean }) {
 
 function CodonTable() {
   return (
-    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+    <section className="mt-6 rounded-xl border border-line p-4">
       <h3 className="text-sm font-semibold">ანიმაციის ი-რნმ</h3>
       <table className="mt-3 w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-[#66736f]">
+          <tr className="text-left text-xs text-mute">
             <th className="pb-2 font-medium">კოდონი</th>
             <th className="pb-2 font-medium">ამინომჟავა</th>
           </tr>
         </thead>
         <tbody>
           {MRNA.map((c) => (
-            <tr key={c} className="border-t border-[#eef2f0]">
+            <tr key={c} className="border-t border-chip">
               <td className="py-1.5 font-mono font-semibold tracking-wider">{c}</td>
               <td className="py-1.5">
                 {CODONS[c].name}
-                {CODONS[c].short !== "—" && <span className="text-[#66736f]"> · {CODONS[c].short}</span>}
+                {CODONS[c].short !== "—" && <span className="text-mute"> · {CODONS[c].short}</span>}
               </td>
             </tr>
           ))}
@@ -158,13 +158,13 @@ export function DnaExplorer({ initial }: { initial?: string }) {
   return (
     <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="დნმ და მემკვიდრეობა" color={ACCENT} icon="dna">
-        <Link href="/biology/blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/biology/blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           სისხლი
         </Link>
       </TopicHeader>
 
       <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
-        <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
+        <nav aria-label="თემის ნაწილები" className="border-e border-line bg-card max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
               <li key={s.view}>
@@ -174,11 +174,11 @@ export function DnaExplorer({ initial }: { initial?: string }) {
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
                     "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    i === index ? "bg-[#eaeefb] font-semibold text-[#26408f]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    i === index ? "bg-[#eaeefb] font-semibold text-[#26408f]" : "text-copy hover:bg-subtle",
                   )}
                 >
                   <span
-                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-[#eef2f0] text-[#66736f]")}
+                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-chip text-mute")}
                     style={i === index ? { backgroundColor: ACCENT } : undefined}
                   >
                     {i + 1}
@@ -195,7 +195,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
           <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
           {!ready && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium shadow-sm">მოლეკულა იტვირთება…</span>
+              <span className="rounded-lg bg-card px-4 py-2.5 text-sm font-medium shadow-sm">მოლეკულა იტვირთება…</span>
             </div>
           )}
           {section.view === "helix" && <Toolbar>{modeChips}</Toolbar>}
@@ -225,7 +225,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
               <Chip active={opts.mutant} onClick={() => set({ mutant: true })}>
                 მუტაცია
               </Chip>
-              <span className="mx-1 w-px shrink-0 bg-[#e2e7e5]" />
+              <span className="mx-1 w-px shrink-0 bg-line" />
               {modeChips}
             </Toolbar>
           )}
@@ -236,41 +236,41 @@ export function DnaExplorer({ initial }: { initial?: string }) {
             {index + 1} / {SECTIONS.length}
           </p>
           <h2 className="mt-1 text-2xl">{section.title}</h2>
-          <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
+          <p className="mt-1 text-sm text-mute">{section.subtitle}</p>
 
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
-              <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
+              <div key={f.label} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{f.label}</dt>
                 <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
           </dl>
 
           {section.view === "nucleotide" && (
-            <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+            <section className="mt-6 rounded-xl border border-line p-4">
               <div className="flex items-center gap-2">
                 <BaseLetter base={opts.base} />
                 <h3 className="text-base font-semibold">{BASE_NAMES[opts.base]}</h3>
-                <span className="ms-auto text-xs text-[#66736f]">{BASE_INFO[opts.base].kind}</span>
+                <span className="ms-auto text-xs text-mute">{BASE_INFO[opts.base].kind}</span>
               </div>
-              <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{BASE_INFO[opts.base].text}</p>
+              <p className="mt-2 text-[15px] leading-7 text-copy">{BASE_INFO[opts.base].text}</p>
             </section>
           )}
           {section.view === "chromosome" && (
-            <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+            <section className="mt-6 rounded-xl border border-line p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-base font-semibold">{STEP_NAMES[opts.step]}</h3>
-                <span className="text-xs text-[#66736f]">სისქე {STEP_INFO[opts.step].size}</span>
+                <span className="text-xs text-mute">სისქე {STEP_INFO[opts.step].size}</span>
               </div>
-              <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{STEP_INFO[opts.step].text}</p>
+              <p className="mt-2 text-[15px] leading-7 text-copy">{STEP_INFO[opts.step].text}</p>
             </section>
           )}
           {section.view === "mutation" && <GlobinStrip mutant={opts.mutant} />}
 
           <div className="mt-5 flex flex-col gap-4">
             {section.paragraphs.map((p) => (
-              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-[#33413e]">
+              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-copy">
                 {p}
               </p>
             ))}
@@ -282,7 +282,7 @@ export function DnaExplorer({ initial }: { initial?: string }) {
 
           <SectionPager index={index} count={SECTIONS.length} onGo={setIndex} />
 
-          <p className="mt-8 text-xs leading-5 text-[#97a29e]">
+          <p className="mt-8 text-xs leading-5 text-faint">
             მოლეკულები: RCSB Protein Data Bank — 1BNA (Drew et al., 1981) და 1KX5 (Davey et al., 2002), CC0. პროცესები ნაჩვენებია გამარტივებული მოდელით.
           </p>
         </article>

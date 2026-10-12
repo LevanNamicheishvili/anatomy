@@ -53,7 +53,7 @@ export default async function Page({ params }: { params: Params }) {
 
       <section className="mt-10">
         <SectionTitle hint={`${topic.lessons.length} გაკვეთილი`}>გაკვეთილები</SectionTitle>
-        <ol className="mt-3 overflow-hidden rounded-xl border border-line-strong bg-white shadow-card">
+        <ol className="mt-3 overflow-hidden rounded-xl border border-line-strong bg-card shadow-card">
           {topic.lessons.map((l, i) => (
             <li key={l.href}>
               <Link

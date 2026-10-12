@@ -38,7 +38,7 @@ function Compatibility() {
   const result = compatible(donor, donorRh, recipient, recipientRh);
   const side = (title: string, g: BloodGroup, setG: (g: BloodGroup) => void, rh: boolean, setRh: (v: boolean) => void) => (
     <div>
-      <p className="text-xs font-semibold text-[#66736f]">{title}</p>
+      <p className="text-xs font-semibold text-mute">{title}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {GROUPS.map((x) => (
           <Chip key={x} active={g === x} onClick={() => setG(x)}>
@@ -57,7 +57,7 @@ function Compatibility() {
     </div>
   );
   return (
-    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+    <section className="mt-6 rounded-xl border border-line p-4">
       <h3 className="text-sm font-semibold">გადასხმის შემოწმება</h3>
       <div className="mt-3 grid gap-4">
         {side("დონორი", donor, setDonor, donorRh, setDonorRh)}
@@ -66,7 +66,7 @@ function Compatibility() {
       <div
         className={cn(
           "mt-4 flex items-start gap-2 rounded-md px-3 py-2.5 text-sm leading-6",
-          result.ok ? "bg-[#e6f3ef] text-[#0c5c4d]" : "bg-[#fdf3f2] text-[#912018]",
+          result.ok ? "bg-brand-soft text-brand-strong" : "bg-danger-soft text-danger",
         )}
       >
         {result.ok ? <Check className="mt-1 size-4 shrink-0" /> : <X className="mt-1 size-4 shrink-0" />}
@@ -112,14 +112,14 @@ export function BloodExplorer({ initial }: { initial?: string }) {
   return (
     <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="სისხლი" color="#b8232b" icon="blood">
-        <Link href="/anatomy" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/anatomy" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           ადამიანის ატლასი
         </Link>
       </TopicHeader>
 
       <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
         {/* Sections, in reading order. */}
-        <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
+        <nav aria-label="თემის ნაწილები" className="border-e border-line bg-card max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
               <li key={s.view}>
@@ -129,13 +129,13 @@ export function BloodExplorer({ initial }: { initial?: string }) {
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
                     "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-copy hover:bg-subtle",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                      i === index ? "bg-[#b8232b] text-white" : "bg-[#eef2f0] text-[#66736f]",
+                      i === index ? "bg-[#b8232b] text-white" : "bg-chip text-mute",
                     )}
                   >
                     {i + 1}
@@ -166,7 +166,7 @@ export function BloodExplorer({ initial }: { initial?: string }) {
                   {GROUP_NAMES[g]}
                 </Chip>
               ))}
-              <span className="mx-1 w-px shrink-0 bg-[#e2e7e5]" />
+              <span className="mx-1 w-px shrink-0 bg-line" />
               <Chip active={rh} onClick={() => setRh(!rh)}>
                 {rh ? "Rh+" : "Rh−"}
               </Chip>
@@ -179,12 +179,12 @@ export function BloodExplorer({ initial }: { initial?: string }) {
             {index + 1} / {SECTIONS.length}
           </p>
           <h2 className="mt-1 text-2xl">{section.title}</h2>
-          <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
+          <p className="mt-1 text-sm text-mute">{section.subtitle}</p>
 
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
-              <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
+              <div key={f.label} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{f.label}</dt>
                 <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
@@ -192,21 +192,21 @@ export function BloodExplorer({ initial }: { initial?: string }) {
 
           <div className="mt-5 flex flex-col gap-4">
             {section.paragraphs.map((p) => (
-              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-[#33413e]">
+              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-copy">
                 {p}
               </p>
             ))}
           </div>
 
           {section.view === "wbc" && (
-            <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+            <section className="mt-6 rounded-xl border border-line p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-base font-semibold">{WBC[wbc].name}</h3>
-                <span className="text-xs text-[#66736f]">
+                <span className="text-xs text-mute">
                   {WBC[wbc].group} · {WBC[wbc].share}
                 </span>
               </div>
-              <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{WBC[wbc].text}</p>
+              <p className="mt-2 text-[15px] leading-7 text-copy">{WBC[wbc].text}</p>
             </section>
           )}
           {section.view === "groups" && <Compatibility />}

@@ -1286,15 +1286,15 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
       <div>
         <div className="relative aspect-[440/260] w-full overflow-hidden rounded-lg bg-[linear-gradient(#cfe6f7,#eef6fb)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" role="img" aria-label={`ფერდობის მოდელი: ${info.name}`} />
-          <span className="pointer-events-none absolute bottom-2 left-3 rounded bg-white/85 px-1.5 py-0.5 text-xs font-bold text-[#111a18]">{input.angle}°</span>
-          {failed && <p className="absolute inset-0 flex items-center justify-center text-sm text-[#33413e]">3D ვერ ჩაიტვირთა</p>}
+          <span className="pointer-events-none absolute bottom-2 left-3 rounded bg-card/85 px-1.5 py-0.5 text-xs font-bold text-ink">{input.angle}°</span>
+          {failed && <p className="absolute inset-0 flex items-center justify-center text-sm text-copy">3D ვერ ჩაიტვირთა</p>}
           {finished && (
-            <p className={cn("pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded bg-white/85 px-3 py-1 text-[15px] font-bold", res.triggered ? "text-[#b91c1c]" : "text-[#15803d]")}>
+            <p className={cn("pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded bg-card/85 px-3 py-1 text-[15px] font-bold", res.triggered ? "text-[#b91c1c]" : "text-[#15803d]")}>
               {res.triggered ? `${info.name}!` : "ფერდობი გაუძლო"}
             </p>
           )}
         </div>
-        <p className={cn("mt-2 min-h-12 text-[15px] leading-6", finished ? (res.triggered ? "text-[#b91c1c]" : "text-[#15803d]") : "text-[#33413e]")}>
+        <p className={cn("mt-2 min-h-12 text-[15px] leading-6", finished ? (res.triggered ? "text-[#b91c1c]" : "text-[#15803d]") : "text-copy")}>
           {finished ? res.reason : "შეცვალე ფერდობის დახრილობა, წვიმა ან თოვლი, ტყე — და დააჭირე „შემოწმება“."}
         </p>
       </div>
@@ -1314,7 +1314,7 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
             color={info.color}
           />
         )}
-        <button type="button" onClick={() => set({ forest: !input.forest })} aria-pressed={input.forest} className={cn("flex h-10 items-center justify-center gap-2 rounded-lg border text-sm font-semibold", input.forest ? "border-[#2f6b34] bg-[#e8f3e9] text-[#2f6b34]" : "border-[#d5dcd9] text-[#33413e]")}>
+        <button type="button" onClick={() => set({ forest: !input.forest })} aria-pressed={input.forest} className={cn("flex h-10 items-center justify-center gap-2 rounded-lg border text-sm font-semibold", input.forest ? "border-[#2f6b34] bg-[#e8f3e9] text-[#2f6b34]" : "border-line-strong text-copy")}>
           <Trees className="size-4" />
           {input.forest ? "ფერდობზე ტყეა" : "ტყე გაჩეხილია"}
         </button>
@@ -1323,14 +1323,14 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
             <Play className="size-4" />
             შემოწმება
           </button>
-          <button type="button" onClick={() => set(PRESETS[kind])} title="თავიდან" aria-label="თავიდან" className="flex size-10 items-center justify-center rounded-lg border border-[#d5dcd9]">
+          <button type="button" onClick={() => set(PRESETS[kind])} title="თავიდან" aria-label="თავიდან" className="flex size-10 items-center justify-center rounded-lg border border-line-strong">
             <RotateCcw className="size-4" />
           </button>
         </div>
-        <div className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-          <p className="text-[11px] leading-4 text-[#66736f]">{kind === "landslide" ? "მდგრადობის კოეფიციენტი (>1 — მდგრადია)" : "საშიშროება"}</p>
+        <div className="rounded-lg bg-subtle px-3 py-2.5">
+          <p className="text-[11px] leading-4 text-mute">{kind === "landslide" ? "მდგრადობის კოეფიციენტი (>1 — მდგრადია)" : "საშიშროება"}</p>
           <p className="mt-1 text-base font-semibold tabular-nums">{kind === "landslide" ? res.fs!.toFixed(2).replace(".", ",") : `${Math.round(res.risk * 100)}%`}</p>
-          <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-[#e2e7e5]">
+          <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-line">
             <span className="block h-full rounded-full transition-all" style={{ width: `${Math.round(res.risk * 100)}%`, backgroundColor: res.risk >= 0.5 ? "#dc2626" : res.risk >= 0.3 ? "#f59e0b" : "#16a34a" }} />
           </span>
         </div>

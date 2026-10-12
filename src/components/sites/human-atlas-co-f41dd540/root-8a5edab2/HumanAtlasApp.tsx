@@ -682,7 +682,7 @@ export function HumanAtlasApp({
   return (
     <main
       lang="ka"
-      className={`${board ? "atlas-board " : ""}relative isolate h-dvh min-h-[480px] w-full overflow-hidden bg-[#f4f6f5] font-sans text-[#111a18]`}
+      className={`${board ? "atlas-board " : ""}atlas-chrome relative isolate h-dvh min-h-[480px] w-full overflow-hidden bg-page font-sans text-ink`}
     >
       <div className="absolute inset-0">
         <canvas
@@ -780,7 +780,7 @@ export function HumanAtlasApp({
       />
 
       <div className={`${canvasArea} z-10`}>
-        <p className="absolute start-4 top-3 text-xs text-[#66736f]">{caption}</p>
+        <p className="absolute start-4 top-3 text-xs text-mute">{caption}</p>
         <div className="absolute inset-x-0 top-3 flex justify-center max-md:top-9">
           <PhaseIndicator t={t} heart={phase.heart} breath={phase.breath} bpm={anim.bpm} />
         </div>

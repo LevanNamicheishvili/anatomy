@@ -11,9 +11,9 @@ export function RequestForm() {
   if (state.sent)
     return (
       <div className="flex flex-col items-start gap-4 py-6">
-        <CheckCircle2 className="size-10 text-[#0f8a74]" />
+        <CheckCircle2 className="size-10 text-brand" />
         <h2 className="text-xl font-semibold">განაცხადი მიღებულია</h2>
-        <p className="text-[15px] leading-7 text-[#33413e]">
+        <p className="text-[15px] leading-7 text-copy">
           განაცხადს განვიხილავთ და დადასტურების შემდეგ მითითებულ პირს გადავცემთ სკოლის ადმინისტრატორის ანგარიშის მონაცემებს.
         </p>
         <Link href="/login" className={btn.secondary}>
@@ -26,7 +26,7 @@ export function RequestForm() {
     <form action={action} className="flex flex-col gap-8">
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
       <fieldset className="flex flex-col gap-4">
-        <legend className="mb-1 text-sm font-semibold text-[#66736f]">სკოლა</legend>
+        <legend className="mb-1 text-sm font-semibold text-mute">სკოლა</legend>
         <Field label="სკოლის სრული სახელი">
           <input name="school_name" required placeholder="მაგ. თბილისის №1 საჯარო სკოლა" className={input} />
         </Field>
@@ -40,7 +40,7 @@ export function RequestForm() {
         </div>
       </fieldset>
       <fieldset className="flex flex-col gap-4">
-        <legend className="mb-1 text-sm font-semibold text-[#66736f]">საკონტაქტო პირი — მომავალი სკოლის ადმინისტრატორი</legend>
+        <legend className="mb-1 text-sm font-semibold text-mute">საკონტაქტო პირი — მომავალი სკოლის ადმინისტრატორი</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="სახელი და გვარი">
             <input name="contact_name" required className={input} />

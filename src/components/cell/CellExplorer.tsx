@@ -93,13 +93,13 @@ export function CellExplorer({ initial }: { initial?: string }) {
   return (
     <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="უჯრედი" color={ACCENT} icon="cell">
-        <Link href="/biology/dna" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/biology/dna" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           დნმ
         </Link>
       </TopicHeader>
 
       <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
-        <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
+        <nav aria-label="თემის ნაწილები" className="border-e border-line bg-card max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
               <li key={s.view}>
@@ -109,11 +109,11 @@ export function CellExplorer({ initial }: { initial?: string }) {
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
                     "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    i === index ? "bg-[#e6f3ef] font-semibold text-[#0c5c4d]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    i === index ? "bg-brand-soft font-semibold text-brand-strong" : "text-copy hover:bg-subtle",
                   )}
                 >
                   <span
-                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-[#eef2f0] text-[#66736f]")}
+                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-chip text-mute")}
                     style={i === index ? { backgroundColor: ACCENT } : undefined}
                   >
                     {i + 1}
@@ -130,7 +130,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {phases && (
             <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
-              <span className="rounded-full bg-[#111a18]/85 px-4 py-1.5 text-sm font-semibold text-white">
+              <span className="rounded-full bg-deep/85 px-4 py-1.5 text-sm font-semibold text-white">
                 {phase + 1}. {phases[phase]?.name}
               </span>
             </div>
@@ -153,7 +153,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
                 type="button"
                 onClick={() => setPlaying(!playing)}
                 aria-label={playing ? "პაუზა" : "გაგრძელება"}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#111a18] text-white"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-deep text-white"
               >
                 {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
               </button>
@@ -178,12 +178,12 @@ export function CellExplorer({ initial }: { initial?: string }) {
             {index + 1} / {SECTIONS.length}
           </p>
           <h2 className="mt-1 text-2xl">{section.title}</h2>
-          <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
+          <p className="mt-1 text-sm text-mute">{section.subtitle}</p>
 
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
-              <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
+              <div key={f.label} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{f.label}</dt>
                 <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
@@ -195,14 +195,14 @@ export function CellExplorer({ initial }: { initial?: string }) {
                 <span className="size-3.5 shrink-0 rounded-full" style={{ background: pickedInfo.color }} />
                 <h3 className="text-base font-semibold">{pickedInfo.name}</h3>
               </div>
-              <p className="mt-1 text-xs text-[#66736f]">
+              <p className="mt-1 text-xs text-mute">
                 {pickedInfo.in === "both" ? "ცხოველურ და მცენარეულ უჯრედებში" : pickedInfo.in === "plant" ? "მხოლოდ მცენარეულ უჯრედებში" : "ცხოველურ უჯრედებში"}
                 {MEMBRANES[picked] ? ` · ${MEMBRANES[picked]}` : ""}
               </p>
-              <p className="mt-3 text-[15px] leading-7 text-[#33413e]">{pickedInfo.text}</p>
+              <p className="mt-3 text-[15px] leading-7 text-copy">{pickedInfo.text}</p>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {pickedInfo.facts.map((f) => (
-                  <li key={f} className="rounded-md bg-[#f5f7f6] px-3 py-1.5 text-sm">
+                  <li key={f} className="rounded-md bg-subtle px-3 py-1.5 text-sm">
                     {f}
                   </li>
                 ))}
@@ -212,7 +212,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
 
           {organelles && (
             <section className="mt-6">
-              <h3 className="text-xs font-semibold text-[#66736f]">ორგანოიდები — დააჭირე</h3>
+              <h3 className="text-xs font-semibold text-mute">ორგანოიდები — დააჭირე</h3>
               <ul className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-1">
                 {organelles.map((id) => (
                   <li key={id}>
@@ -225,7 +225,7 @@ export function CellExplorer({ initial }: { initial?: string }) {
                       aria-current={picked === id ? "true" : undefined}
                       className={cn(
                         "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
-                        picked === id ? "bg-[#e6f3ef] font-semibold text-[#0c5c4d]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                        picked === id ? "bg-brand-soft font-semibold text-brand-strong" : "text-copy hover:bg-subtle",
                       )}
                     >
                       <span className="size-2.5 shrink-0 rounded-full" style={{ background: ORGANELLES[id].color }} />
@@ -238,18 +238,18 @@ export function CellExplorer({ initial }: { initial?: string }) {
           )}
 
           {phases && (
-            <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+            <section className="mt-6 rounded-xl border border-line p-4">
               <p className="text-xs font-semibold" style={{ color: ACCENT }}>
                 ფაზა {phase + 1} / {phases.length}
               </p>
               <h3 className="mt-0.5 text-base font-semibold">{phases[phase]?.name}</h3>
-              <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{phases[phase]?.text}</p>
+              <p className="mt-2 text-[15px] leading-7 text-copy">{phases[phase]?.text}</p>
             </section>
           )}
 
           <div className="mt-5 flex flex-col gap-4">
             {section.paragraphs.map((p) => (
-              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-[#33413e]">
+              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-copy">
                 {p}
               </p>
             ))}

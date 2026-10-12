@@ -50,8 +50,8 @@ const ACCENT = "#0f8a74";
  */
 const scrollArea = "atlas-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5";
 const blockTitle = cn(sectionLabel, "mt-5 mb-2");
-const group = "divide-y divide-[#e2e7e5] overflow-hidden rounded-xl border border-[#e2e7e5] bg-white";
-const footer = "flex shrink-0 flex-col gap-2 border-t border-[#e2e7e5] px-4 py-3";
+const group = "divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card";
+const footer = "flex shrink-0 flex-col gap-2 border-t border-line bg-card px-4 py-4";
 
 /** Tinted square at the start of a card: an icon or a letter in the item's colour. */
 function Tile({ color = ACCENT, children }: { color?: string; children: React.ReactNode }) {
@@ -89,16 +89,16 @@ function ActionCard({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "flex min-h-16 w-full items-center gap-3 rounded-xl border p-3 text-start transition-[background-color,border-color] outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50",
-        active ? "border-[#0f8a74]/45 bg-[#e6f3ef]" : "border-[#e2e7e5] bg-white hover:border-[#d5dcd9] hover:bg-[#f5f7f6]",
+        "flex min-h-16 w-full items-center gap-3 rounded-2xl border p-3.5 shadow-card text-start transition-[background-color,border-color] outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+        active ? "border-brand/45 bg-brand-soft" : "border-line bg-card hover:border-line-strong hover:bg-subtle",
       )}
     >
       {lead}
       <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-        <span className={cn("block text-sm leading-5 font-semibold", active ? "text-[#0c5c4d]" : "text-[#111a18]")} title={typeof title === "string" ? title : undefined}>{title}</span>
-        {body && <span className="mt-0.5 block text-[13px] leading-5 text-[#66736f]">{body}</span>}
+        <span className={cn("block text-sm leading-6 font-semibold", active ? "text-brand-strong" : "text-ink")} title={typeof title === "string" ? title : undefined}>{title}</span>
+        {body && <span className="mt-0.5 block text-[13px] leading-5 text-mute">{body}</span>}
       </span>
-      {chevron && <ChevronRight className="size-4 shrink-0 text-[#97a29e]" aria-hidden />}
+      {chevron && <ChevronRight className="size-4 shrink-0 text-faint" aria-hidden />}
     </button>
   );
 }
@@ -158,8 +158,8 @@ function SystemsTab({
         </ul>
       </div>
 
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-t border-[#e2e7e5] ps-4 pe-2">
-        <span className="min-w-0 truncate text-[13px] text-[#66736f] tabular-nums" title={visibleLabel}>
+      <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 border-t border-line ps-4 pe-2">
+        <span className="min-w-0 break-words text-[13px] text-mute tabular-nums" title={visibleLabel}>
           {visibleLabel}
         </span>
         <button type="button" onClick={onToggleAll} className={btnGhost}>
@@ -248,7 +248,7 @@ function AnimationsTab({
                 checked={anim[key]}
                 onChange={(v) => onAnim({ ...anim, [key]: v })}
                 label={t[key]}
-                lead={<Icon className={cn("size-[18px] shrink-0", anim[key] ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} aria-hidden />}
+                lead={<Icon className={cn("size-[18px] shrink-0", anim[key] ? "text-brand" : "text-mute")} strokeWidth={2} aria-hidden />}
               />
             </li>
           ))}
@@ -342,7 +342,7 @@ function LearnTab({
   sensitive?: { on: boolean; onToggle: () => void };
 }) {
   const lead = (Icon: LucideIcon, on: boolean) => (
-    <Icon className={cn("size-[18px] shrink-0", on ? "text-[#0f8a74]" : "text-[#66736f]")} strokeWidth={2} aria-hidden />
+    <Icon className={cn("size-[18px] shrink-0", on ? "text-brand" : "text-mute")} strokeWidth={2} aria-hidden />
   );
   return (
     <div className={scrollArea}>
@@ -395,7 +395,7 @@ function LearnTab({
           </li>
         )}
       </ul>
-      <p className="mt-2 px-1 text-xs leading-5 text-[#66736f]">დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.</p>
+      <p className="mt-2 px-1 text-xs leading-5 text-mute">დაფის რეჟიმში ტექსტი და წარწერები დიდდება, თემები კი ნაბიჯ-ნაბიჯ ჩანს.</p>
     </div>
   );
 }
@@ -432,13 +432,13 @@ export function Sidebar({
     <section
       aria-label={t.systems}
       className={cn(
-        "absolute start-0 top-14 bottom-0 z-20 flex w-[320px] flex-col border-e border-[#e2e7e5] bg-[#fbfcfc] max-[1100px]:w-[288px]",
+        "absolute start-0 top-14 bottom-0 z-20 flex w-[320px] flex-col border-e border-line bg-subtle max-[1100px]:w-[288px]",
         mobileOpen
           ? "max-md:inset-x-0 max-md:top-auto max-md:bottom-16 max-md:h-[60dvh] max-md:w-auto max-md:rounded-t-2xl max-md:border-e-0 max-md:border-t max-md:shadow-[0_-8px_24px_rgba(17,26,24,0.1)]"
           : "max-md:hidden",
       )}
     >
-      <div className="flex shrink-0 items-stretch border-b border-[#e2e7e5] bg-white max-md:rounded-t-2xl">
+      <div className="flex shrink-0 items-stretch border-b border-line bg-card max-md:rounded-t-2xl">
         {/* Tabs share the width by their label length, so "ანიმაციები" gets the room "თემები" doesn't need in the 288px sidebar. */}
         <div role="tablist" aria-label={t.systems} className="flex min-w-0 flex-1">
           {tabs.map(({ key, label, icon: Icon }) => {
@@ -452,16 +452,16 @@ export function Sidebar({
                 aria-selected={on}
                 onClick={() => onTab(key)}
                 className={cn(
-                  "relative flex min-h-14 min-w-0 flex-auto flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-4 tracking-tight transition-colors",
-                  on ? "font-semibold text-[#111a18]" : "text-[#66736f] hover:text-[#111a18]",
+                  "relative flex min-h-14 min-w-0 flex-auto flex-col items-center justify-center gap-1 px-1 py-2 text-xs leading-5 transition-colors",
+                  on ? "bg-brand-soft font-semibold text-brand-strong" : "text-mute hover:bg-subtle hover:text-ink",
                 )}
               >
-                <Icon className={cn("size-[18px] shrink-0", on ? "text-[#0f8a74]" : "text-[#97a29e]")} strokeWidth={2} aria-hidden />
+                <Icon className={cn("size-[18px] shrink-0", on ? "text-brand" : "text-faint")} strokeWidth={2} aria-hidden />
                 {/* The hidden bold copy reserves the selected width, so tabs don't shift when the selection moves. */}
-                <span data-label={label} className="max-w-full truncate after:invisible after:block after:h-0 after:font-semibold after:content-[attr(data-label)]">
+                <span data-label={label} className="max-w-full break-words after:invisible after:block after:h-0 after:font-semibold after:content-[attr(data-label)]">
                   {label}
                 </span>
-                {on && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#0f8a74]" />}
+                {on && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand" />}
               </button>
             );
           })}

@@ -63,7 +63,7 @@ export function LessonPage({
 
         {locked ? (
           <Reading>
-            <p className="mt-6 rounded-xl border border-line-strong bg-white p-5 text-base leading-7 text-copy">
+            <p className="mt-6 rounded-xl border border-line-strong bg-card p-5 text-base leading-7 text-copy">
               ამ გაკვეთილს მასწავლებელი გაკვეთილზე გაჩვენებს. თუ კითხვა გაქვს, მიმართე მასწავლებელს ან სკოლის ექიმს.
             </p>
           </Reading>
@@ -82,7 +82,7 @@ export function LessonPage({
                     <Link
                       key={r.href}
                       href={r.href}
-                      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-brand/30 bg-brand-soft px-4 py-2 text-sm font-semibold text-[#0c5c4d] transition-colors hover:bg-[#d5ece5]"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-brand/30 bg-brand-soft px-4 py-2 text-sm font-semibold text-brand-strong transition-colors hover:bg-brand-soft/70"
                     >
                       <Box className="size-4" aria-hidden />
                       {r.label}

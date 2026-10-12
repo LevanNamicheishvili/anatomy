@@ -6,17 +6,17 @@ import { SUBJECT_ICONS } from "./TopicHeader";
 /** Top of a hub page: icon, title, a short description and the counts that matter. */
 export function PageHero({ title, description, color, icon: Icon, stats = [] }: { title: string; description: string; color: string; icon: LucideIcon; stats?: string[] }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-line-strong bg-white p-5 shadow-card sm:p-7">
-      <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
+    <section className="science-hero relative overflow-hidden rounded-3xl border border-line p-6 shadow-card sm:p-9">
+      <span aria-hidden className="absolute inset-y-6 start-0 w-1.5 rounded-full" style={{ backgroundColor: color }} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl text-white" style={{ backgroundColor: color }}>
+        <span className="flex size-20 shrink-0 items-center justify-center rounded-2xl text-white" style={{ backgroundColor: color }}>
           <Icon className="size-8" aria-hidden />
         </span>
         <div className="min-w-0">
           <h1 className="text-3xl text-ink sm:text-4xl">{title}</h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-copy">{description}</p>
           {stats.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               {stats.map((s) => (
                 <Chip key={s}>{s}</Chip>
               ))}

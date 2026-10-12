@@ -39,7 +39,7 @@ function Pea({ yellow, round = true, size = 28 }: { yellow: boolean; round?: boo
 function Picker<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: T[]; onChange: (v: T) => void }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-[#66736f]">{label}</p>
+      <p className="text-xs font-semibold text-mute">{label}</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {options.map((o) => (
           <button
@@ -49,7 +49,7 @@ function Picker<T extends string>({ label, value, options, onChange }: { label: 
             onClick={() => onChange(o)}
             className={cn(
               "h-10 min-w-14 rounded-md border px-3 font-mono text-[15px] font-semibold transition-colors",
-              value === o ? "border-[#111a18] bg-[#111a18] text-white" : "border-[#d5dcd9] bg-white hover:bg-[#f5f7f6]",
+              value === o ? "border-ink bg-deep text-white" : "border-line-strong bg-card hover:bg-subtle",
             )}
           >
             {o}
@@ -67,10 +67,10 @@ function Ratio({ items }: { items: { label: string; count: number; node?: React.
       {items
         .filter((i) => i.count)
         .map((i) => (
-          <li key={i.label} className="flex items-center gap-2 rounded-lg bg-[#f5f7f6] px-3 py-2 text-sm">
+          <li key={i.label} className="flex items-center gap-2 rounded-lg bg-subtle px-3 py-2 text-sm">
             {i.node}
             <span className="font-semibold">{i.label}</span>
-            <span className="text-[#66736f] tabular-nums">
+            <span className="text-mute tabular-nums">
               {i.count}/{total}
             </span>
           </li>
@@ -126,9 +126,9 @@ export function PunnettSquare({ mode }: { mode: PunnettMode }) {
       </div>
       <Grid cols={g1} rows={g2} cell={(r, c) => cells[r][c]} node={(z) => <Pea yellow={yellow(z)} round={round(z)} size={mode === "di" ? 20 : 26} />} />
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold text-[#66736f]">ფენოტიპი</p>
+        <p className="text-xs font-semibold text-mute">ფენოტიპი</p>
         <Ratio items={phenCounts} />
-        <p className="mt-1 text-xs font-semibold text-[#66736f]">გენოტიპი</p>
+        <p className="mt-1 text-xs font-semibold text-mute">გენოტიპი</p>
         <Ratio items={genoCounts} />
       </div>
     </Frame>
@@ -137,9 +137,9 @@ export function PunnettSquare({ mode }: { mode: PunnettMode }) {
 
 function Frame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-10 rounded-xl border-2 border-[#0f8a74]/40 bg-white p-5">
+    <section className="mt-10 rounded-xl border-2 border-brand/40 bg-card p-5">
       <h2 className="text-lg">პანეტის ცხაური — სცადე თავად</h2>
-      <p className="mt-1 text-sm text-[#66736f]">{title}</p>
+      <p className="mt-1 text-sm text-mute">{title}</p>
       <div className="mt-4 flex flex-col gap-5">{children}</div>
     </section>
   );
@@ -151,9 +151,9 @@ function Grid({ cols, rows, cell, node, bg, sub }: { cols: string[]; rows: strin
       <table className="mx-auto border-collapse">
         <thead>
           <tr>
-            <th className="size-12 text-xs text-[#97a29e]">♀ / ♂</th>
+            <th className="size-12 text-xs text-faint">♀ / ♂</th>
             {cols.map((c, i) => (
-              <th key={i} className="h-12 min-w-16 border border-[#d5dcd9] bg-[#eef2f0] px-2 font-mono text-[15px]">
+              <th key={i} className="h-12 min-w-16 border border-line-strong bg-chip px-2 font-mono text-[15px]">
                 {c}
               </th>
             ))}
@@ -162,15 +162,15 @@ function Grid({ cols, rows, cell, node, bg, sub }: { cols: string[]; rows: strin
         <tbody>
           {rows.map((r, ri) => (
             <tr key={ri}>
-              <th className="w-14 border border-[#d5dcd9] bg-[#eef2f0] px-2 font-mono text-[15px]">{r}</th>
+              <th className="w-14 border border-line-strong bg-chip px-2 font-mono text-[15px]">{r}</th>
               {cols.map((_, ci) => {
                 const z = cell(ri, ci);
                 return (
-                  <td key={ci} className="h-16 min-w-16 border border-[#d5dcd9] px-2 text-center" style={bg ? { background: bg(z) } : undefined}>
+                  <td key={ci} className="h-16 min-w-16 border border-line-strong px-2 text-center" style={bg ? { background: bg(z) } : undefined}>
                     <div className="flex flex-col items-center gap-0.5">
                       {node?.(z)}
                       <span className="font-mono text-sm font-semibold">{z}</span>
-                      {sub && <span className="max-w-24 text-[10.5px] leading-3 text-[#66736f]">{sub(z)}</span>}
+                      {sub && <span className="max-w-24 text-[10.5px] leading-3 text-mute">{sub(z)}</span>}
                     </div>
                   </td>
                 );

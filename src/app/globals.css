@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-firago), var(--font-georgian), var(--font-app), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-heading: var(--font-glaho), var(--font-sans);
+  --font-heading: var(--font-firago), var(--font-georgian), var(--font-glaho), ui-sans-serif, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,97 +48,126 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * Portal tokens — the same palette the pages already use, named once so primitives stop repeating hex.
- * Usage: text-ink, text-copy, text-mute, text-faint, bg-page, bg-subtle, border-line, border-line-strong, bg-brand…
- */
+/* School science palette: warm paper, ocean teal, ink blue. */
+@theme inline {
+  --color-ink: var(--portal-ink);
+  --color-copy: var(--portal-copy);
+  --color-mute: var(--portal-mute);
+  --color-faint: var(--portal-faint);
+  --color-line: var(--portal-line);
+  --color-line-strong: var(--portal-line-strong);
+  --color-page: var(--portal-page);
+  --color-subtle: var(--portal-subtle);
+  --color-chip: var(--portal-chip);
+  --color-brand: var(--portal-brand);
+  --color-brand-strong: var(--portal-brand-strong);
+  --color-brand-soft: var(--portal-brand-soft);
+  --color-deep: var(--portal-deep);
+  --color-deep-hover: var(--portal-deep-hover);
+  --color-warning: var(--portal-warning);
+  --color-warning-soft: var(--portal-warning-soft);
+  --color-danger: var(--portal-danger);
+  --color-danger-soft: var(--portal-danger-soft);
+  --shadow-card: var(--surface-shadow);
+  --shadow-card-hover: var(--surface-shadow-hover);
+  --shadow-panel: var(--panel-shadow);
+}
+
 @theme {
-  --color-ink: #111a18;
-  --color-copy: #33413e;
-  --color-mute: #66736f;
-  --color-faint: #97a29e;
-  --color-line: #e2e7e5;
-  --color-line-strong: #d5dcd9;
-  --color-page: #f4f6f5;
-  --color-subtle: #f5f7f6;
-  --color-chip: #eef2f0;
-  --color-brand: #0f8a74;
-  --color-brand-strong: #0c7563;
-  --color-brand-soft: #e6f3ef;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdf3f2;
-  --shadow-card: 0 1px 2px rgba(17, 26, 24, 0.04);
-  --shadow-card-hover: 0 14px 32px -18px rgba(17, 26, 24, 0.28);
-  --shadow-panel: 0 4px 18px -6px rgba(17, 26, 24, 0.22);
+  --spacing-gutter: clamp(1rem, 3vw, 2rem);
+  --spacing-section: clamp(2rem, 5vw, 4rem);
+  --text-xs--line-height: 1.65;
+  --text-sm--line-height: 1.7;
+  --text-base--line-height: 1.8;
+  --text-lg--line-height: 1.65;
+  --text-xl--line-height: 1.55;
+  --text-2xl--line-height: 1.5;
+  --text-3xl--line-height: 1.4;
+  --text-4xl--line-height: 1.5;
 }
 
 :root {
-  --background: #f4f6f5;
-  --foreground: #20242b;
-  --card: #fff;
-  --card-foreground: #20242b;
-  --popover: #fff;
-  --popover-foreground: #20242b;
-  --primary: #0f8a74;
-  --primary-foreground: #fff;
-  --secondary: #e9ecef;
-  --secondary-foreground: #20242b;
-  --muted: #e9ecef;
-  --muted-foreground: #68727d;
-  --accent: #edf0f2;
-  --accent-foreground: #20242b;
-  --destructive: #a8574a;
-  --border: #18253618;
-  --input: #18253622;
-  --ring: #0f8a74;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  color-scheme: light;
+  --portal-ink: #183447;
+  --portal-copy: #365365;
+  --portal-mute: #586f7c;
+  --portal-faint: #687f8c;
+  --portal-line: #dce5e7;
+  --portal-line-strong: #c5d4d9;
+  --portal-page: #f5f6f2;
+  --portal-subtle: #eff4f3;
+  --portal-chip: #e5eeed;
+  --portal-brand: #087e83;
+  --portal-brand-strong: #09666c;
+  --portal-brand-soft: #e0f2ee;
+  --portal-deep: #17364a;
+  --portal-deep-hover: #244b61;
+  --portal-warning: #88530d;
+  --portal-warning-soft: #fff3d8;
+  --portal-danger: #b33248;
+  --portal-danger-soft: #fff0f2;
+  --background: var(--portal-page);
+  --foreground: var(--portal-ink);
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--portal-brand);
+  --primary-foreground: #ffffff;
+  --secondary: var(--portal-chip);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--portal-subtle);
+  --muted-foreground: var(--portal-mute);
+  --accent: var(--portal-brand-soft);
+  --accent-foreground: var(--portal-brand-strong);
+  --destructive: var(--portal-danger);
+  --border: var(--portal-line);
+  --input: var(--portal-line-strong);
+  --ring: var(--portal-brand);
+  --chart-1: #087e83;
+  --chart-2: #3973a3;
+  --chart-3: #a16827;
+  --chart-4: #7961a8;
+  --chart-5: #b34c64;
+  --radius: 1rem;
+  --surface-shadow: 0 2px 3px rgb(23 54 74 / 3%), 0 8px 24px -14px rgb(23 54 74 / 16%);
+  --surface-shadow-hover: 0 16px 36px -16px rgb(23 54 74 / 28%);
+  --panel-shadow: 0 12px 40px -14px rgb(23 54 74 / 25%);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --portal-ink: #e5eff4;
+  --portal-copy: #c4d6df;
+  --portal-mute: #a6bcc8;
+  --portal-faint: #91aab7;
+  --portal-line: #294554;
+  --portal-line-strong: #3d5d6d;
+  --portal-page: #10212c;
+  --portal-subtle: #1b3441;
+  --portal-chip: #284552;
+  --portal-brand: #087e83;
+  --portal-brand-strong: #83e1d5;
+  --portal-brand-soft: #173f43;
+  --portal-deep: #173b52;
+  --portal-deep-hover: #24526a;
+  --portal-warning: #f4ce85;
+  --portal-warning-soft: #40341f;
+  --portal-danger: #ff9cac;
+  --portal-danger-soft: #462a35;
+  --card: #182e3b;
+  --ring: #83e1d5;
+  --surface-shadow: 0 4px 24px -10px rgb(0 0 0 / 40%);
+  --surface-shadow-hover: 0 16px 36px -14px rgb(0 0 0 / 55%);
+  --panel-shadow: 0 12px 40px -12px rgb(0 0 0 / 55%);
 }
 
 @layer base {
@@ -147,22 +176,24 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: anywhere;
   }
   html {
     @apply font-sans;
-    line-height: 1.6;
+    line-height: 1.75;
   }
-  /* Headings in BPG Glaho; it has a single weight, so it is never faux-bolded or squeezed. */
+  /* Local FiraGO has true Georgian weights and room for ascenders and descenders. */
   h1,
   h2,
   .font-heading {
     font-family: var(--font-heading);
-    letter-spacing: 0.005em;
+    font-weight: 600;
+    letter-spacing: 0;
     font-synthesis-weight: none;
     text-wrap: balance;
   }
   h1 {
-    line-height: 1.25;
+    line-height: 1.4;
   }
   h2,
   h3 {
@@ -178,9 +209,17 @@
   summary:focus-visible,
   [role="button"]:focus-visible,
   [tabindex]:focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 3px solid var(--ring);
     outline-offset: 2px;
   }
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  button, label, summary { overflow-wrap: anywhere; }
+  button:not(:disabled), summary { cursor: pointer; }
+  :where(h1, h2, h3, section[id]) { scroll-margin-top: 9rem; }
+  ::selection { background: var(--portal-brand-soft); color: var(--portal-ink); }
   input[type="range"] {
     accent-color: var(--color-brand);
   }
@@ -447,4 +486,35 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Shared page treatments; scene canvases and their rendering are untouched. */
+@layer components {
+  .science-hero {
+    background-color: var(--card);
+    background-image: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--portal-brand-soft) 80%, transparent), transparent 65%);
+  }
+  .science-grid {
+    background-image: linear-gradient(var(--portal-line) 1px, transparent 1px), linear-gradient(90deg, var(--portal-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 90%);
+  }
+  .lesson-paper {
+    border: 1px solid var(--portal-line);
+    border-radius: var(--radius-2xl);
+    background: var(--card);
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    box-shadow: var(--surface-shadow);
+  }
+  .atlas-chrome {
+    --radius: 0.875rem;
+  }
+}
+
+/* Keep all form text at 16px, including compact atlas inputs, to avoid mobile zoom. */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  font-size: 1rem;
+  line-height: 1.6;
 }

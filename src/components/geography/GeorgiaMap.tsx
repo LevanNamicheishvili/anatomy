@@ -80,7 +80,7 @@ function Swatches({ items }: { items: { color: string; label: string }[] }) {
   return (
     <ul className="mt-2 grid gap-1">
       {items.map((z) => (
-        <li key={z.label} className="flex items-center gap-2 text-[12px] leading-4 text-[#33413e]">
+        <li key={z.label} className="flex items-center gap-2 text-[12px] leading-4 text-copy">
           <span className="size-3 shrink-0 rounded-sm border border-black/10" style={{ background: z.color }} />
           {z.label}
         </li>
@@ -139,8 +139,8 @@ function Photo({ image, alt }: { image: NonNullable<MediaEntry["image"]>; alt: s
   return (
     <figure className="-mx-6 -mt-6 mb-5">
       {/* eslint-disable-next-line @next/next/no-img-element -- local, pre-sized photos */}
-      <img src={image.src} alt={alt} width={image.width} height={image.height} className="aspect-[16/10] w-full bg-[#eef2f0] object-cover" />
-      <figcaption className="px-6 pt-1.5 text-[10.5px] leading-4 text-[#97a29e]">
+      <img src={image.src} alt={alt} width={image.width} height={image.height} className="aspect-[16/10] w-full bg-chip object-cover" />
+      <figcaption className="px-6 pt-1.5 text-[10.5px] leading-4 text-faint">
         ფოტო:{" "}
         <a href={image.page} target="_blank" rel="noreferrer" className="hover:underline">
           {image.author} · {image.license}
@@ -159,8 +159,8 @@ function Stats({ kind, entry }: { kind: MediaKind; entry?: MediaEntry }) {
       {rows.map((r) => {
         const st = entry!.stats![r.key]!;
         return (
-          <div key={r.key} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-            <dt className="text-[11px] leading-4 text-[#66736f]">
+          <div key={r.key} className="rounded-lg bg-subtle px-3 py-2.5">
+            <dt className="text-[11px] leading-4 text-mute">
               {r.label}
               {st.year ? ` (${st.year})` : ""}
             </dt>
@@ -177,13 +177,13 @@ function Stats({ kind, entry }: { kind: MediaKind; entry?: MediaEntry }) {
 function WikiIntro({ entry }: { entry?: MediaEntry }) {
   if (!entry?.wiki) return null;
   return (
-    <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
-      <h3 className="text-xs font-semibold text-[#66736f]">ვიკიპედიიდან</h3>
-      {entry.wiki.intro && <p className="mt-2 text-sm leading-6 text-[#33413e]">{entry.wiki.intro}</p>}
+    <section className="mt-6 rounded-xl border border-line p-4">
+      <h3 className="text-xs font-semibold text-mute">ვიკიპედიიდან</h3>
+      {entry.wiki.intro && <p className="mt-2 text-sm leading-6 text-copy">{entry.wiki.intro}</p>}
       <a href={entry.wiki.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-semibold text-[#2f6fb0] hover:underline">
         სრული სტატია: {entry.wiki.title} →
       </a>
-      <p className="mt-2 text-[10.5px] leading-4 text-[#97a29e]">
+      <p className="mt-2 text-[10.5px] leading-4 text-faint">
         ტექსტი: ვიკიპედია, CC BY-SA 4.0{entry.wikidata ? ` · ციფრები: ვიკიმონაცემები (${entry.wikidata})` : ""}
       </p>
     </section>
@@ -193,7 +193,7 @@ function WikiIntro({ entry }: { entry?: MediaEntry }) {
 function Thumb({ entry }: { entry?: MediaEntry }) {
   if (!entry?.image) return null;
   // eslint-disable-next-line @next/next/no-img-element -- small local thumbnail
-  return <img src={entry.image.src} alt="" loading="lazy" className="size-9 shrink-0 rounded-md bg-[#eef2f0] object-cover" />;
+  return <img src={entry.image.src} alt="" loading="lazy" className="size-9 shrink-0 rounded-md bg-chip object-cover" />;
 }
 
 function ListItem({
@@ -222,7 +222,7 @@ function ListItem({
         aria-current={active ? "true" : undefined}
         className={cn(
           "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
-          active ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+          active ? "bg-[#e7f0f8] font-semibold text-[#1d4f84]" : "text-copy hover:bg-subtle",
         )}
       >
         {children}
@@ -500,7 +500,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               <span
                 key={r.id}
                 data-label={`region:${r.id}`}
-                className="absolute top-0 left-0 text-[13px] font-semibold whitespace-nowrap text-[#33413e] opacity-0 transition-opacity duration-300 [text-shadow:0_0_4px_#fff,0_0_8px_#fff]"
+                className="absolute top-0 left-0 text-[13px] font-semibold whitespace-nowrap text-copy opacity-0 transition-opacity duration-300 [text-shadow:0_0_4px_#fff,0_0_8px_#fff]"
               >
                 {SHORT_NAMES[r.id] ?? r.name}
               </span>
@@ -573,7 +573,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                 onClick={() => select({ kind: "city", city: c })}
                 className={cn(
                   "pointer-events-auto absolute top-0 left-0 rounded-md border px-2 py-0.5 text-[12.5px] font-semibold whitespace-nowrap opacity-0 shadow-sm transition-[opacity,background-color] duration-300",
-                  activeKey === `city:${c.id}` ? "border-[#1d4f84] bg-[#1d4f84] text-white" : c.capital ? "border-[#b8232b] bg-white text-[#8f1c22]" : "border-[#d5dcd9] bg-white/95 text-[#111a18]",
+                  activeKey === `city:${c.id}` ? "border-[#1d4f84] bg-[#1d4f84] text-white" : c.capital ? "border-[#b8232b] bg-card text-[#8f1c22]" : "border-line-strong bg-card/95 text-ink",
                 )}
               >
                 {c.name}
@@ -599,7 +599,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
 
           {!ready && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium shadow-sm">
+              <span className="flex items-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sm font-medium shadow-sm">
                 <Loader2 className="size-4 animate-spin text-[#2f6fb0]" />
                 რელიეფი იტვირთება…
               </span>
@@ -607,7 +607,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           )}
 
           {/* Layers */}
-          <div className="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-xl border border-line/80 bg-white/90 shadow-panel backdrop-blur-sm">
+          <div className="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-xl border border-line/80 bg-card/90 shadow-panel backdrop-blur-sm">
             <button
               type="button"
               onClick={() => setLayersOpen(!(layersOpen ?? window.matchMedia("(min-width: 1024px)").matches))}
@@ -616,10 +616,10 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
             >
               <Layers className="size-4 text-[#2f6fb0]" />
               შრეები
-              <span className="ms-auto text-xs font-medium text-[#66736f]">{layerInfo.name}</span>
+              <span className="ms-auto text-xs font-medium text-mute">{layerInfo.name}</span>
             </button>
             {layersOpen !== false && (
-              <div className={cn("border-t border-[#e2e7e5] p-2", layersOpen === null && "max-lg:hidden")}>
+              <div className={cn("border-t border-line p-2", layersOpen === null && "max-lg:hidden")}>
                 <div className="flex flex-wrap gap-1">
                   {LAYERS.map((l) => (
                     <button
@@ -629,7 +629,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       onClick={() => setLayer(l.id)}
                       className={cn(
                         "h-10 grow rounded-lg px-3 text-[13px] font-semibold whitespace-nowrap transition-colors",
-                        layer === l.id ? "bg-[#111a18] text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ebe9]",
+                        layer === l.id ? "bg-deep text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ebe9]",
                       )}
                     >
                       {l.name}
@@ -645,7 +645,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       onClick={() => setLabels((s) => ({ ...s, [t.id]: !s[t.id] }))}
                       className={cn(
                         "inline-flex h-10 items-center gap-1 rounded-lg border px-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
-                        labels[t.id] ? "border-[#2f6fb0] bg-[#eaf2fa] text-[#1d4f84]" : "border-[#d5dcd9] bg-white text-[#66736f] hover:bg-[#f5f7f6]",
+                        labels[t.id] ? "border-[#2f6fb0] bg-[#eaf2fa] text-[#1d4f84]" : "border-line-strong bg-card text-mute hover:bg-subtle",
                       )}
                     >
                       {labels[t.id] && <Check className="size-3.5" />}
@@ -664,7 +664,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               aria-label="საწყისი ხედი"
               title="მთელი საქართველო"
               onClick={() => select({ kind: "country" })}
-              className="flex size-11 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
+              className="flex size-11 items-center justify-center rounded-lg border border-line-strong bg-card shadow-sm hover:bg-subtle"
             >
               <Undo2 className="size-5" />
             </button>
@@ -673,28 +673,28 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               aria-label="ჩრდილოეთი ზემოთ"
               title="ჩრდილოეთი ზემოთ"
               onClick={() => sceneRef.current?.north()}
-              className="flex size-11 items-center justify-center rounded-lg border border-[#d5dcd9] bg-white shadow-sm hover:bg-[#f5f7f6]"
+              className="flex size-11 items-center justify-center rounded-lg border border-line-strong bg-card shadow-sm hover:bg-subtle"
             >
               <Navigation2 ref={compassRef} className="size-5 fill-[#b8232b] text-[#b8232b]" />
             </button>
-            <div className="flex flex-col overflow-hidden rounded-lg border border-[#d5dcd9] bg-white shadow-sm">
+            <div className="flex flex-col overflow-hidden rounded-lg border border-line-strong bg-card shadow-sm">
               {[
                 { label: "მიახლოება", icon: Plus, act: "in" },
                 { label: "დაშორება", icon: Minus, act: "out" },
               ].map((b) => (
-                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex size-11 items-center justify-center border-b border-[#e2e7e5] last:border-b-0 hover:bg-[#f5f7f6]">
+                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex size-11 items-center justify-center border-b border-line last:border-b-0 hover:bg-subtle">
                   <b.icon className="size-5" />
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#d5dcd9] bg-white shadow-sm max-sm:hidden">
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line-strong bg-card shadow-sm max-sm:hidden">
               {[
                 { label: "მარცხნივ შებრუნება", icon: RotateCcw, act: "left" },
                 { label: "მარჯვნივ შებრუნება", icon: RotateCw, act: "right" },
                 { label: "ზემოდან ხედი", icon: ChevronUp, act: "up" },
                 { label: "გვერდიდან ხედი", icon: ChevronDown, act: "down" },
               ].map((b) => (
-                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex h-10 w-11 items-center justify-center hover:bg-[#f5f7f6]">
+                <button key={b.label} type="button" aria-label={b.label} title={b.label} onClick={() => navigate(b.act)} className="flex h-10 w-11 items-center justify-center hover:bg-subtle">
                   <b.icon className="size-4" />
                 </button>
               ))}
@@ -702,21 +702,21 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           </div>
 
           {/* Legend of the active layer */}
-          <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-xl border border-line/80 bg-white/90 px-3 py-2 shadow-panel backdrop-blur-sm">
+          <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-xl border border-line/80 bg-card/90 px-3 py-2 shadow-panel backdrop-blur-sm">
             {layer === "satellite" && (
               <>
-                <p className="text-[11px] font-semibold text-[#66736f]">სატელიტური სურათი</p>
-                <p className="mt-1 text-[12px] text-[#33413e]">Sentinel-2, 2024 · ღრუბლების გარეშე</p>
+                <p className="text-[11px] font-semibold text-mute">სატელიტური სურათი</p>
+                <p className="mt-1 text-[12px] text-copy">Sentinel-2, 2024 · ღრუბლების გარეშე</p>
               </>
             )}
             {layer === "physical" && (
               <>
-                <p className="text-[11px] font-semibold text-[#66736f]">სიმაღლე ზღვის დონიდან, მ</p>
+                <p className="text-[11px] font-semibold text-mute">სიმაღლე ზღვის დონიდან, მ</p>
                 <div className="mt-1.5 flex items-end">
                   {ELEVATION_LEGEND.map((s) => (
                     <div key={s.height} className="flex w-9 flex-col items-center">
                       <span className="h-2.5 w-full" style={{ background: s.color }} />
-                      <span className="mt-1 text-[10px] text-[#66736f]">{s.height}</span>
+                      <span className="mt-1 text-[10px] text-mute">{s.height}</span>
                     </div>
                   ))}
                 </div>
@@ -724,28 +724,28 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
             )}
             {layer === "political" && (
               <>
-                <p className="text-[11px] font-semibold text-[#66736f]">ადმინისტრაციული ერთეულები</p>
-                <p className="mt-1 text-[12px] text-[#33413e]">9 მხარე · 2 ავტონომიური რესპუბლიკა · დედაქალაქი</p>
+                <p className="text-[11px] font-semibold text-mute">ადმინისტრაციული ერთეულები</p>
+                <p className="mt-1 text-[12px] text-copy">9 მხარე · 2 ავტონომიური რესპუბლიკა · დედაქალაქი</p>
               </>
             )}
             {layer === "zones" && (
               <>
-                <p className="text-[11px] font-semibold text-[#66736f]">ბუნებრივი ზონები</p>
+                <p className="text-[11px] font-semibold text-mute">ბუნებრივი ზონები</p>
                 <Swatches items={ZONES} />
               </>
             )}
             {layer === "climate" && (
               <>
-                <p className="text-[11px] font-semibold text-[#66736f]">ჰავის ტიპები</p>
+                <p className="text-[11px] font-semibold text-mute">ჰავის ტიპები</p>
                 <Swatches items={CLIMATES} />
               </>
             )}
           </div>
 
           {point && (
-            <div className="pointer-events-none absolute right-3 bottom-3 rounded-lg border border-[#d5dcd9] bg-white/95 px-3 py-2 text-right shadow-sm">
+            <div className="pointer-events-none absolute right-3 bottom-3 rounded-lg border border-line-strong bg-card/95 px-3 py-2 text-right shadow-sm">
               <p className="text-base leading-5 font-semibold tabular-nums">{fmt(Math.max(0, point.height))} მ</p>
-              <p className="mt-0.5 text-[11px] text-[#66736f] tabular-nums">
+              <p className="mt-0.5 text-[11px] text-mute tabular-nums">
                 {point.lat.toFixed(2)}° ჩ.გ. · {point.lon.toFixed(2)}° ა.გ.{point.region ? ` · ${REGION_BY_ID[point.region].name}` : ""}
               </p>
             </div>
@@ -759,16 +759,16 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               <p className="text-xs font-semibold text-[#2f6fb0]">{detail.eyebrow}</p>
               <h2 className="mt-1 text-2xl">{detail.title}</h2>
               {"occupied" in detail && detail.occupied && (
-                <p className="mt-3 flex items-start gap-2 rounded-md bg-[#fdf3f2] px-3 py-2 text-sm leading-6 text-[#912018]">
+                <p className="mt-3 flex items-start gap-2 rounded-md bg-danger-soft px-3 py-2 text-sm leading-6 text-danger">
                   <ShieldAlert className="mt-1 size-4 shrink-0" />
                   {detail.occupied}
                 </p>
               )}
               {mediaKey && <Stats kind={mediaKey[0]} entry={detailMedia} />}
-              <p className="mt-4 text-[15px] leading-7 text-[#33413e]">{detail.text}</p>
+              <p className="mt-4 text-[15px] leading-7 text-copy">{detail.text}</p>
               <ul className="mt-5 flex flex-col gap-2">
                 {detail.facts.map((f) => (
-                  <li key={f} className="rounded-lg bg-[#f5f7f6] px-3 py-2 text-sm text-[#111a18]">
+                  <li key={f} className="rounded-lg bg-subtle px-3 py-2 text-sm text-ink">
                     {f}
                   </li>
                 ))}
@@ -780,7 +780,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       key={c.id}
                       type="button"
                       onClick={() => select({ kind: "city", city: c })}
-                      className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                      className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[13px] font-medium hover:bg-subtle"
                     >
                       <MapPin className="size-3.5 text-[#2f6fb0]" />
                       {c.name}
@@ -799,7 +799,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               <h2 className="mt-1 text-2xl">{layerInfo.title}</h2>
               <div className="mt-4 flex flex-col gap-3">
                 {layerInfo.paragraphs.map((p) => (
-                  <p key={p.slice(0, 30)} className="text-[15px] leading-7 text-[#33413e]">
+                  <p key={p.slice(0, 30)} className="text-[15px] leading-7 text-copy">
                     {p}
                   </p>
                 ))}
@@ -807,10 +807,10 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               {layer === "political" && (
                 <Swatches items={REGIONS.map((r) => ({ color: REGION_COLORS[r.id], label: r.name }))} />
               )}
-              <h3 className="mt-7 text-xs font-semibold text-[#66736f]">{COUNTRY.name}</h3>
+              <h3 className="mt-7 text-xs font-semibold text-mute">{COUNTRY.name}</h3>
               <ul className="mt-2 flex flex-col gap-2">
                 {COUNTRY.facts.map((f) => (
-                  <li key={f} className="rounded-lg bg-[#f5f7f6] px-3 py-2 text-sm text-[#111a18]">
+                  <li key={f} className="rounded-lg bg-subtle px-3 py-2 text-sm text-ink">
                     {f}
                   </li>
                 ))}
@@ -819,7 +819,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
           )}
 
           {/* Everything on the map, as lists. */}
-          <section className="mt-8 border-t border-[#e2e7e5] pt-5">
+          <section className="mt-8 border-t border-line pt-5">
             <div role="tablist" aria-label="რუკის ობიექტები" className="flex gap-1 overflow-x-auto">
               {TABS.map((t) => (
                 <button
@@ -830,7 +830,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                   onClick={() => setTab(t.id)}
                   className={cn(
                     "h-10 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium transition-colors",
-                    tab === t.id ? "bg-[#111a18] text-white" : "text-[#33413e] hover:bg-[#f1f4f3]",
+                    tab === t.id ? "bg-deep text-white" : "text-copy hover:bg-[#f1f4f3]",
                   )}
                 >
                   {t.name}
@@ -854,9 +854,9 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
               {tab === "cities" &&
                 CITIES.map((c) => (
                   <ListItem key={c.id} active={activeKey === `city:${c.id}`} onClick={() => select({ kind: "city", city: c })}>
-                    {media.city?.[c.id]?.image ? <Thumb entry={media.city[c.id]} /> : <MapPin className={cn("size-3.5 shrink-0", c.capital ? "text-[#b8232b]" : "text-[#66736f]")} />}
+                    {media.city?.[c.id]?.image ? <Thumb entry={media.city[c.id]} /> : <MapPin className={cn("size-3.5 shrink-0", c.capital ? "text-[#b8232b]" : "text-mute")} />}
                     {c.name}
-                    <span className="ms-auto text-xs font-normal text-[#97a29e]">{REGION_BY_ID[c.region].name}</span>
+                    <span className="ms-auto text-xs font-normal text-faint">{REGION_BY_ID[c.region].name}</span>
                   </ListItem>
                 ))}
               {tab === "rivers" &&
@@ -864,7 +864,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                   <ListItem key={r.id} active={activeKey === `river:${r.id}`} onClick={() => select({ kind: "river", river: r })}>
                     {media.river?.[r.id]?.image ? <Thumb entry={media.river[r.id]} /> : <Waves className="size-3.5 shrink-0 text-[#2f6fb0]" />}
                     {r.name}
-                    <span className="ms-auto text-xs font-normal text-[#97a29e]">{r.basin === "black" ? "შავი ზღვა" : "კასპიის ზღვა"}</span>
+                    <span className="ms-auto text-xs font-normal text-faint">{r.basin === "black" ? "შავი ზღვა" : "კასპიის ზღვა"}</span>
                   </ListItem>
                 ))}
               {tab === "relief" &&
@@ -876,7 +876,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                       <span className={cn("size-2.5 shrink-0 rounded-sm", f.kind === "range" ? "bg-[#a07c5c]" : f.kind === "lowland" ? "bg-[#86b46f]" : "bg-[#cfc785]")} />
                     )}
                     {f.name}
-                    <span className="ms-auto text-xs font-normal text-[#97a29e]">{LANDFORM_KINDS[f.kind]}</span>
+                    <span className="ms-auto text-xs font-normal text-faint">{LANDFORM_KINDS[f.kind]}</span>
                   </ListItem>
                 ))}
               {tab === "relief" &&
@@ -884,7 +884,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                   <ListItem key={k.id} active={activeKey === `peak:${k.id}`} onClick={() => select({ kind: "peak", peak: k })}>
                     {media.peak?.[k.id]?.image ? <Thumb entry={media.peak[k.id]} /> : <Mountain className="size-3.5 shrink-0 text-[#7b6a58]" />}
                     {k.name}
-                    <span className="ms-auto text-xs font-normal text-[#97a29e] tabular-nums">{fmt(k.height)} მ</span>
+                    <span className="ms-auto text-xs font-normal text-faint tabular-nums">{fmt(k.height)} მ</span>
                   </ListItem>
                 ))}
               {tab === "lakes" &&
@@ -892,13 +892,13 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
                   <ListItem key={l.id} active={activeKey === `lake:${l.id}`} onClick={() => select({ kind: "lake", lake: l })}>
                     {media.lake?.[l.id]?.image ? <Thumb entry={media.lake[l.id]} /> : <Droplets className="size-3.5 shrink-0 text-[#2f6fb0]" />}
                     {l.name}
-                    <span className="ms-auto text-xs font-normal text-[#97a29e]">{l.kind === "lake" ? "ტბა" : "წყალსაცავი"}</span>
+                    <span className="ms-auto text-xs font-normal text-faint">{l.kind === "lake" ? "ტბა" : "წყალსაცავი"}</span>
                   </ListItem>
                 ))}
             </ul>
           </section>
 
-          <p className="mt-8 text-[11px] leading-5 text-[#97a29e]">
+          <p className="mt-8 text-[11px] leading-5 text-faint">
             სატელიტური სურათი: EOxCloudless https://cloudless.eox.at, EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024), CC BY-NC-SA 4.0; ტბები და მდინარეები: © OpenStreetMap contributors (ODbL); ფოტოები: Wikimedia Commons (ავტორები მითითებულია ფოტოსთან); რელიეფი: AWS Terrain Tiles (Mapzen); საზღვრები: geoBoundaries (CC BY 3.0); სიმაღლეები 6-ჯერ გაზრდილია; ბუნებრივი ზონებისა და ჰავის რუკები განზოგადებულია. აფხაზეთი და ცხინვალის რეგიონი საქართველოს განუყოფელი ნაწილია.
           </p>
         </article>

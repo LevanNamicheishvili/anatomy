@@ -215,12 +215,12 @@ export function SeasonsGlobe() {
   const goTo = (d: number) => setDay(d);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა, მზე, დღე და ღამე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {ZONES.map((z) => (
-            <span key={z} data-kind="zone" data-lat={0} data-lon={z * 15} className={cn("absolute top-0 left-0 rounded px-1 text-[10px] font-semibold whitespace-nowrap opacity-0", z === noonZone ? "bg-[#ffd84d] text-[#111a18]" : "text-[#ddd6fe] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]")}>
+            <span key={z} data-kind="zone" data-lat={0} data-lon={z * 15} className={cn("absolute top-0 left-0 rounded px-1 text-[10px] font-semibold whitespace-nowrap opacity-0", z === noonZone ? "bg-[#ffd84d] text-ink" : "text-[#ddd6fe] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]")}>
               {z === 0 ? "0" : `${z > 0 ? "+" : "−"}${Math.abs(z)}`}
             </span>
           ))}
@@ -234,26 +234,26 @@ export function SeasonsGlobe() {
               </span>
             );
           })}
-          <span data-kind="pole" className="absolute top-0 left-0 rounded bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-[#111a18] opacity-0">
+          <span data-kind="pole" className="absolute top-0 left-0 rounded bg-card/90 px-1.5 py-0.5 text-[11px] font-semibold text-ink opacity-0">
             ჩრდ. პოლუსი · ღერძი 23,44°
           </span>
-          <span data-kind="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[11px] font-semibold text-[#111a18] opacity-0">
+          <span data-kind="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[11px] font-semibold text-ink opacity-0">
             მზე
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{tp ? tp.name : dateLabel(day)}</p>
-          <p className="text-[13px] text-[#66736f]">
-            მზე ზენიტშია: <b className="text-[#111a18] tabular-nums">{Math.abs(decl) < 0.05 ? "ეკვატორზე" : formatLat(decl).text}</b>
+          <p className="text-[13px] text-mute">
+            მზე ზენიტშია: <b className="text-ink tabular-nums">{Math.abs(decl) < 0.05 ? "ეკვატორზე" : formatLat(decl).text}</b>
           </p>
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
-          <button type="button" onClick={() => setShowZones((s) => !s)} aria-pressed={showZones} title="საათის სარტყლები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showZones ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setShowZones((s) => !s)} aria-pressed={showZones} title="საათის სარტყლები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showZones ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Clock className="size-5" />
           </button>
         </div>
@@ -270,13 +270,13 @@ export function SeasonsGlobe() {
                   type="button"
                   onClick={() => goTo(t.day)}
                   aria-pressed={day === t.day}
-                  className={cn("h-9 rounded-full px-3 text-sm", day === t.day ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                  className={cn("h-9 rounded-full px-3 text-sm", day === t.day ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
                 >
                   {t.short}
                 </button>
               ))}
             </div>
-            <p className="mt-2 min-h-12 text-[15px] leading-7 text-[#33413e]">{tp ? tp.note : "გადაათრიე თარიღი — ნახე, როგორ ინაცვლებს ზენიტური მზე ტროპიკებს შორის და როგორ იცვლება დღის სიგრძე."}</p>
+            <p className="mt-2 min-h-12 text-[15px] leading-7 text-copy">{tp ? tp.note : "გადაათრიე თარიღი — ნახე, როგორ ინაცვლებს ზენიტური მზე ტროპიკებს შორის და როგორ იცვლება დღის სიგრძე."}</p>
           </div>
           <LabeledSlider label="თარიღი" value={day} display={dateLabel(day)} min={1} max={365} onChange={setDay} color="#2f6fb0" />
           <LabeledSlider label="დრო თბილისში" value={tbTime} display={`${clock(tbTime)} · გრინვიჩით (UTC) ${clock(utc)}`} min={0} max={23.75} step={0.25} onChange={setTbTime} color="#2f6fb0" />
@@ -286,8 +286,8 @@ export function SeasonsGlobe() {
               { k: "შუადღის მზე თბილისში", v: `${Math.round(noonAltitude(41.72, decl))}°` },
               { k: "ახლა შუადღეა სარტყელში", v: utcLabel(noonZone) },
             ].map((x) => (
-              <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f] [overflow-wrap:anywhere]">{x.k}</dt>
+              <div key={x.k} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute [overflow-wrap:anywhere]">{x.k}</dt>
                 <dd className="mt-1 text-base leading-5 font-semibold tabular-nums">{x.v}</dd>
               </div>
             ))}
@@ -296,7 +296,7 @@ export function SeasonsGlobe() {
 
         <div className="flex flex-col gap-3">
           <OrbitInset day={day} onPick={goTo} />
-          <ul className="flex flex-col divide-y divide-[#eef2f0] rounded-lg border border-[#e2e7e5] text-sm">
+          <ul className="flex flex-col divide-y divide-chip rounded-lg border border-line text-sm">
             {CITIES.map((c) => {
               const off = cityOffset(c, day);
               const alt = sunAltitude(c.lat, c.lon, decl, utc);
@@ -305,14 +305,14 @@ export function SeasonsGlobe() {
                   {alt > 0 ? <Sun className="size-4 shrink-0 text-[#c08a00]" /> : <Moon className="size-4 shrink-0 text-[#5b6bb5]" />}
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{c.name}</span>
-                    <span className="block text-[11px] text-[#66736f]">
+                    <span className="block text-[11px] text-mute">
                       {utcLabel(off)}
                       {off !== c.utc ? " · ზაფხულის დრო" : ""}
                     </span>
                   </span>
                   <span className="text-right font-semibold tabular-nums">
                     {clock(utc + off)}
-                    <span className="block text-[10px] font-normal text-[#66736f]">{shiftLabel(dayShift(utc, off) - dayShift(utc, TBILISI_UTC)).trim() || (alt > 0 ? "დღეა" : "ღამეა")}</span>
+                    <span className="block text-[10px] font-normal text-mute">{shiftLabel(dayShift(utc, off) - dayShift(utc, TBILISI_UTC)).trim() || (alt > 0 ? "დღეა" : "ღამეა")}</span>
                   </span>
                 </li>
               );
@@ -320,7 +320,7 @@ export function SeasonsGlobe() {
           </ul>
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">
         მოდელი გამარტივებულია: სარტყლები ნაჩვენებია „იდეალური“ 15°-იანი ზოლებით (ნამდვილი საზღვრები ქვეყნების საზღვრებს მიჰყვება); თარიღები ზუსტია ±1 დღით. დედამიწის სურათი: NASA Blue Marble.
       </p>
     </section>

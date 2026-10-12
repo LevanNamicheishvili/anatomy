@@ -76,16 +76,16 @@ export function HeartExplorer({ initial }: { initial?: string }) {
   return (
     <div className={explorerPage}>
       <TopicHeader subject={{ name: "ბიოლოგია", href: "/biology" }} topic="გული და სისხლის მიმოქცევა" color={ACCENT} icon="heart">
-        <Link href="/biology/blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/biology/blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           სისხლი
         </Link>
-        <Link href="/biology/journeys?j=blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-[#33413e] hover:bg-[#eef2f0] max-sm:hidden">
+        <Link href="/biology/journeys?j=blood" className="rounded-md px-3 py-1.5 text-sm font-medium text-copy hover:bg-chip max-sm:hidden">
           სისხლის მოგზაურობა
         </Link>
       </TopicHeader>
 
       <div className={cn(explorerGrid, "lg:grid-cols-[240px_minmax(0,1fr)_400px]")}>
-        <nav aria-label="თემის ნაწილები" className="border-e border-[#e2e7e5] bg-white max-lg:border-e-0 max-lg:border-b">
+        <nav aria-label="თემის ნაწილები" className="border-e border-line bg-card max-lg:border-e-0 max-lg:border-b">
           <ol className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:gap-0.5 lg:p-3">
             {SECTIONS.map((s, i) => (
               <li key={s.view}>
@@ -95,11 +95,11 @@ export function HeartExplorer({ initial }: { initial?: string }) {
                   aria-current={i === index ? "step" : undefined}
                   className={cn(
                     "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors lg:whitespace-normal",
-                    i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                    i === index ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-copy hover:bg-subtle",
                   )}
                 >
                   <span
-                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-[#eef2f0] text-[#66736f]")}
+                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold", i === index ? "text-white" : "bg-chip text-mute")}
                     style={i === index ? { backgroundColor: ACCENT } : undefined}
                   >
                     {i + 1}
@@ -116,12 +116,12 @@ export function HeartExplorer({ initial }: { initial?: string }) {
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium shadow-sm">გულის მოდელი იტვირთება…</span>
+              <span className="rounded-lg bg-card px-4 py-2.5 text-sm font-medium shadow-sm">გულის მოდელი იტვირთება…</span>
             </div>
           )}
           {section.view === "cycle" && (
             <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3 max-sm:top-[88px] max-sm:justify-end">
-              <span className="rounded-full bg-[#111a18]/85 px-4 py-1.5 text-sm font-semibold text-white max-sm:px-3 max-sm:text-xs">
+              <span className="rounded-full bg-deep/85 px-4 py-1.5 text-sm font-semibold text-white max-sm:px-3 max-sm:text-xs">
                 {PHASES[phase].name} · {PHASES[phase].duration}
               </span>
             </div>
@@ -132,7 +132,7 @@ export function HeartExplorer({ initial }: { initial?: string }) {
                 type="button"
                 onClick={() => set({ playing: !opts.playing })}
                 aria-label={opts.playing ? "პაუზა" : "გაგრძელება"}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#111a18] text-white"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-deep text-white"
               >
                 {opts.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
               </button>
@@ -170,12 +170,12 @@ export function HeartExplorer({ initial }: { initial?: string }) {
             {index + 1} / {SECTIONS.length}
           </p>
           <h2 className="mt-1 text-2xl">{section.title}</h2>
-          <p className="mt-1 text-sm text-[#66736f]">{section.subtitle}</p>
+          <p className="mt-1 text-sm text-mute">{section.subtitle}</p>
 
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {section.facts.map((f) => (
-              <div key={f.label} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{f.label}</dt>
+              <div key={f.label} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{f.label}</dt>
                 <dd className="mt-1 text-sm leading-5 font-semibold [overflow-wrap:anywhere]">{f.value}</dd>
               </div>
             ))}
@@ -187,11 +187,11 @@ export function HeartExplorer({ initial }: { initial?: string }) {
                 <span className="size-3.5 shrink-0 rounded-full" style={{ background: info.color }} />
                 <h3 className="text-base font-semibold">{info.name}</h3>
               </div>
-              {info.blood && <p className="mt-1 text-xs text-[#66736f]">{info.blood === "arterial" ? "არტერიული სისხლი — ჟანგბადით მდიდარი" : "ვენური სისხლი — ჟანგბადით ღარიბი"}</p>}
-              <p className="mt-3 text-[15px] leading-7 text-[#33413e]">{info.text}</p>
+              {info.blood && <p className="mt-1 text-xs text-mute">{info.blood === "arterial" ? "არტერიული სისხლი — ჟანგბადით მდიდარი" : "ვენური სისხლი — ჟანგბადით ღარიბი"}</p>}
+              <p className="mt-3 text-[15px] leading-7 text-copy">{info.text}</p>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {info.facts.map((f) => (
-                  <li key={f} className="rounded-md bg-[#f5f7f6] px-3 py-1.5 text-sm">
+                  <li key={f} className="rounded-md bg-subtle px-3 py-1.5 text-sm">
                     {f}
                   </li>
                 ))}
@@ -201,7 +201,7 @@ export function HeartExplorer({ initial }: { initial?: string }) {
 
           {section.view === "structure" && (
             <section className="mt-6">
-              <h3 className="text-xs font-semibold text-[#66736f]">გულის ნაწილები — დააჭირე</h3>
+              <h3 className="text-xs font-semibold text-mute">გულის ნაწილები — დააჭირე</h3>
               <ul className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-1">
                 {STRUCTURE_PARTS.map((id) => (
                   <li key={id}>
@@ -214,7 +214,7 @@ export function HeartExplorer({ initial }: { initial?: string }) {
                       aria-current={picked === id ? "true" : undefined}
                       className={cn(
                         "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
-                        picked === id ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                        picked === id ? "bg-[#fbeceb] font-semibold text-[#8f1c22]" : "text-copy hover:bg-subtle",
                       )}
                     >
                       <span className="size-2.5 shrink-0 rounded-full" style={{ background: PARTS[id].color }} />
@@ -227,15 +227,15 @@ export function HeartExplorer({ initial }: { initial?: string }) {
           )}
 
           {section.view === "cycle" && (
-            <section className="mt-6 rounded-xl border border-[#e2e7e5] p-4">
+            <section className="mt-6 rounded-xl border border-line p-4">
               <ol className="flex flex-col gap-3">
                 {PHASES.map((p, i) => (
                   <li key={p.name} className={cn("rounded-lg px-3 py-2 transition-colors", i === phase ? "bg-[#fbeceb]" : "")}>
                     <div className="flex items-baseline justify-between gap-2">
                       <span className={cn("text-sm font-semibold", i === phase && "text-[#8f1c22]")}>{p.name}</span>
-                      <span className="text-xs text-[#66736f]">{p.duration}</span>
+                      <span className="text-xs text-mute">{p.duration}</span>
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-[#33413e]">{p.text}</p>
+                    <p className="mt-1 text-sm leading-6 text-copy">{p.text}</p>
                   </li>
                 ))}
               </ol>
@@ -244,14 +244,14 @@ export function HeartExplorer({ initial }: { initial?: string }) {
 
           <div className="mt-5 flex flex-col gap-4">
             {section.paragraphs.map((p) => (
-              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-[#33413e]">
+              <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-copy">
                 {p}
               </p>
             ))}
           </div>
 
           {(section.view === "structure" || section.view === "cycle" || section.view === "circulation") && (
-            <p className="mt-6 text-[11px] leading-5 text-[#97a29e]">გულისა და ფილტვების მოდელი: BodyParts3D © DBCLS (CC BY 4.0), Z-Anatomy (CC BY-SA 4.0).</p>
+            <p className="mt-6 text-[11px] leading-5 text-faint">გულისა და ფილტვების მოდელი: BodyParts3D © DBCLS (CC BY 4.0), Z-Anatomy (CC BY-SA 4.0).</p>
           )}
 
           <SectionPager index={index} count={SECTIONS.length} onGo={go} />

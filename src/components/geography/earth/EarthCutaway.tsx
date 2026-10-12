@@ -87,23 +87,23 @@ export function EarthCutaway() {
   const probeR = drawnRadius(depth);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა ჭრილში: ქერქი, მანტია, ბირთვი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LAYERS.map((l) => (
-            <span key={l.id} data-r={l.id === "inner-core" ? 0.09 : (l.rTop + l.rBottom) / 2} data-e={l.id === "crust" ? 52 : l.id === "upper-mantle" ? 40 : 28} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow", selected === l.id ? "bg-[#111a18] text-white" : "bg-white/90 text-[#111a18]")}>
+            <span key={l.id} data-r={l.id === "inner-core" ? 0.09 : (l.rTop + l.rBottom) / 2} data-e={l.id === "crust" ? 52 : l.id === "upper-mantle" ? 40 : 28} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow", selected === l.id ? "bg-deep text-white" : "bg-card/90 text-ink")}>
               {l.name}
             </span>
           ))}
-          <span data-probe={probeR} className="absolute top-0 left-0 rounded bg-[#111a18]/85 px-1.5 py-0.5 text-white opacity-0">
+          <span data-probe={probeR} className="absolute top-0 left-0 rounded bg-deep/85 px-1.5 py-0.5 text-white opacity-0">
             {nf(depth)} კმ · {nf(tempAt(depth))}°C
           </span>
         </div>
 
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {VIEWS.map((v) => (
-            <button key={v.deg} type="button" onClick={() => view(v.deg)} aria-pressed={opening === v.deg} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", opening === v.deg ? "bg-[#2f6fb0] text-white" : "bg-white/92 text-[#111a18]")}>
+            <button key={v.deg} type="button" onClick={() => view(v.deg)} aria-pressed={opening === v.deg} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", opening === v.deg ? "bg-[#2f6fb0] text-white" : "bg-card/92 text-ink")}>
               {v.name}
             </button>
           ))}
@@ -133,7 +133,7 @@ export function EarthCutaway() {
                 <span key={l.id} className="absolute top-0 h-full" style={{ left: `${(l.top / EARTH_R_KM) * 100}%`, width: `${((l.bottom - l.top) / EARTH_R_KM) * 100}%`, backgroundColor: l.color }} />
               ))}
             </span>
-            <span className="mt-1 flex justify-between text-[10px] text-[#97a29e] tabular-nums" aria-hidden>
+            <span className="mt-1 flex justify-between text-[10px] text-faint tabular-nums" aria-hidden>
               {BOUNDARIES.map((b) => (
                 <span key={b}>{nf(b)}</span>
               ))}
@@ -146,22 +146,22 @@ export function EarthCutaway() {
               { k: "წნევა", v: fmtPressure(pressureAt(depth)) },
               { k: "მდგომარეობა", v: layer.state.split(",")[0].split(" (")[0] },
             ].map((x) => (
-              <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-                <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
+              <div key={x.k} className="rounded-lg bg-subtle px-3 py-2.5">
+                <dt className="text-[11px] leading-4 text-mute">{x.k}</dt>
                 <dd className="mt-1 text-[15px] leading-5 font-semibold [overflow-wrap:anywhere]">{x.v}</dd>
               </div>
             ))}
           </dl>
-          <div className="rounded-lg border border-[#e2e7e5] p-4">
+          <div className="rounded-lg border border-line p-4">
             <h2 className="flex flex-wrap items-center gap-x-2 text-lg">
               <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: info.color }} />
               {info.name}
-              <span className="text-sm font-normal whitespace-nowrap text-[#66736f]">
+              <span className="text-sm font-normal whitespace-nowrap text-mute">
                 {nf(info.top)}–{nf(info.bottom)} კმ
               </span>
             </h2>
-            <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{info.note}</p>
-            <p className="mt-2 text-sm text-[#66736f]">
+            <p className="mt-2 text-[15px] leading-7 text-copy">{info.note}</p>
+            <p className="mt-2 text-sm text-mute">
               შედგენილობა: {info.matter} · {info.temp} · სიმკვრივე {info.density}
             </p>
           </div>
@@ -174,11 +174,11 @@ export function EarthCutaway() {
           <ul className="flex flex-col gap-1.5">
             {LAYERS.map((l) => (
               <li key={l.id}>
-                <button type="button" onClick={() => pick(l.id)} aria-pressed={selected === l.id} className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left", selected === l.id || (!selected && layer.id === l.id) ? "border-[#2f6fb0] bg-[#eef4fb]" : "border-[#e2e7e5] hover:border-[#97a29e]")}>
+                <button type="button" onClick={() => pick(l.id)} aria-pressed={selected === l.id} className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left", selected === l.id || (!selected && layer.id === l.id) ? "border-[#2f6fb0] bg-[#eef4fb]" : "border-line hover:border-faint")}>
                   <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
                   <span className="min-w-0">
                     <span className="block font-semibold">{l.name}</span>
-                    <span className="block text-[12px] text-[#66736f]">
+                    <span className="block text-[12px] text-mute">
                       {nf(l.top)}–{nf(l.bottom)} კმ · {l.state.split(",")[0].split(" (")[0]}
                     </span>
                   </span>
@@ -186,12 +186,12 @@ export function EarthCutaway() {
               </li>
             ))}
           </ul>
-          <p className="rounded-lg bg-[#f5f7f6] px-3 py-2 text-[13px] leading-5 text-[#33413e]">
+          <p className="rounded-lg bg-subtle px-3 py-2 text-[13px] leading-5 text-copy">
             ყველაზე ღრმა ჭაბურღილი (კოლის, რუსეთი) — 12,3 კმ: ეს დედამიწის რადიუსის მხოლოდ 0,2%-ია. სიღრმეში რა ხდება, მეცნიერები მიწისძვრის ტალღებით იგებენ.
           </p>
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">სიღრმეები და ტემპერატურები სასწავლო მიახლოებაა. დედამიწის სურათი: NASA Blue Marble. 1 გიგაპასკალი ≈ 10 000 ატმოსფერო.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">სიღრმეები და ტემპერატურები სასწავლო მიახლოებაა. დედამიწის სურათი: NASA Blue Marble. 1 გიგაპასკალი ≈ 10 000 ატმოსფერო.</p>
     </section>
   );
 }

@@ -6,8 +6,8 @@ import { signIn, type FormState } from "@/app/actions/auth";
 import { Alert } from "@/components/portal/ui";
 
 const field =
-  "peer h-12 w-full rounded-lg border border-[#d5dcd9] bg-white ps-11 pe-3 text-base text-[#111a18] outline-none transition-[border-color,box-shadow] placeholder:text-[#97a29e] hover:border-[#c3ccc9] focus:border-[#0f8a74] focus:ring-4 focus:ring-[#0f8a74]/12";
-const icon = "pointer-events-none absolute start-3.5 top-1/2 size-[18px] -translate-y-1/2 text-[#97a29e] transition-colors peer-focus:text-[#0f8a74]";
+  "peer h-12 w-full rounded-xl border border-line-strong bg-card ps-11 pe-3 text-base text-ink outline-none transition-[border-color,box-shadow] placeholder:text-faint hover:border-line-strong focus:border-brand focus:ring-4 focus:ring-brand/12";
+const icon = "pointer-events-none absolute start-3.5 top-1/2 size-[18px] -translate-y-1/2 text-faint transition-colors peer-focus:text-brand";
 
 export function LoginForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signIn, {});
@@ -20,7 +20,7 @@ export function LoginForm({ next }: { next: string }) {
       <input type="hidden" name="next" value={next} />
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="username" className="text-[13px] font-semibold text-[#33413e]">
+        <label htmlFor="username" className="text-sm font-semibold text-copy">
           მომხმარებლის სახელი
         </label>
         <div className="relative">
@@ -43,7 +43,7 @@ export function LoginForm({ next }: { next: string }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="password" className="text-[13px] font-semibold text-[#33413e]">
+        <label htmlFor="password" className="text-sm font-semibold text-copy">
           პაროლი
         </label>
         <div className="relative">
@@ -64,13 +64,13 @@ export function LoginForm({ next }: { next: string }) {
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "პაროლის დამალვა" : "პაროლის ჩვენება"}
             title={showPassword ? "დამალვა" : "ჩვენება"}
-            className="absolute end-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-md text-[#66736f] transition-colors hover:bg-[#eef2f0] hover:text-[#111a18]"
+            className="absolute end-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-md text-mute transition-colors hover:bg-chip hover:text-ink"
           >
             {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
           </button>
         </div>
         {capsLock && (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-[#8a6100]" role="status">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-warning" role="status">
             <TriangleAlert className="size-3.5 shrink-0" />
             Caps Lock ჩართულია
           </p>
@@ -82,7 +82,7 @@ export function LoginForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#111a18] px-5 text-[15px] font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_8px_20px_-8px_rgba(17,26,24,0.45)] transition-colors outline-none hover:bg-[#1f2b28] focus-visible:ring-4 focus-visible:ring-[#0f8a74]/30 disabled:opacity-70"
+        className="group mt-1 inline-flex min-h-12 py-3 items-center justify-center gap-2 rounded-xl bg-deep px-5 text-[15px] font-semibold text-white shadow-card transition-colors outline-none hover:bg-deep-hover focus-visible:ring-4 focus-visible:ring-brand/30 disabled:opacity-70"
       >
         {pending ? (
           <>

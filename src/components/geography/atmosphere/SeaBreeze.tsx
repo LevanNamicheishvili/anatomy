@@ -69,23 +69,23 @@ export function SeaBreeze() {
   const showP = pressure && b.kind !== "calm" ? "0" : "1";
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
-          <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
+          <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
             <Thermometer className="size-3.5 text-[#2f6fb0]" />
             შავი ზღვა · {t1(b.sea)}
           </span>
-          <span data-at="land" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
+          <span data-at="land" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
             <Thermometer className="size-3.5 text-[#d64545]" />
             ხმელეთი · {t1(b.land)}
           </span>
-          <span data-at="mountain" className="absolute top-0 left-0 rounded bg-white/85 px-1.5 py-0.5 text-[#111a18] opacity-0">
+          <span data-at="mountain" className="absolute top-0 left-0 rounded bg-card/85 px-1.5 py-0.5 text-ink opacity-0">
             მთის წვერი ~4,5 კმ · {t1(b.land - LAPSE * 4.5)}
           </span>
           {([1, 2, 3] as const).map((km) => (
-            <span key={km} data-at={`km${km}`} className="absolute top-0 left-0 translate-x-2 rounded bg-white/80 px-1 text-[11px] text-[#33413e] opacity-0">
+            <span key={km} data-at={`km${km}`} className="absolute top-0 left-0 translate-x-2 rounded bg-card/80 px-1 text-[11px] text-copy opacity-0">
               {km} კმ · {t1(b.land - LAPSE * km)}
             </span>
           ))}
@@ -101,24 +101,24 @@ export function SeaBreeze() {
           <span data-at="seaHigh" data-hidden={showP} className={cn("absolute top-0 left-0 rounded-full px-2 py-0.5 text-[11px] opacity-0", cell(landLow))}>
             ზემოთ: {landLow ? "დ" : "მ"}
           </span>
-          <span data-at="wind" data-hidden={b.kind === "calm" ? "1" : "0"} className="absolute top-0 left-0 flex items-center gap-1 rounded bg-[#111a18]/80 px-1.5 py-0.5 text-white opacity-0">
+          <span data-at="wind" data-hidden={b.kind === "calm" ? "1" : "0"} className="absolute top-0 left-0 flex items-center gap-1 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0">
             <Wind className="size-3.5" />
             {b.kind === "sea" ? "ზღვის ბრიზი →" : "← ხმელეთის ბრიზი"} · {b.speed.toFixed(0)} მ/წმ
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="flex items-center gap-1.5 font-semibold">
             {day ? <Sun className="size-4 text-[#c08a00]" /> : <Moon className="size-4 text-[#5b6bb5]" />}
             {clock(hour)} · {b.kind === "sea" ? "დღის (ზღვის) ბრიზი" : b.kind === "land" ? "ღამის (ხმელეთის) ბრიზი" : "შტილი — ქარი ცვლის მიმართულებას"}
           </p>
-          <p className="text-[13px] text-[#66736f]">
-            ტემპერატურის სხვაობა ხმელეთსა და ზღვას შორის: <b className="text-[#111a18] tabular-nums">{b.diff > 0 ? "+" : ""}{b.diff.toFixed(1)}°C</b>
+          <p className="text-[13px] text-mute">
+            ტემპერატურის სხვაობა ხმელეთსა და ზღვას შორის: <b className="text-ink tabular-nums">{b.diff > 0 ? "+" : ""}{b.diff.toFixed(1)}°C</b>
           </p>
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "დღე-ღამის სვლა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "დღე-ღამის სვლა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
         </div>
@@ -133,7 +133,7 @@ export function SeaBreeze() {
                 type="button"
                 onClick={() => setHour(p.hour)}
                 aria-pressed={Math.round(hour) === p.hour}
-                className={cn("h-9 rounded-full px-3 text-sm", Math.round(hour) === p.hour ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                className={cn("h-9 rounded-full px-3 text-sm", Math.round(hour) === p.hour ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
               >
                 {p.name} · {clock(p.hour)}
               </button>
@@ -144,7 +144,7 @@ export function SeaBreeze() {
             <input type="checkbox" checked={pressure} onChange={(e) => setPressure(e.target.checked)} className="size-4 shrink-0 accent-[#2f6fb0]" />
             წნევის არეები (მ — მაღალი, დ — დაბალი)
           </label>
-          <p className="text-[15px] leading-7 text-[#33413e]">
+          <p className="text-[15px] leading-7 text-copy">
             {b.kind === "sea"
               ? "ხმელეთი მზეზე უფრო სწრაფად თბება, ვიდრე ზღვა. თბილი ჰაერი ფართოვდება, მსუბუქდება და მაღლა ადის — ხმელეთზე წნევა ეცემა. ზღვიდან გრილი ჰაერი მიწის პირას ხმელეთისკენ მიედინება: ეს ზღვის ბრიზია."
               : b.kind === "land"
@@ -161,14 +161,14 @@ export function SeaBreeze() {
             { k: "ქარი უბერავს", v: b.kind === "sea" ? "ზღვიდან ხმელეთზე" : b.kind === "land" ? "ხმელეთიდან ზღვაზე" : "თითქმის შტილია" },
             { k: "ყოველ 1 კმ სიმაღლეზე", v: `−${LAPSE}°C` },
           ].map((x) => (
-            <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-              <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
+            <div key={x.k} className="rounded-lg bg-subtle px-3 py-2.5">
+              <dt className="text-[11px] leading-4 text-mute">{x.k}</dt>
               <dd className="mt-1 text-base leading-5 font-semibold tabular-nums [overflow-wrap:anywhere]">{x.v}</dd>
             </div>
           ))}
         </dl>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">მოდელი გამარტივებულია: ზაფხულის მოწმენდილი დღე შავი ზღვის სანაპიროზე; რიცხვები სასწავლო მიახლოებაა. წნევა — ჰექტოპასკალებში (ჰპა); 1013 ჰპა ≈ 760 მმ ვერცხლისწყლის სვეტი.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მოდელი გამარტივებულია: ზაფხულის მოწმენდილი დღე შავი ზღვის სანაპიროზე; რიცხვები სასწავლო მიახლოებაა. წნევა — ჰექტოპასკალებში (ჰპა); 1013 ჰპა ≈ 760 მმ ვერცხლისწყლის სვეტი.</p>
     </section>
   );
 }

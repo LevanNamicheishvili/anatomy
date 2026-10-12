@@ -22,16 +22,16 @@ const STEPS = [
 ];
 
 const LABELS: { at: SkyAnchor; text: string; cls: string }[] = [
-  { at: "polaris", text: "პოლარული ვარსკვლავი", cls: "bg-[#ffd166] text-[#111a18]" },
+  { at: "polaris", text: "პოლარული ვარსკვლავი", cls: "bg-[#ffd166] text-ink" },
   { at: "dubhe", text: "დუბჰე", cls: "text-[#bfe3ff]" },
   { at: "merak", text: "მერაკი", cls: "text-[#bfe3ff]" },
   { at: "uma", text: "დიდი დათვი", cls: "text-[#7cc4ff]" },
   { at: "umi", text: "პატარა დათვი", cls: "text-[#ffd166]" },
   { at: "cas", text: "კასიოპეა", cls: "text-[#c4b5fd]" },
   { at: "n", text: "ჩ · 0°", cls: "bg-[#ff5a4f] text-white" },
-  { at: "e", text: "აღმ · 90°", cls: "bg-white/85 text-[#111a18]" },
-  { at: "s", text: "ს · 180°", cls: "bg-white/85 text-[#111a18]" },
-  { at: "w", text: "დას · 270°", cls: "bg-white/85 text-[#111a18]" },
+  { at: "e", text: "აღმ · 90°", cls: "bg-card/85 text-ink" },
+  { at: "s", text: "ს · 180°", cls: "bg-card/85 text-ink" },
+  { at: "w", text: "დას · 270°", cls: "bg-card/85 text-ink" },
 ];
 
 const fmtDeg = (v: number) => `${(Math.round(v * 10) / 10).toLocaleString("ka-GE")}°`;
@@ -86,7 +86,7 @@ export function PolarisSky() {
   const hideAz = !(step === 0 || step === 4);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#070d1f]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing" aria-label="ღამის ცა და პოლარული ვარსკვლავი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
@@ -95,23 +95,23 @@ export function PolarisSky() {
               {l.text}
             </span>
           ))}
-          <span data-at="arc" data-hidden={hideArc ? "1" : "0"} className="absolute top-0 left-0 rounded bg-[#ffd166] px-1.5 py-0.5 text-[#111a18] opacity-0">
+          <span data-at="arc" data-hidden={hideArc ? "1" : "0"} className="absolute top-0 left-0 rounded bg-[#ffd166] px-1.5 py-0.5 text-ink opacity-0">
             სიმაღლე {fmtDeg(polAlt)} ≈ განედი
           </span>
-          <span data-at="azimuth" data-hidden={hideAz ? "1" : "0"} className="absolute top-0 left-0 rounded bg-[#111a18]/85 px-1.5 py-0.5 text-[#ffd166] opacity-0">
+          <span data-at="azimuth" data-hidden={hideAz ? "1" : "0"} className="absolute top-0 left-0 rounded bg-deep/85 px-1.5 py-0.5 text-[#ffd166] opacity-0">
             აზიმუტი {Math.round(az)}°
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">განედი: {lat === 0 ? "0° (ეკვატორი)" : `${fmtDeg(Math.abs(lat))} ${lat > 0 ? "ჩ. გ." : "ს. გ."}`}</p>
-          <p className="text-[13px] text-[#66736f]">
-            პოლარულის სიმაღლე: <b className="text-[#111a18] tabular-nums">{polAlt > 0 ? fmtDeg(polAlt) : "ჰორიზონტს ქვემოთ"}</b>
+          <p className="text-[13px] text-mute">
+            პოლარულის სიმაღლე: <b className="text-ink tabular-nums">{polAlt > 0 ? fmtDeg(polAlt) : "ჰორიზონტს ქვემოთ"}</b>
           </p>
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ცის ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ცის ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
         </div>
@@ -123,7 +123,7 @@ export function PolarisSky() {
               type="button"
               onClick={() => setLat(l.lat)}
               aria-pressed={lat === l.lat}
-              className={cn("flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold shadow-sm", lat === l.lat ? "bg-[#2f6fb0] text-white" : "bg-white/92 text-[#111a18] hover:bg-white")}
+              className={cn("flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold shadow-sm", lat === l.lat ? "bg-[#2f6fb0] text-white" : "bg-card/92 text-ink hover:bg-card")}
             >
               {l.name} · {l.lat}°
             </button>
@@ -144,7 +144,7 @@ export function PolarisSky() {
                   type="button"
                   onClick={() => setStep(step === i + 1 ? 0 : i + 1)}
                   aria-pressed={step === i + 1}
-                  className={cn("w-full rounded-lg px-3 py-2 text-left text-sm transition-colors", step === i + 1 ? "bg-[#111a18] text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                  className={cn("w-full rounded-lg px-3 py-2 text-left text-sm transition-colors", step === i + 1 ? "bg-deep text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
                 >
                   <span className="font-semibold">
                     {i + 1}. {s.title}
@@ -156,7 +156,7 @@ export function PolarisSky() {
           </ol>
           <LabeledSlider label="შენი განედი" value={lat} display={fmtDeg(lat)} min={-30} max={90} step={0.1} onChange={setLat} color="#2f6fb0" className="mt-4" />
           <LabeledSlider label="ცის ბრუნვა (ღამის საათები)" value={time} display={`${Math.round(time * 15)}°`} min={0} max={23.95} step={0.05} onChange={setTime} color="#2f6fb0" className="mt-3" />
-          <p className="mt-2 text-[13px] leading-5 text-[#66736f]">
+          <p className="mt-2 text-[13px] leading-5 text-mute">
             {lat < 0
               ? "სამხრეთ ნახევარსფეროში პოლარული ვარსკვლავი არ ჩანს — იქ სამხრეთს სამხრეთის ჯვრით პოულობენ."
               : "ცა საათში 15°-ით ბრუნავს, პოლარული კი თითქმის უძრავია — ამიტომ მასზე ორიენტირება მთელი ღამე შეიძლება."}
@@ -164,22 +164,22 @@ export function PolarisSky() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="rounded-lg border border-[#e2e7e5] p-3">
+          <div className="rounded-lg border border-line p-3">
             <p className="flex items-center gap-1.5 text-sm font-semibold">
               <Compass className="size-4 text-[#2f6fb0]" />
               აზიმუტი
             </p>
-            <p className="mt-1 text-[13px] leading-5 text-[#66736f]">კუთხე ჩრდილოეთის მიმართულებიდან საგნის მიმართულებამდე, საათის ისრის მოძრაობით (0°–360°).</p>
+            <p className="mt-1 text-[13px] leading-5 text-mute">კუთხე ჩრდილოეთის მიმართულებიდან საგნის მიმართულებამდე, საათის ისრის მოძრაობით (0°–360°).</p>
             <LabeledSlider label={compassName(az)} value={Math.round(az)} display={`${Math.round(az)}°`} min={0} max={359} onChange={setAz} color="#2f6fb0" className="mt-2" />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {[0, 90, 180, 270].map((a) => (
-                <button key={a} type="button" onClick={() => setAz(a)} className={cn("h-8 rounded-full px-3 text-sm", Math.round(az) === a ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}>
+                <button key={a} type="button" onClick={() => setAz(a)} className={cn("h-8 rounded-full px-3 text-sm", Math.round(az) === a ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}>
                   {a}°
                 </button>
               ))}
             </div>
           </div>
-          <div className="rounded-lg border border-[#e2e7e5] p-3">
+          <div className="rounded-lg border border-line p-3">
             <p className="flex items-center gap-1.5 text-sm font-semibold">
               <MapPin className="size-4 text-[#ff3b30]" />
               თბილისიდან — რა აზიმუტით?
@@ -196,7 +196,7 @@ export function PolarisSky() {
                       setAz(b);
                       setStep(0);
                     }}
-                    className={cn("h-8 rounded-full px-3 text-sm", on ? "bg-[#111a18] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                    className={cn("h-8 rounded-full px-3 text-sm", on ? "bg-deep font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
                   >
                     {t.name}
                     {on ? ` · ${Math.round(b)}°` : ""}
@@ -207,7 +207,7 @@ export function PolarisSky() {
           </div>
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">ვარსკვლავების მდებარეობა: ნამდვილი კოორდინატები (J2000). პოლარული ციური პოლუსიდან ~0,7°-ითაა დაშორებული, ამიტომ მისი სიმაღლე განედს თითქმის ზუსტად უდრის.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">ვარსკვლავების მდებარეობა: ნამდვილი კოორდინატები (J2000). პოლარული ციური პოლუსიდან ~0,7°-ითაა დაშორებული, ამიტომ მისი სიმაღლე განედს თითქმის ზუსტად უდრის.</p>
     </section>
   );
 }

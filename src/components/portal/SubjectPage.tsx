@@ -30,7 +30,7 @@ export function SubjectPage({ user, subject }: { user: CurrentUser; subject: Sub
       {featured.length > 0 && (
         <section className="mt-10">
           <SectionTitle>მთავარი 3D მოდელები</SectionTitle>
-          <div className={`mt-3 grid gap-5 ${featured.length > 1 ? "xl:grid-cols-2" : ""}`}>
+          <div className={`mt-5 grid gap-6 ${featured.length > 1 ? "xl:grid-cols-2" : ""}`}>
             {featured.map((t) => (
               <FeaturedCard key={t.slug} href={t.href!} title={t.name} description={t.description} icon={TOPIC_ICONS[t.icon]} color={subject.color} grades={t.grades} image={t.image} />
             ))}
@@ -41,7 +41,7 @@ export function SubjectPage({ user, subject }: { user: CurrentUser; subject: Sub
       {rest.length > 0 && (
         <section className="mt-10">
           <SectionTitle hint={`${rest.length} თემა`}>{featured.length > 0 ? "სხვა თემები" : "თემები"}</SectionTitle>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {rest.map((t, i) => (
               <TopicCard key={t.slug} href={t.href!} number={i + 1} title={t.name} description={t.description} icon={TOPIC_ICONS[t.icon]} color={subject.color} grades={t.grades} />
             ))}
@@ -52,7 +52,7 @@ export function SubjectPage({ user, subject }: { user: CurrentUser; subject: Sub
       {soon.length > 0 && (
         <section className="mt-10">
           <SectionTitle>მალე იხსნება</SectionTitle>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {soon.map((t) => (
               <SoonCard key={t.slug} title={t.name} description={t.description} icon={TOPIC_ICONS[t.icon]} />
             ))}

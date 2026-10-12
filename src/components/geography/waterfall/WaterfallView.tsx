@@ -49,7 +49,7 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ჩანჩქერის 3D მოდელი: ${NAMES[id]}`} />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
-            <span key={l.at} data-at={l.at} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-white/90 text-[#111a18]")}>
+            <span key={l.at} data-at={l.at} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-card/90 text-ink")}>
               {l.text}
             </span>
           ))}
@@ -62,7 +62,7 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
           ))}
         </div>
       </div>
-      <div className="text-[14px] leading-6 text-[#33413e]">
+      <div className="text-[14px] leading-6 text-copy">
         <p className="text-sm font-semibold">
           {NAMES[id]} · {preset.rockName}
           {preset.tiers.length > 1 ? ` · ${preset.tiers.length} საფეხური` : ""}
@@ -75,7 +75,7 @@ export function WaterfallView({ id, onPick }: { id: WaterfallId; onPick: (id: Wa
         <p className="mt-3 rounded-lg bg-[#eef6fb] p-2.5 text-[13px] leading-5">
           წყალი კიდიდან ისე ვარდება, როგორც ნასროლი ქვა: წინ მიდის და თან სულ უფრო სწრაფად ეშვება — ამიტომ ნაკადი მრუდია. ძირში დარტყმისას წყალი ქვაბულს ამოთხრის, შხეფები კი ჰაერში წყლის მტვრად იფანტება.
         </p>
-        <p className="mt-2 text-[11px] leading-4 text-[#97a29e]">მოდელი სქემატურია: ფორმა და ქანი მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
+        <p className="mt-2 text-[11px] leading-4 text-faint">მოდელი სქემატურია: ფორმა და ქანი მიახლოებით გადმოსცემს ადგილს, ზომები ზუსტი არ არის. შეგიძლია მოატრიალო და მიუახლოვდე.</p>
       </div>
     </div>
   );

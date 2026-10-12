@@ -51,7 +51,7 @@ export function DeepDivePanel({
 
       <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 pb-6 max-md:px-5">
         {canCut && (
-          <div className="mt-4 rounded-xl border border-[#e2e7e5] bg-white px-3 pt-2.5 pb-1.5">
+          <div className="mt-4 rounded-2xl border border-line bg-card px-3 pt-2.5 pb-1.5">
             <LabeledSlider
               label={t.cutDepth}
               value={Math.round(cutDepth * 100)}
@@ -77,22 +77,22 @@ export function DeepDivePanel({
 
         <div className="mt-5 flex items-center justify-between gap-3">
           <h3 className={cn(sectionLabel, "min-w-0")}>{level === "section" ? t.outsideIn : template.microTitle}</h3>
-          {level === "micro" && <span className="shrink-0 rounded-full bg-[#eef2f0] px-2 py-0.5 text-xs text-[#66736f] tabular-nums">{template.magnification}</span>}
+          {level === "micro" && <span className="shrink-0 rounded-full bg-chip px-2 py-0.5 text-xs text-mute tabular-nums">{template.magnification}</span>}
         </div>
-        <div className="mt-2 rounded-xl border border-[#e2e7e5] bg-[#fbfcfc] p-2">
+        <div className="mt-2 rounded-2xl border border-line bg-subtle p-2">
           {level === "section" ? (
             <CrossSection template={template} active={active} onSelect={setActive} />
           ) : (
             <MicroView template={template} active={active} onSelect={setActive} />
           )}
         </div>
-        <p className="mt-2 text-xs text-[#66736f]">{t.tapHint}</p>
+        <p className="mt-2 text-xs text-mute">{t.tapHint}</p>
 
         {current && (
-          <div className="mt-4 rounded-xl border border-[#d5dcd9] bg-white shadow-[0_1px_2px_rgba(17,26,24,0.04)]">
-            <div className="flex items-center gap-2 border-b border-[#e2e7e5] py-1.5 ps-3 pe-1.5">
+          <div className="mt-4 rounded-2xl border border-line bg-card shadow-card shadow-[0_1px_2px_rgba(17,26,24,0.04)]">
+            <div className="flex items-center gap-2 border-b border-line py-1.5 ps-3 pe-1.5">
               {current.color && <span className="size-3 shrink-0 rounded-sm" style={{ backgroundColor: current.color }} />}
-              <span className="min-w-0 flex-1 py-1 text-sm leading-5 font-semibold text-[#111a18] [overflow-wrap:anywhere]">
+              <span className="min-w-0 flex-1 py-1 text-sm leading-5 font-semibold text-ink [overflow-wrap:anywhere]">
                 {index + 1}. {current.name}
               </span>
               <button type="button" aria-label={t.previous} onClick={() => step(-1)} className={iconBtn}>
@@ -103,10 +103,10 @@ export function DeepDivePanel({
               </button>
             </div>
             <div className="px-3 py-3">
-              <p className="text-[15px] leading-7 text-[#33413e]">{current.tooltip}</p>
+              <p className="text-[15px] leading-7 text-copy">{current.tooltip}</p>
               {current.visual && (
-                <p className="mt-2 text-[13px] leading-5 text-[#66736f]">
-                  <span className="font-medium text-[#33413e]">{t.visualGuide}: </span>
+                <p className="mt-2 text-[13px] leading-5 text-mute">
+                  <span className="font-medium text-copy">{t.visualGuide}: </span>
                   {current.visual}
                 </p>
               )}
@@ -114,7 +114,7 @@ export function DeepDivePanel({
           </div>
         )}
 
-        <ol className="mt-4 divide-y divide-[#e2e7e5] overflow-hidden rounded-xl border border-[#e2e7e5] bg-white">
+        <ol className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
           {items.map((it, i) => (
             <li key={it.id}>
               <button
@@ -122,11 +122,11 @@ export function DeepDivePanel({
                 aria-current={it.id === active ? "step" : undefined}
                 onClick={() => setActive(it.id)}
                 className={cn(
-                  "flex min-h-11 w-full items-center gap-3 px-3 text-start text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 focus-visible:ring-inset",
-                  it.id === active ? "bg-[#e6f3ef] font-medium text-[#0c7563]" : "text-[#33413e] hover:bg-[#f5f7f6]",
+                  "flex min-h-11 w-full items-center gap-3 px-3 text-start text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-inset",
+                  it.id === active ? "bg-brand-soft font-medium text-brand-strong" : "text-copy hover:bg-subtle",
                 )}
               >
-                <span className="w-5 shrink-0 text-end text-xs text-[#97a29e] tabular-nums">{i + 1}</span>
+                <span className="w-5 shrink-0 text-end text-xs text-faint tabular-nums">{i + 1}</span>
                 {it.color && <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: it.color }} />}
                 <span className="min-w-0 flex-1 py-2 [overflow-wrap:anywhere]">{it.name}</span>
               </button>

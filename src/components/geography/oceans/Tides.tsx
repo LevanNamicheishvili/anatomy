@@ -96,7 +96,7 @@ export function Tides() {
         </svg>
 
         <div className="flex flex-col gap-3">
-          <svg viewBox={`0 0 ${GW} ${GH + 20}`} className="w-full rounded-lg bg-[#f5f7f6]" role="img" aria-label="წყლის დონე ნაპირზე დღის განმავლობაში">
+          <svg viewBox={`0 0 ${GW} ${GH + 20}`} className="w-full rounded-lg bg-subtle" role="img" aria-label="წყლის დონე ნაპირზე დღის განმავლობაში">
             <line x1={10} x2={GW - 10} y1={GH / 2} y2={GH / 2} stroke="#c6d0cc" strokeDasharray="3 3" />
             <polyline points={curve} fill="none" stroke="#1f5f99" strokeWidth={2} />
             <line x1={10 + (hour / 24) * (GW - 20)} x2={10 + (hour / 24) * (GW - 20)} y1={4} y2={GH - 4} stroke="#ff3b30" />
@@ -108,12 +108,12 @@ export function Tides() {
             ))}
           </svg>
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-              <p className="text-[11px] leading-4 text-[#66736f]">ახლა ნაპირზე (წითელი წერტილი)</p>
+            <div className="rounded-lg bg-subtle px-3 py-2.5">
+              <p className="text-[11px] leading-4 text-mute">ახლა ნაპირზე (წითელი წერტილი)</p>
               <p className="mt-1 text-[15px] leading-5 font-semibold">{state}</p>
             </div>
-            <div className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-              <p className="text-[11px] leading-4 text-[#66736f]">მოქცევის სიდიდე</p>
+            <div className="rounded-lg bg-subtle px-3 py-2.5">
+              <p className="text-[11px] leading-4 text-mute">მოქცევის სიდიდე</p>
               <p className={cn("mt-1 text-[15px] leading-5 font-semibold", spring ? "text-[#b91c1c]" : "")}>
                 {spring ? "დიდი (სიზიგიური)" : "მცირე (კვადრატურული)"} · ~{range.toFixed(1).replace(".", ",")} მ
               </p>
@@ -145,7 +145,7 @@ export function Tides() {
           <PillButton onClick={() => setPlaying((p) => !p)} pressed={playing} color="#1f5f99" title={playing ? "გაჩერება" : "დედამიწის ბრუნვა"} aria-label={playing ? "გაჩერება" : "დედამიწის ბრუნვა"} icon={playing ? Pause : Play} className="mb-0.5" />
         </div>
       </div>
-      <p className="mt-3 text-[15px] leading-7 text-[#33413e]">
+      <p className="mt-3 text-[15px] leading-7 text-copy">
         მთვარე წყალს თავისკენ „ექაჩება“ — ჩნდება ორი წყლის ამობურცულობა: მთვარისკენ და მის საპირისპიროდ. დედამიწა მათში ბრუნვისას გადის, ამიტომ დღე-ღამეში ორჯერ მოქცევაა (წყალი ნაპირზე ამოდის) და ორჯერ — მიქცევა (წყალი უკან იხევს), ~6 საათის ინტერვალით. შავ ზღვაში მოქცევა მხოლოდ რამდენიმე სანტიმეტრია, ფანდის ყურეში (კანადა) კი 16 მეტრს აღწევს.
       </p>
     </div>

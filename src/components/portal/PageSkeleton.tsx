@@ -1,6 +1,6 @@
 import { Logo } from "./ui";
 
-const bar = "animate-pulse rounded-md bg-[#e6ebe9]";
+const bar = "animate-pulse rounded-md bg-chip";
 
 /**
  * Shown at once while a signed-in page loads its data, so navigation never feels stuck.
@@ -9,8 +9,8 @@ const bar = "animate-pulse rounded-md bg-[#e6ebe9]";
 export function PageSkeleton({ cards = 2, grid = false }: { cards?: number; grid?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-page" aria-busy="true" aria-live="polite" aria-label="იტვირთება">
-      <header className="sticky top-0 z-20 border-b border-line bg-white [view-transition-name:site-header]">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
+      <header className="sticky top-0 z-20 border-b border-line bg-card [view-transition-name:site-header]">
+        <div className="mx-auto flex h-20 max-w-6xl items-center gap-3 px-4 sm:px-6">
           <Logo />
           <span className={`${bar} h-4 w-40`} />
           <span className={`${bar} ms-auto size-9 rounded-full`} />
@@ -20,11 +20,11 @@ export function PageSkeleton({ cards = 2, grid = false }: { cards?: number; grid
           <span className={`${bar} h-3 w-24`} />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-section sm:px-6">
         {grid ? (
           <>
             <span className={`${bar} block h-4 w-40`} />
-            <div className="mt-4 flex items-center gap-5 rounded-2xl border border-line bg-white p-6">
+            <div className="mt-4 flex items-center gap-5 rounded-2xl border border-line bg-card p-6">
               <span className={`${bar} size-16 shrink-0 rounded-2xl`} />
               <div className="min-w-0 flex-1">
                 <span className={`${bar} block h-8 w-56 max-w-full`} />
@@ -33,7 +33,7 @@ export function PageSkeleton({ cards = 2, grid = false }: { cards?: number; grid
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: Math.max(cards, 3) }, (_, i) => (
-                <div key={i} className="rounded-xl border border-line bg-white p-5">
+                <div key={i} className="rounded-2xl border border-line bg-card p-5">
                   <span className={`${bar} block size-11 rounded-xl`} />
                   <span className={`${bar} mt-4 block h-5 w-2/3`} />
                   <span className={`${bar} mt-3 block h-4 w-full`} />
@@ -48,7 +48,7 @@ export function PageSkeleton({ cards = 2, grid = false }: { cards?: number; grid
             <span className={`${bar} mt-3 block h-4 w-96 max-w-full`} />
             <div className="mt-8 flex flex-col gap-6">
               {Array.from({ length: cards }, (_, i) => (
-                <div key={i} className="rounded-xl border border-line bg-white p-5">
+                <div key={i} className="rounded-2xl border border-line bg-card p-5">
                   <span className={`${bar} block h-5 w-48`} />
                   <span className={`${bar} mt-4 block h-4 w-full`} />
                   <span className={`${bar} mt-2 block h-4 w-3/4`} />

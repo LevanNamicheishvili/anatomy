@@ -71,7 +71,7 @@ export function GeorgiaLandforms() {
   const info = KIND_INFO[kind];
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#dfe7ea]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რელიეფი: ხეობები, ჩანჩქერები და დელტები" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
@@ -90,14 +90,14 @@ export function GeorgiaLandforms() {
               <span className={cn("rounded-md px-2 py-1 text-[12px] font-semibold whitespace-nowrap text-white shadow-md", active?.id === f.id && "ring-2 ring-white")} style={{ backgroundColor: KIND_INFO[f.kind].color }}>
                 {f.name}
               </span>
-              <span className="h-3 w-0.5 bg-white" />
+              <span className="h-3 w-0.5 bg-card" />
               <span className="size-2 rounded-full border-2 border-white" style={{ backgroundColor: KIND_INFO[f.kind].color }} />
             </button>
           ))}
         </div>
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#33413e] shadow-sm">
+            <span className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">
               <Loader2 className="size-4 animate-spin" />
               რუკა იტვირთება…
             </span>
@@ -113,14 +113,14 @@ export function GeorgiaLandforms() {
                 setActive(null);
               }}
               aria-pressed={kind === k}
-              className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", kind === k ? "text-white" : "bg-white/92 text-[#111a18]")}
+              className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", kind === k ? "text-white" : "bg-card/92 text-ink")}
               style={kind === k ? { backgroundColor: KIND_INFO[k].color } : undefined}
             >
               {KIND_INFO[k].plural}
             </button>
           ))}
         </div>
-        <button type="button" onClick={home} title="მთელი საქართველო" aria-label="მთელი საქართველო" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-white/92 text-[#111a18] shadow-sm">
+        <button type="button" onClick={home} title="მთელი საქართველო" aria-label="მთელი საქართველო" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-card/92 text-ink shadow-sm">
           <RotateCcw className="size-5" />
         </button>
       </div>
@@ -128,7 +128,7 @@ export function GeorgiaLandforms() {
       <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
         <div>
           <h2 className="text-lg">როგორ წარმოიქმნება: {info.name}</h2>
-          <ol className="mt-2 flex list-decimal flex-col gap-2 ps-5 text-[15px] leading-7 text-[#33413e]">
+          <ol className="mt-2 flex list-decimal flex-col gap-2 ps-5 text-[15px] leading-7 text-copy">
             {info.how.map((h) => (
               <li key={h.slice(0, 24)}>{h}</li>
             ))}
@@ -138,18 +138,18 @@ export function GeorgiaLandforms() {
           <h2 className="text-lg">{active ? active.name : `${info.plural} საქართველოში`}</h2>
           {active ? (
             <>
-              <p className="mt-1 text-sm text-[#66736f]">მდინარე: {active.river}</p>
-              <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{active.text}</p>
+              <p className="mt-1 text-sm text-mute">მდინარე: {active.river}</p>
+              <p className="mt-2 text-[15px] leading-7 text-copy">{active.text}</p>
             </>
           ) : (
             <ul className="mt-2 flex flex-col gap-1.5">
               {RIVER_LANDFORMS.filter((f) => f.kind === kind).map((f) => (
                 <li key={f.id}>
-                  <button type="button" onClick={() => open(f)} className="flex w-full items-center gap-3 rounded-lg border border-[#e2e7e5] px-3 py-2.5 text-left hover:border-[#97a29e]">
+                  <button type="button" onClick={() => open(f)} className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left hover:border-faint">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: KIND_INFO[f.kind].color }} />
                     <span className="min-w-0">
                       <span className="block font-semibold">{f.name}</span>
-                      <span className="block text-[13px] text-[#66736f]">მდ. {f.river}</span>
+                      <span className="block text-[13px] text-mute">მდ. {f.river}</span>
                     </span>
                   </button>
                 </li>
@@ -159,7 +159,7 @@ export function GeorgiaLandforms() {
         </div>
       </div>
       {kind === "waterfall" && (
-        <div className="mx-5 mb-4 border-t border-[#eef2f0] pt-4">
+        <div className="mx-5 mb-4 border-t border-chip pt-4">
           <h2 className="text-lg">ჩანჩქერი ახლოდან</h2>
           <div className="mt-3">
             <WaterfallView
@@ -176,7 +176,7 @@ export function GeorgiaLandforms() {
           </div>
         </div>
       )}
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">რელიეფი: AWS Terrain Tiles (Mapzen); მდინარეები: OpenStreetMap. სიმაღლე გაზრდილია, რომ რელიეფი კარგად ჩანდეს.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">რელიეფი: AWS Terrain Tiles (Mapzen); მდინარეები: OpenStreetMap. სიმაღლე გაზრდილია, რომ რელიეფი კარგად ჩანდეს.</p>
     </section>
   );
 }

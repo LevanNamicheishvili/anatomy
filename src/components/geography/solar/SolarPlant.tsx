@@ -57,30 +57,30 @@ export function SolarPlant() {
   }, [elevation, tilt, share]);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={`relative ${sceneFrame}`}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="მზის ელექტროსადგური" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold">
-          <span data-at="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
+          <span data-at="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
             მზე · {elevation}°
           </span>
-          <span data-at="normal" className="absolute top-0 left-0 rounded bg-white px-1.5 py-0.5 text-[#111a18] opacity-0 shadow-sm">
+          <span data-at="normal" className="absolute top-0 left-0 rounded bg-card px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
             ნორმალი · დაცემის კუთხე {Math.round(r.incidence)}°
           </span>
-          <span data-at="inverter" className="absolute top-0 left-0 rounded bg-[#111a18]/80 px-1.5 py-0.5 text-white opacity-0">
+          <span data-at="inverter" className="absolute top-0 left-0 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0">
             ინვერტორი: მუდმივი → ცვლადი დენი
           </span>
-          <span data-at="grid" className="absolute top-0 left-0 rounded bg-[#111a18]/80 px-1.5 py-0.5 text-white opacity-0">
+          <span data-at="grid" className="absolute top-0 left-0 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0">
             ⚡ ქსელში
           </span>
         </div>
-        <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-white/92 px-3 py-2 shadow-sm">
+        <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-card/92 px-3 py-2 shadow-sm">
           <p className="flex items-center gap-1.5 text-sm">
             <Zap className="size-4 text-[#c08a00]" />
             <b className="tabular-nums">{fmt(r.electric)} ვტ</b>
-            <span className="text-[#66736f]">1 მ² პანელიდან</span>
+            <span className="text-mute">1 მ² პანელიდან</span>
           </p>
-          <div className="mt-1.5 h-1.5 w-44 overflow-hidden rounded-full bg-[#eef2f0]">
+          <div className="mt-1.5 h-1.5 w-44 overflow-hidden rounded-full bg-chip">
             <div className="h-full rounded-full bg-[#f2b705] transition-[width]" style={{ width: `${Math.min(100, share * 100)}%` }} />
           </div>
         </div>
@@ -117,14 +117,14 @@ export function SolarPlant() {
             { k: "ელექტროენერგია (ქ.მ.კ. 20%)", v: `${fmt(r.electric)} ვტ` },
             { k: "საუკეთესო დახრა ახლა", v: `${Math.round(trackerTilt(elevation))}°` },
           ].map((x) => (
-            <div key={x.k} className="rounded-lg bg-[#f5f7f6] px-3 py-2.5">
-              <dt className="text-[11px] leading-4 text-[#66736f]">{x.k}</dt>
+            <div key={x.k} className="rounded-lg bg-subtle px-3 py-2.5">
+              <dt className="text-[11px] leading-4 text-mute">{x.k}</dt>
               <dd className="mt-1 text-base leading-5 font-semibold tabular-nums">{x.v}</dd>
             </div>
           ))}
         </dl>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">მოდელი გამარტივებულია: მზე სამხრეთშია (შუადღე), გათვალისწინებულია მხოლოდ პირდაპირი სხივი და ატმოსფეროს სისქე; გაბნეული შუქი და ტემპერატურა — არა.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მოდელი გამარტივებულია: მზე სამხრეთშია (შუადღე), გათვალისწინებულია მხოლოდ პირდაპირი სხივი და ატმოსფეროს სისქე; გაბნეული შუქი და ტემპერატურა — არა.</p>
     </section>
   );
 }

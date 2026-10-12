@@ -73,7 +73,7 @@ export function GeorgiaHazards() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#dfe7ea]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რუკა: მეწყრის, ღვარცოფისა და ზვავის საშიში ზონები" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
@@ -88,7 +88,7 @@ export function GeorgiaHazards() {
         </div>
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#33413e] shadow-sm">
+            <span className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">
               <Loader2 className="size-4 animate-spin" />
               რუკა იტვირთება…
             </span>
@@ -96,12 +96,12 @@ export function GeorgiaHazards() {
         )}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {KINDS.map((k) => (
-            <button key={k} type="button" onClick={() => pickKind(k)} aria-pressed={kind === k} className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", kind === k ? "text-white" : "bg-white/92 text-[#111a18]")} style={kind === k ? { backgroundColor: HAZARD_INFO[k].color } : undefined}>
+            <button key={k} type="button" onClick={() => pickKind(k)} aria-pressed={kind === k} className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", kind === k ? "text-white" : "bg-card/92 text-ink")} style={kind === k ? { backgroundColor: HAZARD_INFO[k].color } : undefined}>
               {HAZARD_INFO[k].plural}
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => { setActive(null); sceneRef.current?.home(); }} title="მთელი საქართველო" aria-label="მთელი საქართველო" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-white/92 text-[#111a18] shadow-sm">
+        <button type="button" onClick={() => { setActive(null); sceneRef.current?.home(); }} title="მთელი საქართველო" aria-label="მთელი საქართველო" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-card/92 text-ink shadow-sm">
           <RotateCcw className="size-5" />
         </button>
       </div>
@@ -110,12 +110,12 @@ export function GeorgiaHazards() {
         <div>
           <h2 className="text-lg">{active ? active.name : `${info.plural} საქართველოში`}</h2>
           {active ? (
-            <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{active.text}</p>
+            <p className="mt-2 text-[15px] leading-7 text-copy">{active.text}</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-1.5">
               {HAZARD_ZONES.filter((z) => z.kind === kind).map((z) => (
                 <li key={z.id}>
-                  <button type="button" onClick={() => open(z)} className="flex w-full items-center gap-3 rounded-lg border border-[#e2e7e5] px-3 py-2.5 text-left hover:border-[#97a29e]">
+                  <button type="button" onClick={() => open(z)} className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left hover:border-faint">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: info.color }} />
                     <span className="font-semibold">{z.name}</span>
                   </button>
@@ -126,8 +126,8 @@ export function GeorgiaHazards() {
         </div>
         <div>
           <h2 className="text-lg">როგორ ხდება: {info.name}</h2>
-          <p className="mt-1 text-[15px] leading-7 text-[#33413e]">{info.what}</p>
-          <ol className="mt-2 flex list-decimal flex-col gap-2 ps-5 text-[15px] leading-7 text-[#33413e]">
+          <p className="mt-1 text-[15px] leading-7 text-copy">{info.what}</p>
+          <ol className="mt-2 flex list-decimal flex-col gap-2 ps-5 text-[15px] leading-7 text-copy">
             {info.how.map((h) => (
               <li key={h.slice(0, 24)}>{h}</li>
             ))}
@@ -135,7 +135,7 @@ export function GeorgiaHazards() {
         </div>
       </div>
 
-      <div className="mx-5 mt-5 border-t border-[#eef2f0] pt-4">
+      <div className="mx-5 mt-5 border-t border-chip pt-4">
         <h2 className="text-lg">ფერდობის მოდელი: {info.name}</h2>
         <div className="mt-3">
           <SlopeSim key={kind} kind={kind} />
@@ -147,13 +147,13 @@ export function GeorgiaHazards() {
           <ShieldCheck className="size-4" />
           როგორ დავიცვათ თავი
         </p>
-        <ul className="mt-2 flex list-disc flex-col gap-1 ps-5 text-[14px] leading-6 text-[#33413e]">
+        <ul className="mt-2 flex list-disc flex-col gap-1 ps-5 text-[14px] leading-6 text-copy">
           {info.safety.map((s) => (
             <li key={s}>{s}</li>
           ))}
         </ul>
       </div>
-      <p className="px-5 py-3 text-[11px] leading-4 text-[#97a29e]">ზონები მიახლოებითია და სასწავლოა — ეს არ არის ოფიციალური საფრთხის რუკა. რელიეფი: AWS Terrain Tiles (Mapzen); მდინარეები: OpenStreetMap.</p>
+      <p className="px-5 py-3 text-[11px] leading-4 text-faint">ზონები მიახლოებითია და სასწავლოა — ეს არ არის ოფიციალური საფრთხის რუკა. რელიეფი: AWS Terrain Tiles (Mapzen); მდინარეები: OpenStreetMap.</p>
     </section>
   );
 }

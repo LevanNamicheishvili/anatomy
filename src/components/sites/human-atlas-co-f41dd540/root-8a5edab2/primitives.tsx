@@ -3,12 +3,7 @@
 import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-/*
- * Design tokens (docked, tool-style UI on an 8px grid)
- * ink #111a18 · text #33413e · muted #66736f · faint #97a29e
- * line #e2e7e5 · line-strong #d5dcd9 · subtle #f5f7f6 · hover #eef2f0
- * accent #0f8a74 · accent-hover #0c7563 · accent-subtle #e6f3ef
- */
+/* Atlas controls share the portal palette, with compact panel spacing. */
 
 /** Layout sizes shared by every docked region (keep in sync with HumanAtlasApp insets). */
 export const LAYOUT = {
@@ -23,18 +18,18 @@ export const LAYOUT = {
 } as const;
 
 /** Floating surfaces (popovers, menus, the loading card). Docked panels use plain borders instead. */
-export const floating = "rounded-xl border border-[#d5dcd9] bg-white shadow-[0_12px_32px_rgba(17,26,24,0.12)]";
+export const floating = "rounded-2xl border border-line bg-card shadow-panel";
 
-export const sectionLabel = "text-xs font-semibold text-[#66736f]";
+export const sectionLabel = "text-xs font-semibold text-mute";
 
 const btnBase =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 disabled:pointer-events-none disabled:opacity-40 max-md:h-11";
+  "inline-flex min-h-10 max-w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm leading-6 font-medium whitespace-normal transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:pointer-events-none disabled:opacity-40 max-md:min-h-11";
 
-export const btnPrimary = cn(btnBase, "bg-[#0f8a74] text-white hover:bg-[#0c7563]");
-export const btnSecondary = cn(btnBase, "border border-[#d5dcd9] bg-white text-[#33413e] hover:bg-[#f5f7f6]");
-export const btnGhost = cn(btnBase, "text-[#33413e] hover:bg-[#eef2f0]");
+export const btnPrimary = cn(btnBase, "bg-brand text-white hover:bg-brand/90");
+export const btnSecondary = cn(btnBase, "border border-line-strong bg-card text-copy hover:bg-subtle");
+export const btnGhost = cn(btnBase, "text-copy hover:bg-chip");
 export const iconBtn =
-  "inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-[#33413e] transition-colors outline-none hover:bg-[#eef2f0] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 max-md:size-11";
+  "inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-copy transition-colors outline-none hover:bg-chip focus-visible:ring-2 focus-visible:ring-brand/50 max-md:size-11";
 
 /** The look of a switch on its own; the control is the row around it (see `SwitchRow`). */
 export function SwitchTrack({ checked }: { checked: boolean }) {
@@ -43,12 +38,12 @@ export function SwitchTrack({ checked }: { checked: boolean }) {
       aria-hidden
       className={cn(
         "inline-flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors duration-150",
-        checked ? "bg-[#0f8a74]" : "bg-[#cdd5d2]",
+        checked ? "bg-brand" : "bg-line-strong",
       )}
     >
       <span
         className={cn(
-          "block size-5 rounded-full bg-white shadow-[0_1px_2px_rgba(17,26,24,0.25)] transition-transform duration-150",
+          "block size-5 rounded-full bg-card shadow-[0_1px_2px_rgba(17,26,24,0.25)] transition-transform duration-150",
           checked ? "translate-x-4 rtl:-translate-x-4" : "translate-x-0",
         )}
       />
@@ -82,13 +77,13 @@ export function SwitchRow({
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={cn(
-        "flex min-h-12 w-full items-center gap-3 px-3 text-start transition-colors outline-none hover:bg-[#f5f7f6] focus-visible:bg-[#f5f7f6] focus-visible:ring-2 focus-visible:ring-[#0f8a74]/50 focus-visible:ring-inset",
+        "flex min-h-12 w-full items-center gap-3 px-3 text-start transition-colors outline-none hover:bg-subtle focus-visible:bg-subtle focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-inset",
         className,
       )}
     >
       {lead}
-      <span className={cn("min-w-0 flex-1 py-2 text-sm leading-5 [overflow-wrap:anywhere]", checked ? "font-medium text-[#111a18]" : "text-[#33413e]")}>{label}</span>
-      {meta && <span className="shrink-0 text-xs text-[#97a29e] tabular-nums">{meta}</span>}
+      <span className={cn("min-w-0 flex-1 py-2 text-sm leading-6 [overflow-wrap:anywhere]", checked ? "font-medium text-ink" : "text-copy")}>{label}</span>
+      {meta && <span className="shrink-0 text-xs text-faint tabular-nums">{meta}</span>}
       <SwitchTrack checked={checked} />
     </button>
   );
@@ -135,8 +130,8 @@ export function Slider({
         if (e.buttons) setFromClientX(e.clientX);
       }}
     >
-      <div ref={trackRef} className="relative h-1 w-full rounded-full bg-[#dfe5e3]">
-        <div className="absolute inset-y-0 left-0 rounded-full bg-[#0f8a74]" style={{ width: `${pct}%` }} />
+      <div ref={trackRef} className="relative h-1 w-full rounded-full bg-line">
+        <div className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: `${pct}%` }} />
         <div
           id={id}
           role="slider"
@@ -154,7 +149,7 @@ export function Slider({
             else return;
             e.preventDefault();
           }}
-          className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-[#0f8a74] bg-white outline-none after:absolute after:-inset-3 after:content-[''] focus-visible:ring-4 focus-visible:ring-[#0f8a74]/25 active:cursor-grabbing"
+          className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-brand bg-card outline-none after:absolute after:-inset-3 after:content-[''] focus-visible:ring-4 focus-visible:ring-brand/25 active:cursor-grabbing"
           style={{ left: `${pct}%` }}
         />
       </div>

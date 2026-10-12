@@ -168,7 +168,7 @@ export function VoyagesGlobe() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დიდი გეოგრაფიული აღმოჩენების მარშრუტები გლობუსზე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
@@ -182,7 +182,7 @@ export function VoyagesGlobe() {
             ),
           )}
           {CONTINENTS.map((c) => (
-            <span key={c.name} data-lat={c.lat} data-lon={c.lon} data-on={showAll ? "1" : "0"} className="absolute top-0 left-0 rounded bg-white/90 px-1.5 py-0.5 text-[#111a18] opacity-0">
+            <span key={c.name} data-lat={c.lat} data-lon={c.lon} data-on={showAll ? "1" : "0"} className="absolute top-0 left-0 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0">
               {c.name}
             </span>
           ))}
@@ -193,23 +193,23 @@ export function VoyagesGlobe() {
 
         <div className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5">
           {VOYAGES.map((v) => (
-            <button key={v.id} type="button" onClick={() => choose(v.id)} aria-pressed={id === v.id} className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", id === v.id ? "text-white" : "bg-white/92 text-[#111a18]")} style={id === v.id ? { backgroundColor: v.color } : undefined}>
+            <button key={v.id} type="button" onClick={() => choose(v.id)} aria-pressed={id === v.id} className={cn("flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm", id === v.id ? "text-white" : "bg-card/92 text-ink")} style={id === v.id ? { backgroundColor: v.color } : undefined}>
               <span className="size-2.5 rounded-full" style={{ backgroundColor: id === v.id ? "#fff" : v.color }} />
               {v.name.split(" — ")[0]} <span className="font-normal opacity-80">{v.years.split("–")[0]}</span>
             </button>
           ))}
         </div>
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={toggle} aria-pressed={playing} title={playing ? "გაჩერება" : "გაცურვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={toggle} aria-pressed={playing} title={playing ? "გაჩერება" : "გაცურვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
-          <button type="button" onClick={() => setShowAll((s) => !s)} aria-pressed={showAll} title="სამივე მარშრუტი და კონტინენტები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showAll ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setShowAll((s) => !s)} aria-pressed={showAll} title="სამივე მარშრუტი და კონტინენტები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showAll ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Ship className="size-5" />
           </button>
         </div>
-        <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-white/92 px-3 py-2 text-sm shadow-sm">
+        <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{current?.name}</p>
-          <p className="text-[13px] text-[#66736f] tabular-nums">
+          <p className="text-[13px] text-mute tabular-nums">
             {current?.when} · გავლილია ~{nf(Math.round((PATHS[id].km * progress) / 100) * 100)} კმ
           </p>
         </div>
@@ -233,14 +233,14 @@ export function VoyagesGlobe() {
           />
           <div>
             <h2 className="text-lg">{voyage.name}</h2>
-            <p className="mt-1 text-sm text-[#66736f]">
+            <p className="mt-1 text-sm text-mute">
               {voyage.captain} · {voyage.years} · {voyage.ships}
             </p>
-            <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{current?.note ?? voyage.result}</p>
-            {current?.note && <p className="mt-2 text-[14px] leading-6 text-[#66736f]">{voyage.result}</p>}
+            <p className="mt-2 text-[15px] leading-7 text-copy">{current?.note ?? voyage.result}</p>
+            {current?.note && <p className="mt-2 text-[14px] leading-6 text-mute">{voyage.result}</p>}
           </div>
           {showAll && (
-            <ul className="flex flex-col gap-1.5 rounded-lg bg-[#f5f7f6] p-3 text-[14px] leading-6 text-[#33413e]">
+            <ul className="flex flex-col gap-1.5 rounded-lg bg-subtle p-3 text-[14px] leading-6 text-copy">
               {CONTINENTS.map((c) => (
                 <li key={c.name}>
                   <b>{c.name}:</b> {c.who}
@@ -258,7 +258,7 @@ export function VoyagesGlobe() {
                   <span className="mt-1.5 size-2.5 shrink-0 rounded-full border-2" style={{ borderColor: voyage.color, backgroundColor: done ? voyage.color : "transparent" }} />
                   <span>
                     <span className="block font-semibold">{s.name}</span>
-                    <span className="block text-[12px] text-[#66736f]">{s.when}</span>
+                    <span className="block text-[12px] text-mute">{s.when}</span>
                   </span>
                 </button>
               </li>
@@ -266,7 +266,7 @@ export function VoyagesGlobe() {
           })}
         </ol>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">მარშრუტები გამარტივებულია (სასკოლო ატლასის სიზუსტით); ნაჩვენებია მხოლოდ გზა „იქით“. დედამიწის სურათი: NASA Blue Marble.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მარშრუტები გამარტივებულია (სასკოლო ატლასის სიზუსტით); ნაჩვენებია მხოლოდ გზა „იქით“. დედამიწის სურათი: NASA Blue Marble.</p>
     </section>
   );
 }

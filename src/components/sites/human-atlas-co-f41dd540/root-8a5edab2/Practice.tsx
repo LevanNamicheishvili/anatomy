@@ -148,7 +148,7 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
               key={i}
               className={cn(
                 "h-1.5 flex-1 rounded-full",
-                i < answers.length ? (answers[i].correct ? "bg-[#0f8a74]" : "bg-[#c0392b]") : i === step ? "bg-[#97a29e]" : "bg-[#e2e7e5]",
+                i < answers.length ? (answers[i].correct ? "bg-brand" : "bg-danger") : i === step ? "bg-faint" : "bg-line",
               )}
             />
           ))}
@@ -157,10 +157,10 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
         {done ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <Chip tone="accent">{levelName}</Chip>
-            <p className="font-heading text-5xl text-[#111a18] tabular-nums">
+            <p className="font-heading text-5xl text-ink tabular-nums">
               {score} / {questions.length}
             </p>
-            <p className="text-[15px] leading-7 text-[#33413e]">
+            <p className="text-[15px] leading-7 text-copy">
               {score === questions.length ? "ყველა პასუხი სწორია — შესანიშნავია!" : score >= questions.length * 0.7 ? "ძალიან კარგია!" : "კიდევ ერთხელ სცადე — ყოველ ჯერზე უკეთ გამოგივა."}
             </p>
             <div className="mt-2 flex flex-wrap justify-center gap-2">
@@ -178,8 +178,8 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
             {q.kind === "find" ? (
               <>
                 <p className={sectionLabel}>იპოვე მოდელზე და დააჭირე</p>
-                <p className="mt-2 rounded-xl border border-[#d5dcd9] bg-[#f5f7f6] px-4 py-3 text-2xl leading-9 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{q.item.name}</p>
-                {!answered && <p className="mt-3 text-sm leading-6 text-[#66736f]">მოდელის შემობრუნება და გადიდება შეგიძლია.</p>}
+                <p className="mt-2 rounded-2xl border border-line-strong bg-subtle px-4 py-3 text-2xl leading-9 font-semibold text-ink [overflow-wrap:anywhere]">{q.item.name}</p>
+                {!answered && <p className="mt-3 text-sm leading-6 text-mute">მოდელის შემობრუნება და გადიდება შეგიძლია.</p>}
               </>
             ) : (
               <>
@@ -195,20 +195,20 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
                         disabled={answered}
                         onClick={() => choose(o)}
                         className={cn(
-                          "flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2 text-start text-[15px] font-medium transition-colors disabled:cursor-default",
+                          "flex min-h-12 items-center gap-3 rounded-2xl border px-3 py-2 text-start text-[15px] font-medium transition-colors disabled:cursor-default",
                           isRight
-                            ? "border-[#0f8a74] bg-[#e6f3ef] text-[#0c7563]"
+                            ? "border-brand bg-brand-soft text-brand-strong"
                             : isWrong
-                              ? "border-[#c0392b] bg-[#fbeceb] text-[#a3302a]"
+                              ? "border-danger bg-danger-soft text-danger"
                               : answered
-                                ? "border-[#e2e7e5] bg-white text-[#66736f]"
-                                : "border-[#d5dcd9] bg-white text-[#111a18] hover:border-[#97a29e] hover:bg-[#f5f7f6]",
+                                ? "border-line bg-card text-mute"
+                                : "border-line bg-card shadow-card text-ink hover:border-faint hover:bg-subtle",
                         )}
                       >
                         <span
                           className={cn(
                             "flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
-                            isRight ? "bg-[#0f8a74] text-white" : isWrong ? "bg-[#c0392b] text-white" : "bg-[#eef2f0] text-[#33413e]",
+                            isRight ? "bg-brand text-white" : isWrong ? "bg-danger-soft text-danger" : "bg-chip text-copy",
                           )}
                           aria-hidden
                         >
@@ -226,21 +226,21 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
               <div
                 role="status"
                 className={cn(
-                  "mt-5 rounded-xl border p-4",
-                  answers[step].correct ? "border-[#b9e2d5] bg-[#e6f3ef]" : "border-[#f1c7c3] bg-[#fbeceb]",
+                  "mt-5 rounded-2xl border p-4",
+                  answers[step].correct ? "border-brand/30 bg-brand-soft" : "border-danger/30 bg-danger-soft",
                 )}
               >
-                <p className={cn("flex items-center gap-2 text-[15px] font-semibold", answers[step].correct ? "text-[#0c5c4d]" : "text-[#a3302a]")}>
+                <p className={cn("flex items-center gap-2 text-[15px] font-semibold", answers[step].correct ? "text-brand-strong" : "text-danger")}>
                   {answers[step].correct ? <Check className="size-4" aria-hidden /> : <X className="size-4" aria-hidden />}
                   {answers[step].correct ? "სწორია!" : "არასწორია"}
                 </p>
                 {!answers[step].correct && (
-                  <p className="mt-1 text-sm leading-6 text-[#33413e]">
+                  <p className="mt-1 text-sm leading-6 text-copy">
                     {q.kind === "find" ? `შენ მონიშნე: ${answers[step].picked}. ` : ""}
                     სწორი პასუხი: <b>{q.item.name}</b>{q.kind === "find" ? " — მოდელზე მონიშნულია." : "."}
                   </p>
                 )}
-                {structureInfo(q.item.name) && <p className="mt-2 text-sm leading-6 text-[#33413e]">{structureInfo(q.item.name)}</p>}
+                {structureInfo(q.item.name) && <p className="mt-2 text-sm leading-6 text-copy">{structureInfo(q.item.name)}</p>}
               </div>
             )}
 
@@ -251,7 +251,7 @@ function Quiz({ items, host, levelName, onClose }: { items: LearnItem[]; host: P
             )}
           </>
         ) : (
-          <p className="text-sm text-[#66736f]">ამ საფეხურისთვის კითხვები ვერ მოიძებნა.</p>
+          <p className="text-sm text-mute">ამ საფეხურისთვის კითხვები ვერ მოიძებნა.</p>
         )}
       </div>
     </aside>
@@ -294,23 +294,23 @@ function Cards({ items, host, levelName, onClose }: { items: LearnItem[]; host: 
     <aside aria-label="ბარათები" className={cn(dockedSheet, "max-md:h-auto max-md:max-h-[50dvh]")}>
       <SheetHeader label={`ბარათები · ${levelName}`} dot="#0f8a74" title="რა არის ეს?" onClose={onClose} closeLabel="დახურვა" />
       <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="flex items-center justify-between gap-2 text-xs text-[#66736f]">
+        <div className="flex items-center justify-between gap-2 text-xs text-mute">
           <span className="min-w-0 tabular-nums">
             ნასწავლი: {known} / {items.length}
           </span>
           {card && <Chip className="tabular-nums">ყუთი {boxes[card.name] ?? 1} / 5</Chip>}
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e2e7e5]">
-          <div className="h-full rounded-full bg-[#0f8a74] transition-[width]" style={{ width: `${items.length ? (known / items.length) * 100 : 0}%` }} />
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${items.length ? (known / items.length) * 100 : 0}%` }} />
         </div>
 
         {card && (
-          <div className="mt-5 rounded-xl border border-[#d5dcd9] bg-white p-5 shadow-[0_1px_2px_rgba(17,26,24,0.04)]">
+          <div className="mt-5 rounded-2xl border border-line bg-card shadow-card p-5 shadow-[0_1px_2px_rgba(17,26,24,0.04)]">
             <p className={sectionLabel}>მოდელზე მონიშნულია ერთი ნაწილი. გაიხსენე მისი სახელი.</p>
             {revealed ? (
               <>
-                <p className="mt-3 text-2xl leading-9 font-semibold text-[#111a18] [overflow-wrap:anywhere]">{card.name}</p>
-                {info && <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{info}</p>}
+                <p className="mt-3 text-2xl leading-9 font-semibold text-ink [overflow-wrap:anywhere]">{card.name}</p>
+                {info && <p className="mt-2 text-[15px] leading-7 text-copy">{info}</p>}
                 {/* In the 340px sheet "ვერ გავიხსენე" needs two lines rather than spilling out of its button. */}
                 <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2">
                   <button type="button" onClick={() => grade(false)} className={cn(btnSecondary, "h-auto min-h-11 py-2 leading-5 whitespace-normal")}>
@@ -330,7 +330,7 @@ function Cards({ items, host, levelName, onClose }: { items: LearnItem[]; host: 
             )}
           </div>
         )}
-        <p className="mt-4 text-xs leading-5 text-[#97a29e]">რასაც ვერ იხსენებ, უფრო ხშირად გამოჩნდება. პროგრესი ამ ბრაუზერში ინახება.</p>
+        <p className="mt-4 text-xs leading-5 text-faint">რასაც ვერ იხსენებ, უფრო ხშირად გამოჩნდება. პროგრესი ამ ბრაუზერში ინახება.</p>
       </div>
     </aside>
   );

@@ -33,12 +33,12 @@ function Coord({ p, title }: { p: LatLon; title: string }) {
   const lo = formatLon(p.lon);
   return (
     <div>
-      <p className="text-[11px] font-semibold text-[#66736f]">{title}</p>
+      <p className="text-[11px] font-semibold text-mute">{title}</p>
       <p className="mt-0.5 text-sm leading-5 tabular-nums">
-        <span className="text-[#66736f]">განედი:</span> <b>{la.text}</b> {la.letter && <span className="text-[#97a29e]">({la.letter})</span>}
+        <span className="text-mute">განედი:</span> <b>{la.text}</b> {la.letter && <span className="text-faint">({la.letter})</span>}
       </p>
       <p className="text-sm leading-5 tabular-nums">
-        <span className="text-[#66736f]">გრძედი:</span> <b>{lo.text}</b> {lo.letter && <span className="text-[#97a29e]">({lo.letter})</span>}
+        <span className="text-mute">გრძედი:</span> <b>{lo.text}</b> {lo.letter && <span className="text-faint">({lo.letter})</span>}
       </p>
     </div>
   );
@@ -125,7 +125,7 @@ export function GraticuleGlobe() {
   const found = picked && Math.abs(picked.lat - TBILISI.lat) < 1.5 && Math.abs(picked.lon - TBILISI.lon) < 1.5;
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-crosshair touch-none" aria-label="გლობუსი გრადუსთა ბადით" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -145,7 +145,7 @@ export function GraticuleGlobe() {
               data-kind="line"
               data-v={l.value}
               data-m={l.kind === "meridian" ? "1" : "0"}
-              className="absolute top-0 left-0 rounded px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-[#111a18] opacity-0 shadow-sm"
+              className="absolute top-0 left-0 rounded px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-ink opacity-0 shadow-sm"
               style={{ backgroundColor: l.color }}
             >
               {l.name}
@@ -161,15 +161,15 @@ export function GraticuleGlobe() {
           </span>
         </div>
 
-        <div className="pointer-events-none absolute top-3 left-3 min-w-52 rounded-lg bg-white/92 px-3 py-2 shadow-sm">
-          {hover ? <Coord p={hover} title="კურსორის ქვეშ" /> : <p className="text-sm text-[#66736f]">მიიტანე კურსორი გლობუსზე (ან შეეხე)</p>}
+        <div className="pointer-events-none absolute top-3 left-3 min-w-52 rounded-lg bg-card/92 px-3 py-2 shadow-sm">
+          {hover ? <Coord p={hover} title="კურსორის ქვეშ" /> : <p className="text-sm text-mute">მიიტანე კურსორი გლობუსზე (ან შეეხე)</p>}
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => setGrid((g) => !g)} aria-pressed={grid} title="ბადე" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", grid ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setGrid((g) => !g)} aria-pressed={grid} title="ბადე" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", grid ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Grid3x3 className="size-5" />
           </button>
-          <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} title="ბრუნვა" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", spin ? "bg-[#2f6fb0] text-white" : "bg-white/90 text-[#111a18]")}>
+          <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} title="ბრუნვა" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", spin ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <RotateCw className="size-5" />
           </button>
         </div>
@@ -183,7 +183,7 @@ export function GraticuleGlobe() {
                 setSpin(false);
                 sceneRef.current?.focus(g.lat, g.lon, 3.2);
               }}
-              className="flex h-9 items-center gap-1.5 rounded-lg bg-white/92 px-3 text-sm font-semibold text-[#111a18] shadow-sm hover:bg-white"
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-card/92 px-3 text-sm font-semibold text-ink shadow-sm hover:bg-card"
             >
               <Crosshair className="size-4 text-[#2f6fb0]" />
               {g.name}
@@ -202,7 +202,7 @@ export function GraticuleGlobe() {
                   type="button"
                   onClick={() => pickLine(l)}
                   aria-pressed={line?.id === l.id}
-                  className={cn("flex h-9 items-center gap-2 rounded-full px-3 text-sm transition-colors", line?.id === l.id ? "bg-[#111a18] font-semibold text-white" : "bg-[#f1f4f3] text-[#33413e] hover:bg-[#e6ecea]")}
+                  className={cn("flex h-9 items-center gap-2 rounded-full px-3 text-sm transition-colors", line?.id === l.id ? "bg-deep font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
                 >
                   <span className="size-2.5 rounded-full" style={{ backgroundColor: l.color }} />
                   {l.name}
@@ -210,23 +210,23 @@ export function GraticuleGlobe() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 min-h-12 text-[15px] leading-7 text-[#33413e]">{line ? line.note : "აირჩიე ხაზი — გლობუსი მისკენ შეტრიალდება და გაიგებ, რატომ არის ის მნიშვნელოვანი."}</p>
+          <p className="mt-3 min-h-12 text-[15px] leading-7 text-copy">{line ? line.note : "აირჩიე ხაზი — გლობუსი მისკენ შეტრიალდება და გაიგებ, რატომ არის ის მნიშვნელოვანი."}</p>
         </div>
-        <div className="rounded-lg border border-[#e2e7e5] p-3 sm:w-64">
+        <div className="rounded-lg border border-line p-3 sm:w-64">
           <p className="flex items-center gap-1.5 text-sm font-semibold">
             <MapPin className="size-4 text-[#ff3b30]" />
             დავალება: იპოვე თბილისი
           </p>
-          <p className="mt-1 text-[13px] leading-5 text-[#66736f]">41°43′ ჩ. გ., 44°47′ აღმ. გრ. — დააჭირე ამ წერტილს გლობუსზე.</p>
+          <p className="mt-1 text-[13px] leading-5 text-mute">41°43′ ჩ. გ., 44°47′ აღმ. გრ. — დააჭირე ამ წერტილს გლობუსზე.</p>
           {picked && (
-            <div className="mt-2 border-t border-[#eef2f0] pt-2">
+            <div className="mt-2 border-t border-chip pt-2">
               <Coord p={picked} title="შენი წერტილი" />
-              <p className={cn("mt-1.5 text-sm font-semibold", found ? "text-[#0f8a74]" : "text-[#b8232b]")}>{found ? "სწორია! ეს თბილისია." : "ჯერ არა — შეადარე განედი და გრძედი."}</p>
+              <p className={cn("mt-1.5 text-sm font-semibold", found ? "text-brand" : "text-[#b8232b]")}>{found ? "სწორია! ეს თბილისია." : "ჯერ არა — შეადარე განედი და გრძედი."}</p>
             </div>
           )}
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">დედამიწის სურათი: NASA Visible Earth (Blue Marble), საჯარო საკუთრება.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დედამიწის სურათი: NASA Visible Earth (Blue Marble), საჯარო საკუთრება.</p>
     </section>
   );
 }

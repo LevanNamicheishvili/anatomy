@@ -264,7 +264,7 @@ export function NarrationBar({ n, className }: { n: Narration; className?: strin
   if (!n.active) return null;
   return (
     <div className={cn("flex items-center gap-3 rounded-lg bg-[#0f1714]/82 px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm", className)}>
-      <button type="button" onClick={n.playing ? n.pause : n.play} aria-label={n.playing ? "მოყოლის პაუზა" : "მოყოლის გაგრძელება"} className="flex size-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25">
+      <button type="button" onClick={n.playing ? n.pause : n.play} aria-label={n.playing ? "მოყოლის პაუზა" : "მოყოლის გაგრძელება"} className="flex size-8 items-center justify-center rounded-full bg-card/15 hover:bg-card/25">
         {n.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
       </button>
       <div
@@ -283,14 +283,14 @@ export function NarrationBar({ n, className }: { n: Narration; className?: strin
           if (e.key === "ArrowRight") n.seek(now + 5);
           if (e.key === "ArrowLeft") n.seek(now - 5);
         }}
-        className="relative h-2 w-40 cursor-pointer rounded-full bg-white/20 sm:w-56"
+        className="relative h-2 w-40 cursor-pointer rounded-full bg-card/20 sm:w-56"
       >
         <div ref={progressEl} className="absolute inset-y-0 left-0 w-0 rounded-full bg-[#e8b867]" />
       </div>
       <span ref={timeEl} className="tabular-nums text-white/80">
         0:00 / {clock(NARRATION_DURATION)}
       </span>
-      <button type="button" onClick={n.close} aria-label="მოყოლის დახურვა" className="flex size-8 items-center justify-center rounded-full hover:bg-white/15">
+      <button type="button" onClick={n.close} aria-label="მოყოლის დახურვა" className="flex size-8 items-center justify-center rounded-full hover:bg-card/15">
         <X className="size-4" />
       </button>
     </div>
@@ -333,7 +333,7 @@ export function NarrationTranscript({ n, accent }: { n: Narration; accent: strin
         </button>
       </div>
       {n.error && <p className="mt-2 text-xs text-[#93541e]">ხმა ვერ ჩაირთო. შეამოწმე ხმის გამაძლიერებელი ან კავშირი და სცადე თავიდან.</p>}
-      <div ref={boxRef} className="atlas-scroll relative mt-3 max-h-64 overflow-y-auto pe-1 text-[15px] leading-7 text-[#33413e]" lang="ka">
+      <div ref={boxRef} className="atlas-scroll relative mt-3 max-h-64 overflow-y-auto pe-1 text-[15px] leading-7 text-copy" lang="ka">
         {paragraphs.map((ids, pi) => (
           <p key={pi} className={cn("mb-3", (pi >= 5 && pi <= 7) && "border-s-2 border-[#d9c3a0] ps-3 italic text-[#4a4033]")}>
             {ids.map((i) => (
@@ -344,7 +344,7 @@ export function NarrationTranscript({ n, accent }: { n: Narration; accent: strin
                   onClick={() => n.seek(WORDS[i].start)}
                   className={cn(
                     "rounded px-0.5 text-left transition-colors hover:bg-[#f0e2c9]",
-                    n.active && i === n.word && "bg-[#e8b867] text-[#111a18]",
+                    n.active && i === n.word && "bg-[#e8b867] text-ink",
                     n.active && i < n.word && "text-[#8b6337]",
                   )}
                 >

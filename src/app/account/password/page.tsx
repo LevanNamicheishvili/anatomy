@@ -15,7 +15,7 @@ export default async function PasswordPage() {
   const form = (
     <Card className="w-full max-w-md p-6 sm:p-8">
       <h1 className="text-2xl">{user.mustChangePassword ? "შექმენი საკუთარი პაროლი" : "პაროლის შეცვლა"}</h1>
-      <p className="mt-2 text-base leading-7 text-[#66736f]">
+      <p className="mt-2 text-base leading-7 text-mute">
         {user.mustChangePassword
           ? `გამარჯობა, ${user.fullName}! დროებითი პაროლი შეცვალე ისეთით, რომელსაც მხოლოდ შენ გეცოდინება.`
           : "ახალი პაროლი ძველის ნაცვლად იმოქმედებს."}
@@ -29,7 +29,7 @@ export default async function PasswordPage() {
   // First sign-in: no navigation until the temporary password is replaced.
   if (user.mustChangePassword)
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-[#f4f6f5] px-4 py-10 font-sans text-[#111a18]">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-page px-4 py-10 font-sans text-ink">
         <div className="flex items-center gap-3">
           <Logo />
           <span className="text-[17px] font-heading">{PORTAL_NAME}</span>

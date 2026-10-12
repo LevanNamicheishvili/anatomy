@@ -36,7 +36,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
 
   return (
     <>
-      <label className="mt-8 flex h-14 items-center gap-3 rounded-xl border border-line-strong bg-white px-4 shadow-card transition-colors hover:border-faint focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+      <label className="mt-8 flex min-h-16 items-center gap-3 rounded-2xl border border-line bg-card px-4 shadow-card transition-colors hover:border-faint focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
         <Search className="size-5 shrink-0 text-faint" aria-hidden />
         <input
           type="text"
@@ -57,7 +57,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
       {q ? (
         <section className="mt-6" aria-live="polite">
           <p className="text-sm text-mute">{hits.length ? `ნაპოვნია ${hits.length}` : "ვერაფერი მოიძებნა"}</p>
-          <ul className="mt-3 overflow-hidden rounded-xl border border-line-strong bg-white">
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-line bg-card">
             {hits.map(({ topic, title, href, is3d }, i) => (
               <li key={`${topic.slug}-${href}`}>
                 <Link href={href} className={cn("group flex min-h-14 items-center gap-3 px-5 py-2.5 transition-colors hover:bg-subtle focus-visible:bg-subtle outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand", i > 0 && "border-t border-chip")}>
@@ -79,7 +79,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
           <section className="mt-10">
             <SectionTitle>3D მოდელები და მოგზაურობები</SectionTitle>
             {flagship.length > 0 && (
-              <div className="mt-3 grid gap-5">
+              <div className="mt-5 grid gap-6">
                 {flagship.map((f) => (
                   <FeaturedCard key={f.href} href={f.href} title={f.label} description={f.sub} icon={TOPIC_ICONS[f.icon]} color={COLOR} grades={f.grades} image={f.image} />
                 ))}
@@ -94,7 +94,7 @@ export function BiologyHome({ topics, featured }: { topics: BioTopic[]; featured
 
           <section className="mt-10">
             <SectionTitle hint={`${topics.length} თემა`}>თემები</SectionTitle>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {topics.map((t, i) => (
                 <TopicCard
                   key={t.slug}

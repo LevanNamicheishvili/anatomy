@@ -27,7 +27,7 @@ export function BottomDock({
   return (
     <div
       className={cn(
-        "absolute start-[320px] bottom-0 z-20 flex h-16 items-center gap-4 border-t border-[#e2e7e5] bg-white px-4 max-[1100px]:start-[288px]",
+        "absolute start-[320px] bottom-0 z-20 flex h-16 items-center gap-4 border-t border-line bg-card/95 px-4 shadow-panel backdrop-blur-xl max-[1100px]:start-[288px]",
         sheetOpen ? "end-[456px] max-[1100px]:end-[396px]" : "end-14",
         "max-md:inset-x-0 max-md:gap-2 max-md:px-2",
       )}
@@ -37,25 +37,25 @@ export function BottomDock({
         icon={Layers}
         onClick={onLayers}
         aria-expanded={layersOpen}
-        className={cn("min-h-11 px-3.5 md:hidden", layersOpen && "border-[#0f8a74]/40 bg-[#e6f3ef] text-[#0c7563] hover:bg-[#e6f3ef]")}
+        className={cn("min-h-11 px-3.5 md:hidden", layersOpen && "border-brand/40 bg-brand-soft text-brand-strong hover:bg-brand-soft")}
       >
         {t.systems}
       </PillButton>
 
       {/* With a sheet open the dock is narrow (down to ~340px on laptops): the end labels go first, then the title, so the slider keeps its room. */}
-      <label htmlFor="explode-slider" className={cn("shrink-0 text-[13px] font-medium text-[#111a18] max-md:hidden", sheetOpen && "max-[1100px]:hidden")}>
+      <label htmlFor="explode-slider" className={cn("shrink-0 text-[13px] font-medium text-ink max-md:hidden", sheetOpen && "max-[1100px]:hidden")}>
         {t.explode}
       </label>
-      <span className={cn("shrink-0 text-xs text-[#97a29e] max-lg:hidden", sheetOpen && "hidden")}>{t.assembled}</span>
+      <span className={cn("shrink-0 text-xs text-faint max-lg:hidden", sheetOpen && "hidden")}>{t.assembled}</span>
       <div className="min-w-0 flex-1">
         <Slider id="explode-slider" value={explode} onChange={onExplode} label={t.explode} />
       </div>
-      <span className={cn("shrink-0 text-xs text-[#97a29e] max-lg:hidden", sheetOpen && "hidden")}>{t.everyPiece}</span>
-      <output htmlFor="explode-slider" className="w-10 shrink-0 text-end text-[13px] font-medium text-[#111a18] tabular-nums">
+      <span className={cn("shrink-0 text-xs text-faint max-lg:hidden", sheetOpen && "hidden")}>{t.everyPiece}</span>
+      <output htmlFor="explode-slider" className="w-10 shrink-0 text-end text-[13px] font-medium text-ink tabular-nums">
         {explode}%
       </output>
 
-      <span className="h-6 w-px shrink-0 bg-[#e2e7e5]" />
+      <span className="h-6 w-px shrink-0 bg-line" />
       <button type="button" onClick={onReset} className={cn(btnSecondary, "max-md:w-11 max-md:px-0", sheetOpen && "max-[1100px]:w-10 max-[1100px]:px-0")} aria-label={t.reset} title={t.reset}>
         <RotateCcw className="size-4" strokeWidth={2} />
         <span className={cn("max-md:hidden", sheetOpen && "max-[1100px]:hidden")}>{t.reset}</span>

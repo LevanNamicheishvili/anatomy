@@ -44,17 +44,17 @@ function SubjectCard({ subject }: { subject: Subject }) {
           <SubjectMark subject={subject} size="lg" />
         </span>
       )}
-      <span className="flex flex-1 flex-col p-5">
-        <span className="flex items-center justify-between gap-3">
+      <span className="flex min-w-0 flex-1 flex-col p-6">
+        <span className="flex flex-wrap items-center justify-between gap-3">
           <span className="flex min-w-0 items-center gap-3">
             <SubjectMark subject={subject} />
-            <span className="truncate text-xl font-heading">{subject.name}</span>
+            <span className="break-words text-xl font-heading">{subject.name}</span>
           </span>
           {ready ? <Chip>{topics} თემა</Chip> : <Chip>მალე</Chip>}
         </span>
-        <span className={`mt-3 line-clamp-3 text-[15px] leading-7 ${ready ? "text-copy" : "text-faint"}`}>{subject.description}</span>
+        <span className={`mt-3 [overflow-wrap:anywhere] text-[15px] leading-7 ${ready ? "text-copy" : "text-faint"}`}>{subject.description}</span>
         {ready && (
-          <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold" style={{ color: subject.color }}>
+          <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold text-brand-strong">
             გახსნა
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </span>
@@ -67,7 +67,7 @@ function SubjectCard({ subject }: { subject: Subject }) {
       {body}
     </Link>
   ) : (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-dashed border-line-strong bg-white/60">{body}</div>
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-dashed border-line-strong bg-card/60">{body}</div>
   );
 }
 
@@ -75,7 +75,7 @@ function SubjectCard({ subject }: { subject: Subject }) {
 function ManagementTile({ href, icon: Icon, title, meta }: { href: string; icon: LucideIcon; title: string; meta: string }) {
   return (
     <Link href={href} className={cn(cardLink, "flex-row items-center gap-4 p-5 hover:border-brand")}>
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-ink text-white">
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-deep text-white">
         <Icon className="size-6" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
@@ -123,7 +123,8 @@ export default async function PortalPage() {
 
   return (
     <PortalShell user={user} active="/dashboard">
-      <header>
+      <header className="science-hero rounded-3xl border border-line p-6 shadow-card sm:p-9">
+        <p className="mb-3 text-sm font-semibold text-brand-strong">სასწავლო სივრცე</p>
         <h1 className="text-3xl sm:text-4xl">გამარჯობა, {firstName}</h1>
         <p className="mt-2 max-w-2xl text-base leading-7 text-copy">{GREETING[user.role]}</p>
       </header>
@@ -134,7 +135,7 @@ export default async function PortalPage() {
 
       <section className="mt-10">
         <SectionTitle>საგნები</SectionTitle>
-        <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {SUBJECTS.map((s) => (
             <SubjectCard key={s.slug} subject={s} />
           ))}

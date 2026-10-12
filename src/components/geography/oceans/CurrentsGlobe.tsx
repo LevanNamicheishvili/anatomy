@@ -106,7 +106,7 @@ export function CurrentsGlobe() {
               ["cold", "ცივი"],
             ] as const
           ).map(([k, name]) => (
-            <button key={k} type="button" onClick={() => setShow(k)} aria-pressed={show === k} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", show === k ? "text-white" : "bg-white/92 text-[#111a18]")} style={show === k ? { backgroundColor: k === "warm" ? WARM : k === "cold" ? COLD : "#2f6fb0" } : undefined}>
+            <button key={k} type="button" onClick={() => setShow(k)} aria-pressed={show === k} className={cn("h-9 rounded-lg px-3 text-sm font-semibold shadow-sm", show === k ? "text-white" : "bg-card/92 text-ink")} style={show === k ? { backgroundColor: k === "warm" ? WARM : k === "cold" ? COLD : "#2f6fb0" } : undefined}>
               {name}
             </button>
           ))}
@@ -117,11 +117,11 @@ export function CurrentsGlobe() {
           <h2 className="flex items-center gap-2 text-lg">
             <span className="size-3 rounded-full" style={{ backgroundColor: active.warm ? WARM : COLD }} />
             {active.name} დინება
-            <span className="text-sm font-normal text-[#66736f]">· {active.warm ? "თბილი" : "ცივი"}</span>
+            <span className="text-sm font-normal text-mute">· {active.warm ? "თბილი" : "ცივი"}</span>
           </h2>
-          <p className="mt-2 text-[15px] leading-7 text-[#33413e]">{active.effect}</p>
+          <p className="mt-2 text-[15px] leading-7 text-copy">{active.effect}</p>
         </div>
-        <div className="rounded-lg bg-[#f5f7f6] p-3 text-[14px] leading-6 text-[#33413e]">
+        <div className="rounded-lg bg-subtle p-3 text-[14px] leading-6 text-copy">
           <b>თბილი დინება</b> ნაპირის ჰავას ათბობს და ატენიანებს — მეტი ნალექი. <b>ცივი დინება</b> აგრილებს და ამშრალებს: მის ნაპირზე ხშირად უდაბნოებია.
         </div>
       </div>

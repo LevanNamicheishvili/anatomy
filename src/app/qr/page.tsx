@@ -30,22 +30,22 @@ export default async function QrPage() {
   const isLocal = /localhost|127\.0\.0\.1/.test(base);
 
   return (
-    <main className="min-h-dvh bg-[#f4f6f5] px-6 py-8 font-sans text-[#111a18] print:bg-white print:p-0">
+    <main className="min-h-dvh bg-page px-6 py-8 font-sans text-ink print:bg-card print:p-0">
       <div className="mx-auto max-w-5xl">
         <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
           <div>
-            <Link href="/anatomy" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0f8a74] hover:underline">
+            <Link href="/anatomy" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
               <ArrowLeft className="size-4" />
               {t.title}
             </Link>
             <h1 className="mt-2 text-2xl sm:text-3xl">{t.qrPageTitle}</h1>
-            <p className="mt-2 max-w-2xl text-[15px] leading-7 text-[#33413e]">{t.qrPageLead}</p>
+            <p className="mt-2 max-w-2xl text-[15px] leading-7 text-copy">{t.qrPageLead}</p>
           </div>
           <PrintButton label={t.printQr} />
         </header>
 
         {isLocal && (
-          <p className="mt-4 rounded-md border border-[#ead8a8] bg-[#fdf8ea] p-3 text-sm text-[#6b5314] print:hidden">
+          <p className="mt-4 rounded-md border border-warning/30 bg-warning-soft p-3 text-sm text-warning print:hidden">
             ⚠️ ეს კოდები ახლა <b>{base}</b>-ს მიუთითებს და მხოლოდ ამ კომპიუტერზე იმუშავებს. საჯარო მისამართზე
             განთავსების შემდეგ დააყენე NEXT_PUBLIC_SITE_URL და კოდები თავიდან დაბეჭდე.
           </p>
@@ -55,26 +55,26 @@ export default async function QrPage() {
           {codes.map(({ topic, url, svg }) => (
             <li
               key={topic.slug}
-              className="flex break-inside-avoid flex-col items-center rounded-lg border border-[#e2e7e5] bg-white p-5 text-center"
+              className="flex break-inside-avoid flex-col items-center rounded-lg border border-line bg-card p-5 text-center"
             >
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <span className="size-2.5 rounded-full" style={{ backgroundColor: topic.color }} />
                 {topic.title}
               </h2>
-              <p className="text-sm text-[#66736f]">{topic.subtitle}</p>
+              <p className="text-sm text-mute">{topic.subtitle}</p>
               <div className="mt-3 w-44 [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />
-              <p className="mt-2 text-xs text-[#33413e]">{t.qrScan}</p>
-              <p className="mt-1 text-[11px] break-all text-[#97a29e]">{url}</p>
+              <p className="mt-2 text-xs text-copy">{t.qrScan}</p>
+              <p className="mt-1 text-[11px] break-all text-faint">{url}</p>
               <div className="mt-3 flex gap-2 print:hidden">
                 <Link
                   href={`/topic/${topic.slug}`}
-                  className="inline-flex h-10 items-center rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                  className="inline-flex h-10 items-center rounded-lg border border-line-strong px-3 text-[13px] font-medium hover:bg-subtle"
                 >
                   {t.openTopic}
                 </Link>
                 <a
                   href={`/qr/${topic.slug}`}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#d5dcd9] px-3 text-[13px] font-medium hover:bg-[#f5f7f6]"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[13px] font-medium hover:bg-subtle"
                 >
                   <Download className="size-4" />
                   SVG

@@ -21,10 +21,10 @@ type Tab = (typeof TABS)[number]["id"];
 export function Oceans() {
   const [tab, setTab] = useState<Tab>("currents");
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card">
-      <div className="flex flex-wrap gap-1.5 border-b border-[#e2e7e5] bg-[#f5f7f6] px-3 py-2" role="tablist">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className="flex flex-wrap gap-1.5 border-b border-line bg-subtle px-3 py-2" role="tablist">
         {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={cn("h-9 rounded-lg px-3 text-sm font-semibold", tab === t.id ? "bg-[#1f5f99] text-white" : "text-[#33413e] hover:bg-[#e6ecea]")}>
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={cn("h-9 rounded-lg px-3 text-sm font-semibold", tab === t.id ? "bg-[#1f5f99] text-white" : "text-copy hover:bg-[#e6ecea]")}>
             {t.name}
           </button>
         ))}
@@ -32,7 +32,7 @@ export function Oceans() {
       {tab === "currents" && <CurrentsGlobe />}
       {tab === "floor" && <EchoSounder />}
       {tab === "tides" && <Tides />}
-      <p className="px-5 pb-3 text-[11px] leading-4 text-[#97a29e]">დინებები და ფსკერის პროფილი გამარტივებულია; მიქცევა-მოქცევის სიმაღლე — ღია ოკეანის სანაპიროს ტიპური მნიშვნელობა. დედამიწის სურათი: NASA Blue Marble.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დინებები და ფსკერის პროფილი გამარტივებულია; მიქცევა-მოქცევის სიმაღლე — ღია ოკეანის სანაპიროს ტიპური მნიშვნელობა. დედამიწის სურათი: NASA Blue Marble.</p>
     </section>
   );
 }
