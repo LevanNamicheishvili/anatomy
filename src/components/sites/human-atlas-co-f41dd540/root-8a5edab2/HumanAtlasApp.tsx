@@ -683,6 +683,7 @@ export function HumanAtlasApp({
       lang="ka"
       className={`${board ? "atlas-board " : ""}atlas-chrome relative isolate h-dvh min-h-[480px] w-full overflow-hidden bg-page font-sans text-ink`}
     >
+      <span aria-hidden className="pointer-events-none absolute bottom-1 right-2 z-10 select-none text-[10px] text-ink/40 tabular-nums">{process.env.NEXT_PUBLIC_BUILD}</span>
       <div className="absolute inset-0">
         <canvas
           ref={canvasRef}
