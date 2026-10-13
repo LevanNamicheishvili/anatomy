@@ -654,7 +654,8 @@ export class AnatomyViewer {
         [...byUrl].map(async ([url, list]) => {
           // Runs in the background, so nothing waits on it. No timeout: on a busy main thread the Draco
           // decoder can take longer than any fixed limit, and a discarded result left the muscles invisible.
-          const gltf = await loader.loadAsync(`${url}?v=${MODEL_VERSION}`).catch(() => null);
+          const gltf = await // Face models change often; tie their version to the build so the service worker never serves an old batch.
+          loader.loadAsync(`${url}?v=${process.env.NEXT_PUBLIC_BUILD || MODEL_VERSION}`).catch(() => null);
           if (!gltf || this.disposed) return;
           gltf.scene.updateMatrixWorld(true);
           for (const part of list) {
