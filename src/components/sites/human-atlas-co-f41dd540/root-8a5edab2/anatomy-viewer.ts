@@ -469,8 +469,8 @@ export class AnatomyViewer {
 
   // ---- Materials -------------------------------------------------------------------------------
 
-  private material(system: SystemKey, group: AnimGroup, state: MaterialState, translucent = false): THREE.MeshPhysicalMaterial {
-    const key = `${system}|${group}|${state}${translucent ? "|t" : ""}`;
+  private material(system: SystemKey, group: AnimGroup, state: MaterialState, translucent = false, faceState?: "selected" | "faded"): THREE.MeshPhysicalMaterial {
+    const key = `${system}|${group}|${state}${translucent ? "|t" : ""}|${faceState ?? ""}`;
     const cached = this.materials.get(key);
     if (cached) return cached;
     const m = makeTissue(system);
@@ -481,7 +481,7 @@ export class AnatomyViewer {
     } else if (state === "selected") {
       // Keep the real tissue color; a mint glow strong enough to read on thin face muscles, plus a mint edge sheen.
       m.emissive = new THREE.Color(SELECTED_GLOW);
-      m.emissiveIntensity = 0.3;
+      m.emissiveIntensity = faceState === "selected" ? 0.8 : 0.3;
       m.sheen = 1;
       m.sheenRoughness = 0.3;
       m.sheenColor = new THREE.Color("#5ff2cf");
@@ -507,6 +507,11 @@ export class AnatomyViewer {
       m.opacity = state === "base" ? 0.5 : 0.65;
       m.depthWrite = false;
       m.clearcoat = 0;
+    }
+    if (faceState === "faded") {
+      m.transparent = true;
+      m.opacity = 0.25;
+      m.depthWrite = false;
     }
     this.injectAnimation(m, group);
     if (state === "cut") this.wrapCut(m);
@@ -776,7 +781,11 @@ export class AnatomyViewer {
   setSelected(ids: string[]) {
     const prev = this.selected;
     this.selected = new Set(ids);
-    for (const id of new Set([...prev, ...ids])) {
+    const affected = new Set([...prev, ...ids]);
+    if ([...affected].some((id) => id.startsWith("FX"))) {
+      for (const id of this.parts.keys()) if (id.startsWith("FX")) affected.add(id);
+    }
+    for (const id of affected) {
       const entry = this.parts.get(id);
       if (entry) this.applyMaterial(entry);
     }
@@ -811,7 +820,14 @@ export class AnatomyViewer {
         : this.hovered === id
           ? "hover"
           : "base";
-    entry.mesh.material = this.material(entry.part.system, entry.group, state, entry.translucent);
+    const faceState = id.startsWith("FX")
+      ? this.selected.has(id)
+        ? "selected"
+        : [...this.selected].some((selectedId) => selectedId.startsWith("FX"))
+          ? "faded"
+          : undefined
+      : undefined;
+    entry.mesh.material = this.material(entry.part.system, entry.group, state, entry.translucent, faceState);
   }
 
   private updatePartMatrix(entry: PartMesh) {
