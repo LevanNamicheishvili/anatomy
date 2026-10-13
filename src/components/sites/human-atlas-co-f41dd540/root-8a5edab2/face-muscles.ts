@@ -76,12 +76,16 @@ export const FACE_MUSCLES: CustomPartDef[] = [
   { id: "FX9018M", name: "Right lateral pterygoid", url: `${FACE_MUSCLE_DIR}/lateral_pterygoid.glb`, mesh: "lateral_pterygoid_R", bounds: mirror(LATPTER_L) },
 ];
 
+// Held back from the atlas until their models pass QA, so students never see a broken mesh.
+const HELD_FILES = new Set(["masseter.glb", "buccinator.glb", "medial_pterygoid.glb", "lateral_pterygoid.glb"]);
+const isHeld = (d: CustomPartDef) => HELD_FILES.has(d.url.split("/").pop() ?? "");
+
 export const FACE_MUSCLE_BY_ID = new Map(FACE_MUSCLES.map((d) => [d.id, d]));
 
 /** Adds the custom face muscles to the manifest as muscular parts (idempotent). */
 export function withFaceMuscles(m: AtlasManifest): AtlasManifest {
   const have = new Set(m.parts.map((p) => p.id));
-  const extra: AtlasPart[] = FACE_MUSCLES.filter((d) => !have.has(d.id)).map((d) => ({
+  const extra: AtlasPart[] = FACE_MUSCLES.filter((d) => !have.has(d.id) && !isHeld(d)).map((d) => ({
     id: d.id,
     name: d.name,
     conceptId: d.id,
