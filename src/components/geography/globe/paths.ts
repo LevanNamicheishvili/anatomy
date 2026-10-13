@@ -37,8 +37,6 @@ export function globePath(points: LatLon[], radius: number, lift = 0.006, stepDe
   }
   for (const l of lens) stopAt.push(total ? l / total : 0);
   const curve = new THREE.CatmullRomCurve3(dense, false, "centripetal");
-  // Legs are cut into steps of different sizes; a fine length table keeps the speed along the path even.
-  curve.arcLengthDivisions = Math.max(200, dense.length * 4);
   // Arc-length parametrisation of the dense curve matches the summed great-circle angles closely enough.
   return { curve, stopAt, km: total * EARTH_KM };
 }
