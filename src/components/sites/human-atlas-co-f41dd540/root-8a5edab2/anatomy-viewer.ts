@@ -762,7 +762,7 @@ export class AnatomyViewer {
     this.updateSkinnedBounds(entry);
     this.applyExplode(entry);
     this.applyMaterial(entry);
-    mesh.visible = this.visibility ? this.visibility.has(part.id) : true;
+    mesh.visible = this.shown(part.id);
     this.root.add(mesh);
     this.matricesDirty = true;
   }
@@ -771,9 +771,17 @@ export class AnatomyViewer {
 
   private visibility: Set<string> | null = null;
 
+  // Depressor septi blends into orbicularis oris, so it is drawn only as a highlight while selected.
+  private static readonly SELECT_ONLY = new Set(["FX9014", "FX9014M"]);
+
+  private shown(id: string) {
+    if (AnatomyViewer.SELECT_ONLY.has(id) && !this.selected.has(id)) return false;
+    return this.visibility ? this.visibility.has(id) : true;
+  }
+
   setVisible(ids: Set<string>) {
     this.visibility = ids;
-    for (const [id, entry] of this.parts) entry.mesh.visible = ids.has(id);
+    for (const [id, entry] of this.parts) entry.mesh.visible = this.shown(id);
     if (this.hovered && !ids.has(this.hovered)) this.setHovered(null);
     this.dirty = true;
   }
@@ -788,6 +796,10 @@ export class AnatomyViewer {
     for (const id of affected) {
       const entry = this.parts.get(id);
       if (entry) this.applyMaterial(entry);
+    }
+    for (const id of AnatomyViewer.SELECT_ONLY) {
+      const entry = this.parts.get(id);
+      if (entry) entry.mesh.visible = this.shown(id);
     }
     this.dirty = true;
   }
