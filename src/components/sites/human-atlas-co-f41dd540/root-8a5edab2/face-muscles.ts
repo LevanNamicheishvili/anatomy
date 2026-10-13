@@ -77,7 +77,7 @@ export const FACE_MUSCLES: CustomPartDef[] = [
 ];
 
 // Held back from the atlas until their models pass QA, so students never see a broken mesh.
-const HELD_FILES = new Set(["masseter.glb", "buccinator.glb", "medial_pterygoid.glb", "lateral_pterygoid.glb"]);
+const HELD_FILES = new Set(["masseter.glb", "buccinator.glb", "medial_pterygoid.glb", "lateral_pterygoid.glb", "procerus.glb"]);
 const isHeld = (d: CustomPartDef) => HELD_FILES.has(d.url.split("/").pop() ?? "");
 
 export const FACE_MUSCLE_BY_ID = new Map(FACE_MUSCLES.map((d) => [d.id, d]));
