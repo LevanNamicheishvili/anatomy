@@ -6,7 +6,8 @@
  * and a slightly different origin: the lobes are placed into our coordinates by matching the trachea and
  * bronchial tree, which both models share, axis by axis.
  *
- * The lobes replace any previous LUNG-* parts in atlas.json and are written as one extra chunk.
+ * The lobes replace any previous LUNG-* parts in atlas.json and are written as one extra chunk. Afterwards run
+ * `python3 scripts/fit-lungs-to-ribcage.py`: the airway fit alone leaves the lobes running through the ribs.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
