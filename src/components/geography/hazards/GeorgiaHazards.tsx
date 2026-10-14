@@ -5,12 +5,14 @@ import { Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
+import { HeroView } from "../heroes/HeroView";
 import { HAZARD_INFO, HAZARD_ZONES, type HazardKind, type HazardZone } from "./hazards-data";
 import { SlopeSim } from "./SlopeSim";
 
 /*
  * Topic 7 — landslides, mudflows and avalanches. Top: the Georgia relief map (the same GeorgiaScene as the
- * map page and the landforms lesson) with the well-known danger areas as halos. Bottom: a slope model.
+ * map page and the landforms lesson) with the well-known danger areas as halos. Below: a 3D model of a mudflow
+ * or an avalanche, and a slope model.
  */
 
 const KINDS: HazardKind[] = ["landslide", "mudflow", "avalanche"];
@@ -134,6 +136,15 @@ export function GeorgiaHazards() {
           </ol>
         </div>
       </div>
+
+      {kind !== "landslide" && (
+        <div className="mx-5 mt-5 border-t border-chip pt-4">
+          <h2 className="text-lg">3D მოდელი: {info.name}</h2>
+          <div className="max-w-3xl">
+            <HeroView key={kind} id={kind} />
+          </div>
+        </div>
+      )}
 
       <div className="mx-5 mt-5 border-t border-chip pt-4">
         <h2 className="text-lg">ფერდობის მოდელი: {info.name}</h2>
