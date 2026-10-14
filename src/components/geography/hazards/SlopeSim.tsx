@@ -7,6 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { Play, RotateCcw, Trees } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { cn } from "@/lib/utils";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { ParticleCloud, fbm, hash01, noise2 } from "../fx/particles";
 import { HAZARD_INFO, type HazardKind } from "./hazards-data";
 import { evaluate, type SlopeInput } from "./slope-math";
@@ -1242,6 +1243,7 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const sceneRef = useRef<SlopeScene | null>(null);
   const info = HAZARD_INFO[kind];
   const res = evaluate(kind, input);
@@ -1284,8 +1286,9 @@ export function SlopeSim({ kind }: { kind: HazardKind }) {
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_15rem]">
       <div>
-        <div className="relative aspect-[440/260] w-full overflow-hidden rounded-lg bg-[linear-gradient(#cfe6f7,#eef6fb)]">
+        <div ref={fsRef} data-scene className="relative aspect-[440/260] w-full overflow-hidden rounded-lg bg-[linear-gradient(#cfe6f7,#eef6fb)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" role="img" aria-label={`ფერდობის მოდელი: ${info.name}`} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-2 right-2 size-9" iconClassName="size-4" />
           <span className="pointer-events-none absolute bottom-2 left-3 rounded bg-card/85 px-1.5 py-0.5 text-xs font-bold text-ink">{input.angle}°</span>
           {failed && <p className="absolute inset-0 flex items-center justify-center text-sm text-copy">3D ვერ ჩაიტვირთა</p>}
           {finished && (

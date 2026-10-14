@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Panel, PillButton, SectionPager } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { DnaScene, type DnaOptions } from "./DnaScene";
 import { BASE_COLORS, BASE_INFO, BASE_NAMES, CODONS, GLOBIN, MRNA, SECTIONS, STEP_INFO, STEP_NAMES, type Base, type ChromosomeStep } from "./dna-data";
@@ -120,6 +121,7 @@ function CodonTable() {
 /** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
 export function DnaExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<DnaScene | null>(null);
   const [ready, setReady] = useState(false);
@@ -190,8 +192,9 @@ export function DnaExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${section.title}`} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
           {!ready && (
             <div className="absolute inset-0 flex items-center justify-center">

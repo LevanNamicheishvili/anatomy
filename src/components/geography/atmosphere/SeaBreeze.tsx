@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Moon, Pause, Play, Sun, Thermometer, Wind } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { breeze, LAPSE } from "./breeze-math";
 import { CoastScene, type CoastAnchor } from "./CoastScene";
@@ -26,6 +27,7 @@ const clock = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String
 
 export function SeaBreeze() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CoastScene | null>(null);
   const [hour, setHour] = useState(14);
@@ -69,8 +71,8 @@ export function SeaBreeze() {
   const showP = pressure && b.kind !== "calm" ? "0" : "1";
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
@@ -121,6 +123,7 @@ export function SeaBreeze() {
           <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "დღე-ღამის სვლა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
       </div>
 

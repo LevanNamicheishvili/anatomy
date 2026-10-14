@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Box } from "lucide-react";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { HeroScene } from "./HeroScene";
 import { HEROES, type HeroId } from "./heroes";
 
@@ -12,6 +13,7 @@ import { HEROES, type HeroId } from "./heroes";
 
 export function HeroView({ id }: { id: HeroId }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const [done, setDone] = useState<{ id: HeroId; s: "loaded" | "failed" } | null>(null);
   const status = done?.id === id ? done.s : "loading";
   const hero = HEROES[id];
@@ -32,9 +34,10 @@ export function HeroView({ id }: { id: HeroId }) {
 
   return (
     <div className="mt-2">
-      <div className={status === "failed" ? "hidden" : "relative aspect-[16/10] w-full overflow-hidden rounded-lg"} style={{ backgroundColor: hero.sky }}>
+      <div ref={fsRef} data-scene className={status === "failed" ? "hidden" : "relative aspect-[16/10] w-full overflow-hidden rounded-lg"} style={{ backgroundColor: hero.sky }}>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D მოდელი: ${hero.name}`} />
         <span className="pointer-events-none absolute top-2 left-2 rounded bg-card/90 px-1.5 py-0.5 text-[12px] font-semibold text-ink shadow-sm">{hero.name}</span>
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-2 right-2 size-9" iconClassName="size-4" />
         {status === "loading" && <span className="pointer-events-none absolute right-2 bottom-2 rounded bg-card/80 px-1.5 py-0.5 text-[11px] text-mute">მოდელი იტვირთება…</span>}
       </div>
       {status === "failed" && (

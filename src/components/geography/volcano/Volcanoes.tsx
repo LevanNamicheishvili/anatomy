@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { HeroView } from "../heroes/HeroView";
 import { VolcanoScene, type VolcanoAnchor, type VolcanoStep } from "./VolcanoScene";
@@ -81,6 +82,7 @@ const nf = (v: number) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,
 
 export function Volcanoes() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<VolcanoScene | null>(null);
   const [step, setStep] = useState<VolcanoStep>("plates");
@@ -121,8 +123,8 @@ export function Volcanoes() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[#a9d4f0]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[#a9d4f0]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ფილების საზღვრის ჭრილი: ვულკანი, მიწისძვრა, ცუნამი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
@@ -138,9 +140,10 @@ export function Volcanoes() {
             </PillButton>
           ))}
         </div>
-        {(step === "eruption" || step === "quake" || step === "tsunami") && (
-          <PillButton onClick={() => sceneRef.current?.restart()} title="თავიდან" aria-label="თავიდან" icon={RotateCcw} className="absolute top-3 right-3 shadow-sm" />
-        )}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
+          {(step === "eruption" || step === "quake" || step === "tsunami") && <PillButton onClick={() => sceneRef.current?.restart()} title="თავიდან" aria-label="თავიდან" icon={RotateCcw} className="shadow-sm" />}
+        </div>
       </div>
 
       <div className="grid gap-5 px-5 py-4 lg:grid-cols-[1fr_18rem]">

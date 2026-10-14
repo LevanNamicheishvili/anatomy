@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Sun, Zap } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
+import { cn } from "@/lib/utils";
 import { SEASONS, solarReading, trackerTilt } from "./solar-math";
 import { SolarScene } from "./SolarScene";
 
@@ -22,6 +24,7 @@ function Slider({ label, value, min, max, onChange, disabled }: { label: string;
 
 export function SolarPlant() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SolarScene | null>(null);
   const [elevation, setElevation] = useState<number>(SEASONS[1].elevation);
@@ -57,9 +60,10 @@ export function SolarPlant() {
   }, [elevation, tilt, share]);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={`relative ${sceneFrame}`}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="მზის ელექტროსადგური" />
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold">
           <span data-at="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
             მზე · {elevation}°

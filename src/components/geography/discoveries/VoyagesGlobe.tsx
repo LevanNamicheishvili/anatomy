@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Pause, Play, Ship } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { latLonToVec3 } from "../globe/coords";
 import { GlobeScene } from "../globe/GlobeScene";
@@ -50,6 +51,7 @@ function tiltFor(camera: THREE.PerspectiveCamera, distance: number) {
 
 export function VoyagesGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
   /** What the scene draws; read every frame. The state below repeats it for the page a few times a second. */
@@ -221,8 +223,8 @@ export function VoyagesGlobe() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დიდი გეოგრაფიული აღმოჩენების მარშრუტები გლობუსზე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {VOYAGES.flatMap((v) =>
@@ -259,6 +261,7 @@ export function VoyagesGlobe() {
           <button type="button" onClick={toggleAll} aria-pressed={showAll} title="სამივე მარშრუტი და კონტინენტები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showAll ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Ship className="size-5" />
           </button>
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{current?.name}</p>

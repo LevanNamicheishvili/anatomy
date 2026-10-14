@@ -518,3 +518,44 @@ textarea {
   font-size: 1rem;
   line-height: 1.6;
 }
+
+/*
+ * Full screen for the 3D scenes (src/components/portal/fullscreen.tsx). A lesson section fills the screen: its
+ * scene ([data-scene]) takes at least two thirds of it, the controls follow underneath and the section scrolls
+ * to them if they do not fit. An explorer's scene goes full screen on its own. Unlayered, so these win over the
+ * utility classes.
+ */
+[data-full] {
+  margin: 0 !important;
+  border-width: 0 !important;
+  border-radius: 0 !important;
+}
+[data-full="page"] {
+  position: fixed !important;
+  inset: 0;
+  z-index: 100;
+  width: 100vw;
+  height: 100dvh;
+}
+[data-full]:not([data-scene]) {
+  display: flex !important;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: var(--card);
+}
+[data-full]:not([data-scene]) > [data-scene] {
+  flex: 1 0 auto;
+  min-height: 68dvh;
+  height: auto;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+[data-full]:not([data-scene]) > :not([data-scene]) {
+  flex: 0 0 auto;
+}
+[data-full][data-scene] {
+  height: 100dvh;
+  max-height: none;
+  aspect-ratio: auto;
+}

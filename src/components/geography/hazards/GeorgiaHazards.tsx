@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
 import { HeroView } from "../heroes/HeroView";
@@ -19,6 +20,7 @@ const KINDS: HazardKind[] = ["landslide", "mudflow", "avalanche"];
 
 export function GeorgiaHazards() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GeorgiaScene | null>(null);
   const [ready, setReady] = useState(false);
@@ -75,9 +77,10 @@ export function GeorgiaHazards() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[#dfe7ea]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[#dfe7ea]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რუკა: მეწყრის, ღვარცოფისა და ზვავის საშიში ზონები" />
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-[3.75rem] right-3" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
           {HAZARD_ZONES.map((z) => (
             <button key={z.id} type="button" data-id={z.id} data-on={z.kind === kind ? "1" : "0"} onClick={() => open(z)} className={cn("absolute top-0 left-0 size-0 opacity-0 transition-opacity", active?.id === z.id && "z-10")}>

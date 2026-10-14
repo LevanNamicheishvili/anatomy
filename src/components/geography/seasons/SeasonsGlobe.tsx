@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Clock, Moon, Pause, Play, Sun } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { formatLat, latLonToVec3, vec3ToLatLon } from "../globe/coords";
 import { AXIAL_TILT, meridian, parallel, SPECIAL_LINES } from "../globe/graticule";
@@ -125,6 +126,7 @@ function sunAltitude(lat: number, lon: number, decl: number, utc: number) {
 
 export function SeasonsGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{ globe: GlobeScene; zones: ReturnType<typeof timeZones> } | null>(null);
   const [day, setDay] = useState(172);
@@ -215,8 +217,8 @@ export function SeasonsGlobe() {
   const goTo = (d: number) => setDay(d);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა, მზე, დღე და ღამე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {ZONES.map((z) => (
@@ -256,6 +258,7 @@ export function SeasonsGlobe() {
           <button type="button" onClick={() => setShowZones((s) => !s)} aria-pressed={showZones} title="საათის სარტყლები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showZones ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Clock className="size-5" />
           </button>
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Layers } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { CutawayScene } from "./CutawayScene";
 import { drawnRadius, EARTH_R_KM, LAYERS, layerAt, pressureAt, tempAt, type LayerId } from "./layers";
@@ -31,6 +32,7 @@ function fmtPressure(gpa: number) {
 
 export function EarthCutaway() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CutawayScene | null>(null);
   const [opening, setOpening] = useState(90);
@@ -87,9 +89,10 @@ export function EarthCutaway() {
   const probeR = drawnRadius(depth);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა ჭრილში: ქერქი, მანტია, ბირთვი" />
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LAYERS.map((l) => (
             <span key={l.id} data-r={l.id === "inner-core" ? 0.09 : (l.rTop + l.rBottom) / 2} data-e={l.id === "crust" ? 52 : l.id === "upper-mantle" ? 40 : 28} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow", selected === l.id ? "bg-deep text-white" : "bg-card/90 text-ink")}>

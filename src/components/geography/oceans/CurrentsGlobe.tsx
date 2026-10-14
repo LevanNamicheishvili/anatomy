@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GlobeScene } from "../globe/GlobeScene";
 import { globePath, pathTube, type GlobePath } from "../globe/paths";
@@ -20,6 +21,7 @@ const PATHS: GlobePath[] = CURRENTS.map((c) => globePath(c.path, 1, 0.008));
 
 export function CurrentsGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState<"all" | "warm" | "cold">("all");
   const [active, setActive] = useState<Current>(CURRENTS[1]);
@@ -84,9 +86,10 @@ export function CurrentsGlobe() {
   }, [show]);
 
   return (
-    <div>
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
+    <div ref={fsRef}>
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ოკეანის თბილი და ცივი დინებები გლობუსზე" />
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {CURRENTS.map((c) => {
             const at = c.path[c.labelAt];

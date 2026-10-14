@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Crosshair, Grid3x3, MapPin, RotateCw } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { formatLat, formatLon, type LatLon } from "../globe/coords";
 import { buildCrosshair, buildGraticule, SPECIAL_LINES, type SpecialLine } from "../globe/graticule";
@@ -46,6 +47,7 @@ function Coord({ p, title }: { p: LatLon; title: string }) {
 
 export function GraticuleGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GlobeScene | null>(null);
   const gridRef = useRef<{ visible: boolean } | null>(null);
@@ -125,8 +127,8 @@ export function GraticuleGlobe() {
   const found = picked && Math.abs(picked.lat - TBILISI.lat) < 1.5 && Math.abs(picked.lon - TBILISI.lon) < 1.5;
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-crosshair touch-none" aria-label="გლობუსი გრადუსთა ბადით" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {PARALLELS.map((v) => (
@@ -172,6 +174,7 @@ export function GraticuleGlobe() {
           <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} title="ბრუნვა" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", spin ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <RotateCw className="size-5" />
           </button>
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
 
         <div className="absolute inset-x-0 bottom-3 flex flex-wrap justify-center gap-1.5 px-3">

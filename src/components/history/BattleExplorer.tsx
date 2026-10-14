@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Crown, MapPin, Plus,
 import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { JourneyScene } from "@/components/journeys/JourneyScene";
 import { cn } from "@/lib/utils";
 import { createDidgori, type BattleView } from "./didgori";
@@ -19,6 +20,7 @@ const ACCENT = "#a0662b";
 /** The Didgori battle simulation: stages on the left, the 3D field in the middle, the story on the right. */
 export function BattleExplorer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const overlayRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<JourneyScene | null>(null);
@@ -152,7 +154,7 @@ export function BattleExplorer() {
           </section>
         </nav>
 
-        <div className="relative isolate min-h-0 overflow-hidden bg-[#c8d4da]">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden bg-[#c8d4da]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D სიმულაცია: ${current.title}`} />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
@@ -186,6 +188,7 @@ export function BattleExplorer() {
             </label>
           </div>
           <div className="absolute right-3 top-16 flex flex-col gap-2">
+            <FullscreenButton full={fsOn} onClick={fsToggle} className="border border-line-strong bg-card" />
             <button type="button" disabled={loading || error} aria-label="მიახლოება" onClick={() => sceneRef.current?.zoomBy(0.75)} className="flex size-10 items-center justify-center rounded-lg border border-line/80 bg-card/90 shadow-panel backdrop-blur-sm disabled:opacity-40"><Plus className="size-4" /></button>
             <button type="button" disabled={loading || error} aria-label="დაშორება" onClick={() => sceneRef.current?.zoomBy(1.33)} className="flex size-10 items-center justify-center rounded-lg border border-line/80 bg-card/90 shadow-panel backdrop-blur-sm disabled:opacity-40"><Minus className="size-4" /></button>
           </div>

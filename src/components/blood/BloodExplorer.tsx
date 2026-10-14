@@ -6,6 +6,7 @@ import { Check, X } from "lucide-react";
 import { Panel, PillButton, SectionPager } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { BloodScene } from "./BloodScene";
 import { GROUP_NAMES, SECTIONS, WBC, compatible, type BloodGroup, type WbcKind } from "./blood-data";
@@ -85,6 +86,7 @@ function Compatibility() {
 /** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
 export function BloodExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BloodScene | null>(null);
   const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
@@ -147,8 +149,9 @@ export function BloodExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative isolate min-h-0 overflow-hidden">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${section.title}`} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
           {section.view === "wbc" && (
             <Toolbar>

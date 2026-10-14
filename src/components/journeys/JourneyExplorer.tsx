@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react"
 import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { JourneyScene, type Builder } from "./JourneyScene";
 import { JOURNEYS, JOURNEY_BY_ID, type JourneyId } from "./journeys-data";
@@ -17,6 +18,7 @@ const BUILDERS: Record<JourneyId, Builder> = { blood: bloodJourney, zoom: zoomJo
 
 export function JourneyExplorer({ initial }: { initial: JourneyId }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const overlayRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<JourneyScene | null>(null);
@@ -90,8 +92,9 @@ export function JourneyExplorer({ initial }: { initial: JourneyId }) {
           </ol>
         </nav>
 
-        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`3D: ${journey.title} — ${current.title}`} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">

@@ -6,6 +6,7 @@ import { Pause, Play } from "lucide-react";
 import { Panel, PillButton, SectionPager, revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { HeartScene, type HeartOptions } from "./HeartScene";
 import { PARTS, PHASES, SECTIONS, STRUCTURE_PARTS, type Circuit, type HeartPart } from "./heart-data";
@@ -37,6 +38,7 @@ const CIRCUITS: { id: Circuit; name: string }[] = [
 /** `initial`: section to open first (its view name), e.g. from a textbook lesson link. */
 export function HeartExplorer({ initial }: { initial?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const overlayRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HeartScene | null>(null);
   const [index, setIndex] = useState(() => Math.max(0, SECTIONS.findIndex((s) => s.view === initial)));
@@ -111,8 +113,9 @@ export function HeartExplorer({ initial }: { initial?: string }) {
           </ol>
         </nav>
 
-        <div className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#eef1f0_75%)]">
           <canvas ref={canvasRef} className={cn("absolute inset-0 size-full touch-none", section.view === "structure" && "cursor-pointer")} aria-label={`3D: ${section.title}`} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
           <div ref={overlayRef} className="pointer-events-none absolute inset-0 overflow-hidden" />
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">

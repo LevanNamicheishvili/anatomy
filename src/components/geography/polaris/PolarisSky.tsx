@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Compass, MapPin, Pause, Play, Star } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { bearing, compassName, horizonDir, LATITUDES, POLARIS, TARGETS, TBILISI } from "./sky-data";
 import { SkyScene, type SkyAnchor } from "./SkyScene";
@@ -38,6 +39,7 @@ const fmtDeg = (v: number) => `${(Math.round(v * 10) / 10).toLocaleString("ka-GE
 
 export function PolarisSky() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SkyScene | null>(null);
   const [lat, setLat] = useState(41.7);
@@ -86,8 +88,8 @@ export function PolarisSky() {
   const hideAz = !(step === 0 || step === 4);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[#070d1f]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[#070d1f]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing" aria-label="ღამის ცა და პოლარული ვარსკვლავი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
@@ -114,6 +116,7 @@ export function PolarisSky() {
           <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ცის ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
 
         <div className="absolute inset-x-0 bottom-3 flex flex-wrap justify-center gap-1.5 px-3">

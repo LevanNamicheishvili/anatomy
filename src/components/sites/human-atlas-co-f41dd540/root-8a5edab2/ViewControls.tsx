@@ -1,6 +1,7 @@
 "use client";
 
-import { Minus, Plus, RotateCcw, RotateCw, Tags } from "lucide-react";
+import { Maximize2, Minimize2, Minus, Plus, RotateCcw, RotateCw, Tags } from "lucide-react";
+import { useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import type { ViewName } from "./anatomy-viewer";
 import type { Strings } from "./i18n";
@@ -33,6 +34,9 @@ export function ViewControls({
   labelsOn: boolean;
   onLabels: () => void;
 }) {
+  // The whole atlas full screen: no browser bars on a smart board.
+  const { full: fsOn, toggle: fsToggle, canWholePage } = useFullscreen({ wholePage: true });
+  const fsLabel = fsOn ? "სრული ეკრანიდან გამოსვლა" : "სრულ ეკრანზე გაშლა";
   return (
     <nav
       aria-label="კამერა"
@@ -83,6 +87,14 @@ export function ViewControls({
       <button type="button" aria-label="დაპატარავება" onClick={() => onZoom(-1)} className={cn(iconBtn, "max-md:hidden")}>
         <Minus className="size-[18px]" strokeWidth={2} />
       </button>
+      {canWholePage && (
+        <>
+          <span className={divider} />
+          <button type="button" title={fsLabel} aria-label={fsLabel} aria-pressed={fsOn} onClick={fsToggle} className={cn(iconBtn, fsOn && "bg-brand text-white hover:bg-brand")}>
+            {fsOn ? <Minimize2 className="size-[18px]" strokeWidth={2} /> : <Maximize2 className="size-[18px]" strokeWidth={2} />}
+          </button>
+        </>
+      )}
     </nav>
   );
 }

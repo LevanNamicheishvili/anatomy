@@ -5,6 +5,7 @@ import { Check, ChevronDown, ChevronUp, Droplets, Layers, Loader2, MapPin, Minus
 import { revealScene } from "@/components/portal/controls";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import { explorerGrid, explorerPage, explorerText } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import {
   BASIN_NAMES,
@@ -233,6 +234,7 @@ function ListItem({
 
 export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapLayer }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const compassRef = useRef<SVGSVGElement>(null);
   const sceneRef = useRef<GeorgiaScene | null>(null);
@@ -493,7 +495,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
 
       {/* No sections strip here, so the map is the first row. */}
       <div className={cn(explorerGrid, "grid-rows-[minmax(18rem,58svh)_auto] lg:grid-cols-[minmax(0,1fr)_400px]")}>
-        <div className="relative isolate min-h-0 overflow-hidden bg-[#dfeaf1]">
+        <div ref={fsRef} data-scene className="relative isolate min-h-0 overflow-hidden bg-[#dfeaf1]">
           <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს 3D რუკა" />
           <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
             {REGIONS.filter((r) => r.id !== "tbilisi").map((r) => (
@@ -659,6 +661,7 @@ export function GeorgiaMap({ initialLayer = "satellite" }: { initialLayer?: MapL
 
           {/* Navigation: large buttons for smart boards, as well as drag, pinch and wheel. */}
           <div className="absolute top-3 right-3 flex flex-col gap-2">
+            <FullscreenButton full={fsOn} onClick={fsToggle} className="size-11 border border-line-strong bg-card hover:bg-subtle" />
             <button
               type="button"
               aria-label="საწყისი ხედი"

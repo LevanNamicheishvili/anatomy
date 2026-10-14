@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
+import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
 import { WaterfallView } from "../waterfall/WaterfallView";
@@ -19,6 +20,7 @@ const KINDS: LandformKind[] = ["gorge", "waterfall", "delta"];
 
 export function GeorgiaLandforms() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GeorgiaScene | null>(null);
   const [ready, setReady] = useState(false);
@@ -71,9 +73,10 @@ export function GeorgiaLandforms() {
   const info = KIND_INFO[kind];
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
-      <div className={cn("relative bg-[#dfe7ea]", sceneFrame)}>
+    <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
+      <div className={cn("relative bg-[#dfe7ea]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="საქართველოს რელიეფი: ხეობები, ჩანჩქერები და დელტები" />
+        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-[3.75rem] right-3" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
           {RIVER_LANDFORMS.map((f) => (
             <button
