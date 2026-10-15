@@ -10,10 +10,46 @@ import { breeze, LAPSE } from "./breeze-math";
 import { CoastScene, type CoastAnchor } from "./CoastScene";
 
 /*
- * Topic 8 — air temperature, pressure and wind, shown as the breeze on Georgia's Black Sea coast. Move the
- * clock: by day the land heats up faster than the sea, low pressure forms over the land and the sea breeze
- * blows ashore; at night it all turns round. On the mountain the air gets ~6 °C colder per kilometre.
+ * Topic 8 — air temperature, pressure and wind, shown as the breeze on Georgia's Black Sea coast (Poti, the
+ * Colchis lowland, the Caucasus). Move the clock: by day the land heats up faster than the sea, low pressure
+ * forms over the land and the sea breeze blows ashore; at night it all turns round. On the mountain the air
+ * gets ~6 °C colder per kilometre. Under the scene: how it happens step by step, and why land and sea differ.
  */
+
+/** How the breeze comes about, step by step: by day, at night, and in the calm between. */
+const STEPS = {
+  sea: [
+    ["მზე ათბობს", "მზე ერთნაირად ანათებს ხმელეთსაც და ზღვასაც, მაგრამ ხმელეთი ბევრად სწრაფად თბება: შუადღისთვის ის ზღვაზე 6–8 °C-ით თბილია."],
+    ["თბილი ჰაერი ადის", "ხმელეთის თავზე ჰაერი თბება, ფართოვდება, მსუბუქდება და მაღლა ადის (ნარინჯისფერი ისარი). მიწასთან ჰაერი თხელდება — იქმნება დაბალი წნევის არე (დ)."],
+    ["ზღვიდან გრილი ჰაერი მოდის", "ზღვის თავზე ჰაერი გრილი და მძიმეა — წნევა მაღალია (მ). ჰაერი ყოველთვის მაღალი წნევიდან დაბალი წნევისკენ მოძრაობს: მიწის პირას ზღვიდან ხმელეთისკენ უბერავს ზღვის ბრიზი."],
+    ["წრე იკვრება", "მაღლა, დაახლოებით 1 კმ-ზე, ჰაერი უკან, ზღვისკენ მიედინება და ზღვის თავზე ეშვება (ცისფერი ისარი). ხმელეთის თავზე ამოსულ ჰაერში ორთქლი ცივდება — ჩნდება გროვა ღრუბლები."],
+  ],
+  land: [
+    ["მზე ჩავიდა", "ღამით ხმელეთი სითბოს სწრაფად გამოასხივებს და ცივდება, ზღვა კი დღისით დაგროვილ სითბოს დიდხანს ინარჩუნებს."],
+    ["ხმელეთზე ჰაერი მძიმდება", "გაცივებული ჰაერი იკუმშება და მძიმდება — ხმელეთზე წნევა იზრდება (მ)."],
+    ["ზღვის თავზე ჰაერი ადის", "ზღვის თავზე ჰაერი ახლა შედარებით თბილია: ის მაღლა ადის და წნევა ეცემა (დ)."],
+    ["ხმელეთის ბრიზი", "მიწის პირას ჰაერი ხმელეთიდან ზღვისკენ მიედინება. ღამის ბრიზი დღისაზე სუსტია — 1–3 მ/წმ, რადგან ტემპერატურების სხვაობაც ნაკლებია."],
+  ],
+  calm: [
+    ["ტემპერატურები თანაბრდება", "დილით და საღამოს ხმელეთი და ზღვა თითქმის ერთნაირად თბილია."],
+    ["წნევის სხვაობა ქრება", "როცა ტემპერატურა ერთნაირია, წნევაც თანაბრდება და ჰაერს მოძრაობის მიზეზი აღარ აქვს."],
+    ["შტილი", "ქარი წყნარდება — ნავის აფრა და დროშა ჩამოშვებულია, კვამლი პირდაპირ მაღლა ადის."],
+    ["ბრიზი მობრუნდება", "მალე ერთ-ერთი მხარე უფრო თბილი გახდება და ბრიზი საწინააღმდეგო მიმართულებით დაუბერავს."],
+  ],
+} as const;
+
+const WHY = [
+  "წყლის გასათბობად ბევრად მეტი სითბოა საჭირო: ერთნაირი მასის წყალს ნიადაგზე დაახლოებით 4-ჯერ მეტი სითბო სჭირდება, რომ 1 °C-ით გათბეს.",
+  "მზის სხივი წყალში რამდენიმე მეტრზე აღწევს და სითბო დიდ მოცულობაზე ნაწილდება; ნიადაგში მხოლოდ ზედა რამდენიმე სანტიმეტრი თბება.",
+  "ზღვა ირევა — ტალღები და დინებები თბილ ზედა ფენას ქვემოთ, ცივ წყალს ერევა.",
+  "ზღვის ზედაპირიდან წყალი ორთქლდება, აორთქლება კი სითბოს ართმევს.",
+];
+
+const FACTS = [
+  "ბათუმში, ფოთსა და სოხუმში ზაფხულის მოწმენდილ დღეებში ზღვის ბრიზი ჩვეულებრივ დილის 9–10 საათიდან იწყება და საღამომდე უბერავს — ის სიცხეს ამსუბუქებს.",
+  "ზღვის ბრიზი ხმელეთზე ათეულ კილომეტრზე შედის, მისი ფენის სისქე კი რამდენიმე ასეული მეტრიდან 1 კმ-მდეა.",
+  "იგივე მიზეზით უბერავს მთა-ხეობის ქარი: დღისით გამთბარი ფერდობებიდან ჰაერი მთისკენ ადის, ღამით გაცივებული — ხეობაში ეშვება.",
+];
 
 const PRESETS = [
   { name: "დილა", hour: 8 },
@@ -84,7 +120,16 @@ export function SeaBreeze() {
             ხმელეთი · {t1(b.land)}
           </span>
           <span data-at="mountain" className="absolute top-0 left-0 rounded bg-card/85 px-1.5 py-0.5 text-ink opacity-0">
-            მთის წვერი ~4,5 კმ · {t1(b.land - LAPSE * 4.5)}
+            კავკასიონი · ~4,5 კმ · {t1(b.land - LAPSE * 4.5)}
+          </span>
+          <span data-at="town" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+            ფოთი
+          </span>
+          <span data-at="river" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+            მდ. რიონი
+          </span>
+          <span data-at="lowland" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+            კოლხეთის დაბლობი
           </span>
           {([1, 2, 3] as const).map((km) => (
             <span key={km} data-at={`km${km}`} className="absolute top-0 left-0 translate-x-2 rounded bg-card/80 px-1 text-[11px] text-copy opacity-0">
@@ -117,6 +162,17 @@ export function SeaBreeze() {
           <p className="text-[13px] text-mute">
             ტემპერატურის სხვაობა ხმელეთსა და ზღვას შორის: <b className="text-ink tabular-nums">{b.diff > 0 ? "+" : ""}{b.diff.toFixed(1)}°C</b>
           </p>
+        </div>
+
+        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-card/90 px-2.5 py-1.5 text-[12px] text-copy shadow-sm">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-[#ff7a2e]" />
+            თბილი ჰაერი ადის
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-[#4fa8ff]" />
+            გრილი ჰაერი ეშვება
+          </span>
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
@@ -170,6 +226,39 @@ export function SeaBreeze() {
             </div>
           ))}
         </dl>
+      </div>
+      <div className="grid gap-4 border-t border-line px-5 py-4 lg:grid-cols-[1.3fr_1fr]">
+        <div>
+          <h3 className="text-base font-semibold">{b.kind === "sea" ? "როგორ იბადება დღის ბრიზი" : b.kind === "land" ? "როგორ იბადება ღამის ბრიზი" : "რა ხდება შტილის დროს"}</h3>
+          <ol className="mt-2 flex flex-col gap-2">
+            {STEPS[b.kind].map(([title, text], i) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#2f6fb0] text-[13px] font-semibold text-white">{i + 1}</span>
+                <p className="text-[15px] leading-6 text-copy">
+                  <b className="text-ink">{title}.</b> {text}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="rounded-lg bg-subtle p-3">
+            <h3 className="text-sm font-semibold">რატომ თბება ხმელეთი ზღვაზე სწრაფად?</h3>
+            <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-[14px] leading-6 text-copy">
+              {WHY.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-lg border border-line p-3">
+            <h3 className="text-sm font-semibold">საინტერესოა</h3>
+            <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-[14px] leading-6 text-copy">
+              {FACTS.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
       <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მოდელი გამარტივებულია: ზაფხულის მოწმენდილი დღე შავი ზღვის სანაპიროზე; რიცხვები სასწავლო მიახლოებაა. წნევა — ჰექტოპასკალებში (ჰპა); 1013 ჰპა ≈ 760 მმ ვერცხლისწყლის სვეტი.</p>
     </section>
