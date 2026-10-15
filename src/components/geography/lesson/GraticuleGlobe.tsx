@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import { Crosshair, Grid3x3, MapPin, RotateCw } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
-import { formatLat, formatLon, type LatLon } from "../globe/coords";
-import { buildCrosshair, buildGraticule, SPECIAL_LINES, type SpecialLine } from "../globe/graticule";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
+import { formatLat, formatLon, latLonToVec3, type LatLon } from "../globe/coords";
+import { buildCrosshair, buildGraticule, meridian, parallel, SPECIAL_LINES, type SpecialLine } from "../globe/graticule";
+import { GRID_CUES, type GridLit, type GridShot } from "./graticule-cues";
 import { GlobeScene } from "../globe/GlobeScene";
 import { MapButton } from "../globe/MapButton";
 
@@ -22,6 +25,19 @@ const TBILISI: LatLon = { lat: 41.72, lon: 44.79 };
 
 const parLabel = (v: number) => (v === 0 ? "0°" : `${Math.abs(v)}° ${v > 0 ? "ჩ" : "ს"}`);
 const merLabel = (v: number) => (v === 0 || v === 180 ? `${v}°` : `${Math.abs(v)}° ${v > 0 ? "აღმ" : "დას"}`);
+
+/** Which lines light up for each cue: named lines by id, and the whole sets of parallels and meridians. */
+const LIT_LINES: Record<GridLit, string[]> = {
+  grid: ["parallels", "meridians"],
+  parallels: ["parallels"],
+  meridians: ["meridians"],
+  equator: ["equator"],
+  prime: ["prime"],
+  tropics: ["tropic-n", "tropic-s"],
+  polar: ["arctic", "antarctic"],
+  special: ["equator", "tropic-n", "tropic-s", "arctic", "antarctic"],
+  between: ["tropic-n", "arctic"],
+};
 
 const GOTO: { name: string; lat: number; lon: number }[] = [
   { name: "თბილისი", lat: TBILISI.lat, lon: TBILISI.lon },
@@ -52,6 +68,9 @@ export function GraticuleGlobe() {
   const labelsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GlobeScene | null>(null);
   const gridRef = useRef<{ visible: boolean } | null>(null);
+  /** The narration's lights: halos round the named lines, the sets of parallels and meridians, and the marker. */
+  const fxRef = useRef<{ light: (ids: string[]) => void; mark: (p: [number, number] | null) => void } | null>(null);
+  const [lit, setLit] = useState<GridLit | null>(null);
   const [hover, setHover] = useState<LatLon | null>(null);
   const [picked, setPicked] = useState<LatLon | null>(null);
   const [grid, setGrid] = useState(true);
@@ -72,6 +91,39 @@ export function GraticuleGlobe() {
     gridRef.current = graticule;
     const cross = buildCrosshair(scene.radius);
     scene.earth.add(graticule, cross.group);
+    // Halos the narration lights up (pulsing in onFrame).
+    const halos = new Map<string, THREE.Object3D>();
+    const haloMats: THREE.MeshBasicMaterial[] = [];
+    const halo = (color: string) => {
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+      haloMats.push(m);
+      return m;
+    };
+    const r = scene.radius * 1.004;
+    for (const l of SPECIAL_LINES) {
+      const h = l.kind === "parallel" ? parallel(r, l.value, scene.radius * 0.022, halo(l.color)) : meridian(r, l.value, scene.radius * 0.022, halo(l.color));
+      h.visible = false;
+      halos.set(l.id, h);
+      scene.earth.add(h);
+    }
+    const sets = { parallels: new THREE.Group(), meridians: new THREE.Group() };
+    const setMat = halo("#ffe066");
+    for (let v = -75; v <= 75; v += 15) if (v) sets.parallels.add(parallel(r, v, scene.radius * 0.007, setMat));
+    for (let v = -165; v <= 180; v += 15) if (v) sets.meridians.add(meridian(r, v, scene.radius * 0.007, setMat));
+    for (const [id, g] of Object.entries(sets)) {
+      g.visible = false;
+      halos.set(id, g);
+      scene.earth.add(g);
+    }
+    fxRef.current = {
+      light: (ids) => {
+        for (const [id, h] of halos) h.visible = ids.includes(id);
+      },
+      mark: (p) => {
+        if (!p) return cross.hide();
+        cross.place(p[0], p[1], latLonToVec3(p[0], p[1], scene.radius));
+      },
+    };
 
     scene.onHover = (p) => {
       if (p) cross.place(p.lat, p.lon, p.point);
@@ -85,6 +137,8 @@ export function GraticuleGlobe() {
 
     const els = [...layer.querySelectorAll<HTMLElement>("[data-kind]")];
     scene.onFrame = (project) => {
+      const pulse = 0.5 + 0.3 * Math.sin(performance.now() / 260);
+      for (const m of haloMats) m.opacity = pulse;
       const view = scene.viewCenter();
       for (const el of els) {
         const v = Number(el.dataset.v);
@@ -125,6 +179,25 @@ export function GraticuleGlobe() {
     sceneRef.current?.setMapVisible(map);
   }, [map]);
 
+  // The narration drives the globe: the camera goes where the voice is, the lines it talks about light up, and the
+  // marker stands on the place it names (with its coordinates in the read-out).
+  const direct = useCallback((s: Partial<GridShot>) => {
+    const scene = sceneRef.current;
+    const fx = fxRef.current;
+    setSpin(false);
+    setGrid(true);
+    const lines = s.lit ? LIT_LINES[s.lit] : [];
+    setLit(s.lit ?? null);
+    setLine(lines.length === 1 ? (SPECIAL_LINES.find((l) => l.id === lines[0]) ?? null) : null);
+    fx?.light(lines);
+    fx?.mark(s.mark ?? null);
+    setHover(s.mark ? { lat: s.mark[0], lon: s.mark[1] } : null);
+    if (scene && s.view) scene.focus(s.view[0], s.view[1], s.view[2]);
+  }, []);
+  useNarrationDirector(GRID_CUES, direct);
+  const litIds = lit ? LIT_LINES[lit] : [];
+  const glowCls = "rounded ring-4 ring-[#ffd76a] scale-115 z-10";
+
   const pickLine = (l: SpecialLine) => {
     setLine(l);
     setSpin(false);
@@ -140,12 +213,12 @@ export function GraticuleGlobe() {
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-crosshair touch-none" aria-label="გლობუსი გრადუსთა ბადით" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {PARALLELS.map((v) => (
-            <span key={`p${v}`} data-kind="par" data-v={v} className="absolute top-0 left-0 text-[11px] font-semibold whitespace-nowrap text-white/85 opacity-0 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+            <span key={`p${v}`} data-kind="par" data-v={v} className={cn("absolute top-0 left-0 text-[11px] font-semibold whitespace-nowrap text-white/85 opacity-0 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]", litIds.includes("parallels") && glowCls)}>
               {parLabel(v)}
             </span>
           ))}
           {MERIDIANS.map((v) => (
-            <span key={`m${v}`} data-kind="mer" data-v={v} className="absolute top-0 left-0 text-[11px] font-semibold whitespace-nowrap text-white/70 opacity-0 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+            <span key={`m${v}`} data-kind="mer" data-v={v} className={cn("absolute top-0 left-0 text-[11px] font-semibold whitespace-nowrap text-white/70 opacity-0 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]", litIds.includes("meridians") && glowCls)}>
               {merLabel(v)}
             </span>
           ))}
@@ -155,7 +228,7 @@ export function GraticuleGlobe() {
               data-kind="line"
               data-v={l.value}
               data-m={l.kind === "meridian" ? "1" : "0"}
-              className="absolute top-0 left-0 rounded px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-ink opacity-0 shadow-sm"
+              className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-ink opacity-0 shadow-sm", litIds.includes(l.id) && glowCls)}
               style={{ backgroundColor: l.color }}
             >
               {l.name}
