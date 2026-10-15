@@ -3,7 +3,7 @@ import { LessonNarration } from "@/components/portal/LessonNarration";
 import { LessonQuiz } from "@/components/portal/LessonQuiz";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import type { GeoLesson } from "@/lib/geography-lessons";
-import { geoNarrationId, lessonNarration } from "@/lib/narration";
+import { geoNarrationId, lessonNarration, narrationWords } from "@/lib/narration";
 import { GeoVisual } from "./GeoVisual";
 
 const COLOR = "#2f6fb0";
@@ -35,7 +35,7 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
         </VisualWide>
 
         <Reading>
-          <LessonSections sections={lesson.sections} spoken={!!narration} />
+          <LessonSections sections={lesson.sections} spokenFrom={narration ? narrationWords(lesson.intro).length : undefined} />
           <TermsList terms={lesson.terms} />
           <RememberCallout items={lesson.remember} />
           <LessonQuiz quiz={lesson.quiz} />

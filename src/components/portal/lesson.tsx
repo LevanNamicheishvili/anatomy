@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Lightbulb, type LucideIcon } from "lucide-react";
-import { narrationWords } from "@/lib/narration";
+import { narrationLayout, narrationWords } from "@/lib/narration";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs, Chip } from "./ui";
 
@@ -12,15 +12,16 @@ import { Breadcrumbs, Chip } from "./ui";
  */
 
 /**
- * Text that a lesson narration reads: with `spoken`, every word is its own span, so the narration can light the
- * words up as they are said (LessonNarration); the words are cut exactly as the timings were (narrationWords).
+ * Text that a narration reads: with `from` (the number of its first word in the narration), every word is its
+ * own span marked with its number, so the narration can light the words up as they are said
+ * (LessonNarration); the words are cut exactly as the timings were (narrationWords).
  */
-function Spoken({ text, spoken }: { text: string; spoken?: boolean }) {
-  if (!spoken) return text;
+export function Spoken({ text, from }: { text: string; from?: number }) {
+  if (from === undefined) return text;
   const words = narrationWords(text);
   return words.map((w, i) => (
     <Fragment key={i}>
-      <span data-nw="">{w}</span>
+      <span data-nw={from + i}>{w}</span>
       {i < words.length - 1 ? " " : null}
     </Fragment>
   ));
@@ -67,7 +68,7 @@ export function LessonHeader({
       <h1 className="mt-2 text-[1.75rem] leading-[1.4] text-ink [overflow-wrap:anywhere] sm:text-4xl">{title}</h1>
       {intro && (
         <p className="mt-3 max-w-3xl text-base leading-7 text-copy sm:text-lg sm:leading-8">
-          <Spoken text={intro} spoken={spoken} />
+          <Spoken text={intro} from={spoken ? 0 : undefined} />
         </p>
       )}
       {children}
@@ -76,17 +77,20 @@ export function LessonHeader({
 }
 
 /** The lesson's headed paragraphs. */
-export function LessonSections({ sections, spoken }: { sections: { heading: string; text: string[] }[]; spoken?: boolean }) {
+/** The lesson's headed paragraphs; `spokenFrom`: the narration reads them, numbering on from this word. */
+export function LessonSections({ sections, spokenFrom }: { sections: { heading: string; text: string[] }[]; spokenFrom?: number }) {
+  const layout = spokenFrom === undefined ? null : narrationLayout(sections.map((s) => ({ heading: s.heading, paragraphs: s.text })));
+  const at = (n: number) => (layout ? spokenFrom! + n : undefined);
   return (
     <>
-      {sections.map((s) => (
+      {sections.map((s, i) => (
         <section key={s.heading} className="lesson-paper mt-7">
           <h2 className="border-b border-line pb-4 text-xl text-ink">
-            <Spoken text={s.heading} spoken={spoken} />
+            <Spoken text={s.heading} from={layout ? at(layout[i].heading) : undefined} />
           </h2>
-          {s.text.map((p) => (
+          {s.text.map((p, k) => (
             <p key={p.slice(0, 30)} className="mt-3 text-base leading-8 text-copy">
-              <Spoken text={p} spoken={spoken} />
+              <Spoken text={p} from={layout ? at(layout[i].paragraphs[k]) : undefined} />
             </p>
           ))}
         </section>
@@ -112,16 +116,21 @@ export function TermsList({ terms }: { terms: { term: string; meaning: string }[
 }
 
 /** Yellow box with a short list; "remember" on lessons, also used for the atlas's interesting facts. */
-export function RememberCallout({ items, title = "დაიმახსოვრე", icon: Icon = Lightbulb }: { items: string[]; title?: string; icon?: LucideIcon }) {
+export function RememberCallout({ items, title = "დაიმახსოვრე", icon: Icon = Lightbulb, spokenFrom }: { items: string[]; title?: string; icon?: LucideIcon; spokenFrom?: number }) {
+  const layout = spokenFrom === undefined ? null : narrationLayout([{ heading: title, paragraphs: items }])[0];
   return (
     <section className="mt-5 rounded-2xl border border-warning/20 bg-warning-soft p-5 sm:p-6">
       <h2 className="flex items-center gap-2 text-lg text-ink">
         <Icon className="size-5 text-warning" aria-hidden />
-        {title}
+        <span>
+          <Spoken text={title} from={layout ? spokenFrom! + layout.heading : undefined} />
+        </span>
       </h2>
       <ul className="mt-3 flex list-disc flex-col gap-2 ps-5 text-[15px] leading-7 text-copy marker:text-warning">
-        {items.map((r) => (
-          <li key={r}>{r}</li>
+        {items.map((r, k) => (
+          <li key={r}>
+            <Spoken text={r} from={layout ? spokenFrom! + layout.paragraphs[k] : undefined} />
+          </li>
         ))}
       </ul>
     </section>

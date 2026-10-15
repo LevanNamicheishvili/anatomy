@@ -3,17 +3,17 @@
  *
  *   npx tsx scripts/narration/build-narration.ts <what> [--voice Charon] [--check]
  *
- *   <what>   geo:<slug> | bio:<grade>:<number> | geo | bio | all
+ *   <what>   geo:<slug> | bio:<grade>:<number> | topic:<slug> | geo | bio | topic | all
  *   --voice  a Gemini prebuilt voice (default Charon)
  *   --check  have Gemini transcribe each section back and report words it did not hear (pronunciation check)
  *   --force  time the words again even if the lesson is up to date (the recordings come from the cache)
  *
  * Needs GEMINI_API_KEY in .env.local (never in git); GEMINI_API_KEY_2, _3… are used in turn when a key's daily
  * limit runs out (the free tier allows only a few recordings a day). Writes public/narration/<id>.m4a (AAC, made with macOS
- * afconvert) and <id>.json (word timings), and src/lib/narration-manifest.ts. A lesson is read in pieces — the
- * introduction, then each section with its heading — and every piece is kept in .narration-cache/, so a run that
- * stops (the free tier's daily limit, a network error) picks up where it left off, and a lesson whose text has
- * not changed is not recorded again.
+ * afconvert) and <id>.json (word timings), and src/lib/narration-manifest.ts. A lesson is read in one go (a long
+ * one in two or three pieces, split between sections: one request each, which is what the free tier counts),
+ * and every piece is kept in .narration-cache/, so a run that stops (the daily limit, a network error) picks up
+ * where it left off, and a lesson whose text has not changed is not recorded again.
  *
  * Word times: Gemini gives none. The pauses in each piece are matched to the punctuation of its text (sentence
  * and paragraph ends to long pauses, commas to short ones) by dynamic programming, choosing the matching whose
@@ -31,7 +31,9 @@ import { GRADE_10 } from "../../src/lib/lessons/grade-10";
 import { GRADE_11 } from "../../src/lib/lessons/grade-11";
 import { GRADE_12 } from "../../src/lib/lessons/grade-12";
 import type { LessonContent } from "../../src/lib/lessons/types";
-import { bioNarrationId, geoNarrationId, narrationBlocks, narrationHash, narrationWords, type NarrationBlock } from "../../src/lib/narration";
+import { bioNarrationId, geoNarrationId, narrationBlocks, narrationHash, narrationWords, topicNarrationBlocks, topicNarrationId, type NarrationBlock } from "../../src/lib/narration";
+import { STRINGS } from "../../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/i18n";
+import { TOPICS } from "../../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/topics";
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "public/narration");
@@ -40,8 +42,10 @@ const MANIFEST = path.join(ROOT, "src/lib/narration-manifest.ts");
 const MODEL = "gemini-3.8-flash-tts";
 const CHECK_MODEL = "gemini-3.8-flash";
 const STYLE = "Georgian. A warm, clear school teacher explaining a lesson to 12–16 year old pupils: calm, unhurried pace, natural intonation, a short pause at commas, a longer one at full stops and after headings.";
-/** Silence between the introduction and the sections (seconds). */
+/** Silence between pieces (seconds). */
 const GAP = 0.7;
+/** Longest text read in one request (characters); longer lessons are split between sections. */
+const PIECE_CHARS = 3400;
 const RATE = 24000;
 
 const args = process.argv.slice(2);
@@ -58,26 +62,29 @@ let keyAt = 0;
 interface Job {
   id: string;
   title: string;
-  content: Pick<LessonContent, "intro" | "sections">;
+  blocks: NarrationBlock[];
 }
 
 const BIO: Record<number, Record<string, LessonContent>> = { 8: GRADE_8, 9: GRADE_9, 10: GRADE_10, 11: GRADE_11, 12: GRADE_12 };
-const geoJobs = (): Job[] => GEO_LESSONS.map((l) => ({ id: geoNarrationId(l.slug), title: l.title, content: l }));
+const geoJobs = (): Job[] => GEO_LESSONS.map((l) => ({ id: geoNarrationId(l.slug), title: l.title, blocks: narrationBlocks(l) }));
+const topicJobs = (): Job[] => TOPICS.map((tp) => ({ id: topicNarrationId(tp.slug), title: tp.title, blocks: topicNarrationBlocks(tp, STRINGS.ka.topicFacts, STRINGS.ka.topicHealth) }));
 const bioJobs = (): Job[] =>
   Object.entries(BIO).flatMap(([grade, lessons]) =>
     Object.entries(lessons)
       // Lessons the teacher shows (reproduction) are not read aloud at home.
       .filter(([, c]) => !c.sensitive)
-      .map(([key, content]) => ({ id: bioNarrationId(Number(grade), key), title: `${grade}: ${key}`, content })),
+      .map(([key, content]) => ({ id: bioNarrationId(Number(grade), key), title: `${grade}: ${key}`, blocks: narrationBlocks(content) })),
   );
 
 function jobs(): Job[] {
   if (what === "geo") return geoJobs();
   if (what === "bio") return bioJobs();
-  if (what === "all") return [...geoJobs(), ...bioJobs()];
+  if (what === "topic") return topicJobs();
+  if (what === "all") return [...geoJobs(), ...topicJobs(), ...bioJobs()];
   const [kind, a, b] = what.split(":");
   if (kind === "geo") return geoJobs().filter((j) => j.id === geoNarrationId(a));
   if (kind === "bio") return bioJobs().filter((j) => j.id === bioNarrationId(Number(a), b));
+  if (kind === "topic") return topicJobs().filter((j) => j.id === topicNarrationId(a));
   throw new Error("say what to read: geo:<slug>, bio:<grade>:<number>, geo, bio or all");
 }
 
@@ -181,6 +188,8 @@ async function gemini(url: string, body: unknown) {
     if (res.ok) return res.json();
     const text = await res.text();
     if (res.status === 429 && /PerDay|per day|daily/i.test(text)) {
+      const quota = text.match(/"quotaId":\s*"([^"]+)"[\s\S]*?"quotaValue":\s*"(\d+)"/);
+      if (quota) console.log(`    ${quota[1]}: ${quota[2]} a day`);
       if (keyAt + 1 >= KEYS.length) throw new DailyLimit(text.slice(0, 300));
       keyAt++;
       console.log(`    daily limit reached; going on with key ${keyAt + 1}`);
@@ -409,7 +418,7 @@ function writeManifest() {
 }
 
 async function build(job: Job) {
-  const blocks = narrationBlocks(job.content);
+  const blocks = job.blocks;
   const hash = narrationHash(blocks);
   const jsonPath = path.join(OUT, `${job.id}.json`);
   if (fs.existsSync(jsonPath)) {
@@ -419,22 +428,33 @@ async function build(job: Job) {
       return;
     }
   }
-  console.log(`${job.id} (${job.title}): ${blocks.length} pieces`);
+  // Sections go together into pieces of up to PIECE_CHARS (most lessons: one piece).
+  const groups: NarrationBlock[][] = [];
+  for (const block of blocks) {
+    const size = JSON.stringify(block).length;
+    const last = groups[groups.length - 1];
+    if (last && JSON.stringify(last).length + size <= PIECE_CHARS) last.push(block);
+    else groups.push([block]);
+  }
+  console.log(`${job.id} (${job.title}): ${groups.length} piece${groups.length > 1 ? "s" : ""}`);
   const pieces: Int16Array[] = [];
   const words: [number, number][] = [];
   let offset = 0;
-  for (const [b, block] of blocks.entries()) {
-    const { words: ws, said } = piece(block);
+  for (const [g, group] of groups.entries()) {
+    const parts = group.map(piece);
+    // Within a piece, the end of each block is a paragraph break; the piece's last word ends the speech.
+    const ws = parts.flatMap((p, k) => p.words.map((w, i) => (i === p.words.length - 1 && k < parts.length - 1 ? { ...w, brk: 3 } : w)));
+    const said = parts.map((p) => p.said).join("\n\n");
     const samples = await speak(said);
-    if (check) await checkPiece(samples, said, `piece ${b + 1}`);
+    if (check) await checkPiece(samples, said, `piece ${g + 1}`);
     for (const [s, e] of align(samples, ws)) words.push([+(offset + s).toFixed(2), +(offset + e).toFixed(2)]);
     pieces.push(samples);
     offset += samples.length / RATE;
-    if (b < blocks.length - 1) {
+    if (g < groups.length - 1) {
       pieces.push(new Int16Array(Math.round(GAP * RATE)));
       offset += GAP;
     }
-    console.log(`  piece ${b + 1}/${blocks.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words, ${report.splice(0).join(", ")}`);
+    console.log(`  piece ${g + 1}/${groups.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words, ${report.splice(0).join(", ")}`);
   }
   const all = new Int16Array(pieces.reduce((n, p) => n + p.length, 0));
   let at = 0;

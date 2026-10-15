@@ -3,7 +3,7 @@ import { Box } from "lucide-react";
 import type { BioLesson, BioTopic } from "@/lib/biology-topics";
 import type { Lesson } from "@/lib/curriculum";
 import type { LessonContent } from "@/lib/lessons";
-import type { NarrationInfo } from "@/lib/narration";
+import { narrationWords, type NarrationInfo } from "@/lib/narration";
 import { LessonVisual } from "@/components/visuals/LessonVisual";
 import type { LessonVisualDef } from "@/components/visuals/lesson-visuals";
 import { LessonNav, LessonHeader, LessonSections, Reading, RememberCallout, TermsList, VisualWide, type LessonLink } from "./lesson";
@@ -99,7 +99,7 @@ export function LessonPage({
                 </div>
               )}
 
-              <LessonSections sections={content.sections} spoken={!!narration} />
+              <LessonSections sections={content.sections} spokenFrom={narration ? narrationWords(content.intro).length : undefined} />
               <TermsList terms={content.terms} />
               <RememberCallout items={content.remember} />
 

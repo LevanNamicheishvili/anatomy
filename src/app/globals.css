@@ -506,8 +506,8 @@ html[data-narrating] .nw-now {
   box-shadow: 0 0 0 2px #ffe08a;
   color: #1d1a12;
 }
-/* Room for the narration bar at the foot of the screen. */
-html[data-narrating] body {
+/* Room for the narration bar at the foot of the screen (lesson pages). */
+html[data-narrating="page"] body {
   padding-bottom: 4.5rem;
 }
 
