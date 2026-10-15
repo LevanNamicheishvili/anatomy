@@ -5,8 +5,10 @@ import { Layers } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { cn } from "@/lib/utils";
-import { CutawayScene } from "./CutawayScene";
+import { CutawayScene, type CutBand, type CutFx } from "./CutawayScene";
+import { EARTH_CUES, type EarthShot } from "./earth-cues";
 import { drawnRadius, EARTH_R_KM, LAYERS, layerAt, pressureAt, tempAt, type LayerId } from "./layers";
 
 /*
@@ -21,6 +23,18 @@ const VIEWS = [
   { name: "ნახევარი", deg: 180 },
 ];
 const BOUNDARIES = [0, 35, 660, 2900, 5150, EARTH_R_KM];
+/** What the narration shows besides the layers, named in a key over the scene. */
+const KEY: Record<CutFx | CutBand, { text: string; dot: string }> = {
+  waves: { text: "მიწისძვრის ტალღები", dot: "#ffd873" },
+  convection: { text: "ცხელი ადის · გაცივებული ეშვება", dot: "linear-gradient(90deg,#ff8a26 50%,#6fa6ff 50%)" },
+  core: { text: "თხევადი რკინა მოძრაობს", dot: "#ffd27a" },
+  magma: { text: "მაგმა", dot: "#ff8a2a" },
+  field: { text: "მაგნიტური ველი", dot: "#7cc7ff" },
+  plates: { text: "ლითოსფერული ფილების საზღვრები", dot: "#ff6a3d" },
+  compass: { text: "კომპასი საქართველოში — ისარი ჩრდილოეთისკენ", dot: "#e0322b" },
+  lithosphere: { text: "ლითოსფერო (0–100 კმ)", dot: "#fff3b0" },
+  asthenosphere: { text: "ასთენოსფერო (100–250 კმ)", dot: "#fff3b0" },
+};
 
 /** 12345 → "12 345" (Georgian style: a space between thousands). */
 const nf = (v: number) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -38,6 +52,13 @@ export function EarthCutaway() {
   const [opening, setOpening] = useState(90);
   const [depth, setDepth] = useState(1500);
   const [selected, setSelected] = useState<LayerId | null>(null);
+  /** Set by the narration: the layers lit, where the probe stands, what else is shown. */
+  const [lit, setLit] = useState<LayerId[] | null>(null);
+  /** Where the probe stands on the cut face (null: hidden while the voice speaks of other things). */
+  const [probeAt, setProbeAt] = useState<number | null>(-28);
+  const [shown, setShown] = useState<(CutFx | CutBand)[]>([]);
+  const glide = useRef(0);
+  const depthRef = useRef(depth);
   const layer = layerAt(depth);
   const info = LAYERS.find((l) => l.id === (selected ?? layer.id))!;
 
@@ -50,7 +71,7 @@ export function EarthCutaway() {
     const els = [...layer.querySelectorAll<HTMLElement>("[data-r]")];
     const probe = layer.querySelector<HTMLElement>("[data-probe]");
     scene.onFrame = (project) => {
-      const show = scene.faceVisible();
+      const show = scene.labelsReadable();
       for (const el of els) {
         const p = project(scene.facePoint(Number(el.dataset.r), Number(el.dataset.e)));
         el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
@@ -58,9 +79,9 @@ export function EarthCutaway() {
       }
       if (probe) {
         const r = Number(probe.dataset.probe);
-        const p = project(scene.facePoint(r, -28));
+        const p = project(scene.facePoint(r, Number(probe.dataset.e)));
         probe.style.transform = `translate(${p.x}px, ${p.y}px) translate(12px, -50%)`;
-        probe.style.opacity = show && p.visible ? "1" : "0";
+        probe.style.opacity = show && p.visible && probe.dataset.on ? "1" : "0";
       }
     };
     return () => {
@@ -69,19 +90,72 @@ export function EarthCutaway() {
     };
   }, []);
 
-  useEffect(() => {
-    sceneRef.current?.setProbe(depth);
-  }, [depth]);
-  useEffect(() => {
-    sceneRef.current?.select(selected);
-  }, [selected]);
+  useEffect(() => () => cancelAnimationFrame(glide.current), []);
 
   const view = (deg: number) => {
     setOpening(deg);
     sceneRef.current?.animateTo(deg);
   };
+  /** The probe goes down (or up) to a depth in step with the voice. */
+  const glideDepth = (from: number, to: number) => {
+    cancelAnimationFrame(glide.current);
+    const start = performance.now();
+    const dur = Math.min(2600, 700 + Math.abs(to - from) * 0.35);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - start) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      setDepth(Math.round(from + (to - from) * e));
+      if (k < 1) glide.current = requestAnimationFrame(step);
+    };
+    step();
+  };
+  const last = useRef<Partial<EarthShot>>({});
+  const direct = (s: Partial<EarthShot>, jump: boolean) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const before = last.current;
+    last.current = s;
+    if (s.opening !== undefined && (jump || s.opening !== before.opening)) {
+      setOpening(s.opening);
+      if (jump) scene.setOpening(s.opening);
+      else scene.animateTo(s.opening);
+    }
+    if (s.view && (jump || s.view !== before.view)) scene.view(s.view, jump);
+    setLit(s.lit ?? []);
+    setSelected(null);
+    if (s.probeAt !== undefined) setProbeAt(s.probeAt);
+    const d = s.depth;
+    if (d !== undefined && (jump || JSON.stringify(d) !== JSON.stringify(before.depth))) {
+      const [from, to] = typeof d === "number" ? [depthRef.current, d] : d;
+      if (jump) {
+        cancelAnimationFrame(glide.current);
+        setDepth(to);
+      } else glideDepth(from, to);
+    }
+    scene.show(s.fx ?? [], s.band ?? null);
+    setShown([...(s.fx ?? []), ...(s.band ? [s.band] : [])]);
+  };
+  const driving = useNarrationDirector(EARTH_CUES, direct);
+  // When the voice stops, the scene is the pupil's again: no extras, the probe back in its place.
+  const litNow = driving ? lit : null;
+  const probeNow = driving ? probeAt : -28;
+  const shownNow = driving ? shown : [];
+  useEffect(() => {
+    if (!driving) sceneRef.current?.show([], null);
+  }, [driving]);
+  useEffect(() => {
+    depthRef.current = depth;
+    sceneRef.current?.setProbe(depth, probeNow ?? -28);
+    sceneRef.current?.showProbe(probeNow !== null);
+  }, [depth, probeNow]);
+  useEffect(() => {
+    sceneRef.current?.select(litNow ?? selected);
+  }, [selected, litNow]);
   const pick = (id: LayerId) => {
     const l = LAYERS.find((x) => x.id === id)!;
+    cancelAnimationFrame(glide.current);
+    setLit(null);
+    setProbeAt(-28);
     setSelected(id);
     setDepth(Math.round((l.top + l.bottom) / 2));
     if (opening === 0) view(90);
@@ -95,11 +169,11 @@ export function EarthCutaway() {
         <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LAYERS.map((l) => (
-            <span key={l.id} data-r={l.id === "inner-core" ? 0.09 : (l.rTop + l.rBottom) / 2} data-e={l.id === "crust" ? 52 : l.id === "upper-mantle" ? 40 : 28} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow", selected === l.id ? "bg-deep text-white" : "bg-card/90 text-ink")}>
+            <span key={l.id} data-r={l.id === "inner-core" ? 0.09 : (l.rTop + l.rBottom) / 2} data-e={l.id === "crust" ? 52 : l.id === "upper-mantle" ? 40 : 28} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow transition-colors", (litNow ?? [selected]).includes(l.id) ? "bg-deep text-white ring-2 ring-[#ffd76a]" : "bg-card/90 text-ink")}>
               {l.name}
             </span>
           ))}
-          <span data-probe={probeR} className="absolute top-0 left-0 rounded bg-deep/85 px-1.5 py-0.5 text-white opacity-0">
+          <span data-probe={probeR} data-e={probeNow ?? -28} data-on={probeNow !== null ? "1" : undefined} className="absolute top-0 left-0 rounded bg-deep/85 px-1.5 py-0.5 text-white opacity-0">
             {nf(depth)} კმ · {nf(tempAt(depth))}°C
           </span>
         </div>
@@ -111,6 +185,16 @@ export function EarthCutaway() {
             </button>
           ))}
         </div>
+        {shownNow.length > 0 && (
+          <ul className="pointer-events-none absolute top-14 left-3 flex flex-col gap-1">
+            {shownNow.map((k) => (
+              <li key={k} className="flex w-fit items-center gap-2 rounded-lg bg-black/60 px-2.5 py-1 text-[13px] font-semibold text-white">
+                <span className="size-2.5 shrink-0 rounded-full" style={{ background: KEY[k].dot }} />
+                {KEY[k].text}
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="pointer-events-none absolute right-3 bottom-3 rounded bg-black/50 px-2 py-1 text-[11px] text-white/85">ქერქი ნახატზე გადიდებულია — სინამდვილეში ის ვაშლის კანივით თხელია</p>
       </div>
 
@@ -125,8 +209,11 @@ export function EarthCutaway() {
               max={EARTH_R_KM}
               step={5}
               onChange={(v) => {
+                cancelAnimationFrame(glide.current);
                 setDepth(v);
                 setSelected(null);
+                setLit(null);
+                setProbeAt(-28);
                 if (opening === 0) view(90);
               }}
               color="#2f6fb0"
