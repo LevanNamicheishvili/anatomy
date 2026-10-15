@@ -49,3 +49,6 @@ next-env.d.ts
 temp/
 .env*
 !.env.example
+
+# Lesson narration: Gemini audio kept between runs (scripts/narration/build-narration.ts)
+.narration-cache/

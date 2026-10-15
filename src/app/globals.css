@@ -488,6 +488,29 @@ body {
   color: transparent;
 }
 
+/* Lesson narration (LessonNarration): the words not yet said are paler, the one being said is marked like a
+   highlighter, the said ones are in full ink. A click on a word moves the voice there. */
+html[data-narrating] [data-nw] {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+html[data-narrating] [data-nw]:not(.nw-said) {
+  color: color-mix(in srgb, currentColor 55%, transparent);
+}
+html[data-narrating] .nw-said {
+  color: var(--color-ink);
+}
+html[data-narrating] .nw-now {
+  background-color: #ffe08a;
+  box-shadow: 0 0 0 2px #ffe08a;
+  color: #1d1a12;
+}
+/* Room for the narration bar at the foot of the screen. */
+html[data-narrating] body {
+  padding-bottom: 4.5rem;
+}
+
 /* Shared page treatments; scene canvases and their rendering are untouched. */
 @layer components {
   .science-hero {

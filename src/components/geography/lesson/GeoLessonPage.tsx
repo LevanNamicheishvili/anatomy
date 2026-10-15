@@ -1,7 +1,9 @@
 import { LessonHeader, LessonNav, LessonSections, Reading, RememberCallout, TermsList, VisualWide, type LessonLink } from "@/components/portal/lesson";
+import { LessonNarration } from "@/components/portal/LessonNarration";
 import { LessonQuiz } from "@/components/portal/LessonQuiz";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import type { GeoLesson } from "@/lib/geography-lessons";
+import { geoNarrationId, lessonNarration } from "@/lib/narration";
 import { GeoVisual } from "./GeoVisual";
 
 const COLOR = "#2f6fb0";
@@ -10,6 +12,7 @@ const link = (l: GeoLesson | null): LessonLink | null => (l ? { href: `/geograph
 
 /** A geography lesson: compact header, the 3D scene as the hero, then the explainer, key terms, what to remember and a self-check. */
 export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev: GeoLesson | null; next: GeoLesson | null }) {
+  const narration = lessonNarration(geoNarrationId(lesson.slug), lesson);
   return (
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink">
       <TopicHeader subject={{ name: "გეოგრაფია", href: "/geography" }} topic={lesson.title} color={COLOR} icon={lesson.icon} />
@@ -21,7 +24,10 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
             grades={lesson.grades}
             title={lesson.title}
             intro={lesson.intro}
-          />
+            spoken={!!narration}
+          >
+            {narration && <LessonNarration narration={narration} />}
+          </LessonHeader>
         </Reading>
 
         <VisualWide>
@@ -29,7 +35,7 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
         </VisualWide>
 
         <Reading>
-          <LessonSections sections={lesson.sections} />
+          <LessonSections sections={lesson.sections} spoken={!!narration} />
           <TermsList terms={lesson.terms} />
           <RememberCallout items={lesson.remember} />
           <LessonQuiz quiz={lesson.quiz} />

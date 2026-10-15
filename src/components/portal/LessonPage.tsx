@@ -3,9 +3,11 @@ import { Box } from "lucide-react";
 import type { BioLesson, BioTopic } from "@/lib/biology-topics";
 import type { Lesson } from "@/lib/curriculum";
 import type { LessonContent } from "@/lib/lessons";
+import type { NarrationInfo } from "@/lib/narration";
 import { LessonVisual } from "@/components/visuals/LessonVisual";
 import type { LessonVisualDef } from "@/components/visuals/lesson-visuals";
 import { LessonNav, LessonHeader, LessonSections, Reading, RememberCallout, TermsList, VisualWide, type LessonLink } from "./lesson";
+import { LessonNarration } from "./LessonNarration";
 import { LessonQuiz } from "./LessonQuiz";
 import { PunnettSquare } from "./PunnettSquare";
 import { TopicHeader } from "./TopicHeader";
@@ -21,6 +23,7 @@ export function LessonPage({
   content,
   locked = false,
   visual = null,
+  narration = null,
 }: {
   topic: BioTopic | null;
   prev: BioLesson | null;
@@ -29,6 +32,8 @@ export function LessonPage({
   content: LessonContent;
   locked?: boolean;
   visual?: LessonVisualDef | null;
+  /** The lesson read aloud (karaoke), when recorded. */
+  narration?: NarrationInfo | null;
 }) {
   const back = topic ? `/biology/themes/${topic.slug}` : "/biology";
   const title = lesson.title.replace(/\s*\(\+.*\)$/, "");
@@ -58,7 +63,10 @@ export function LessonPage({
             eyebrow={topic ? `${topic.title}${index >= 0 ? ` · გაკვეთილი ${index + 1}` : ""}` : "ბიოლოგია"}
             title={title}
             intro={locked ? undefined : content.intro}
-          />
+            spoken={!locked && !!narration}
+          >
+            {!locked && narration && <LessonNarration narration={narration} />}
+          </LessonHeader>
         </Reading>
 
         {locked ? (
@@ -91,7 +99,7 @@ export function LessonPage({
                 </div>
               )}
 
-              <LessonSections sections={content.sections} />
+              <LessonSections sections={content.sections} spoken={!!narration} />
               <TermsList terms={content.terms} />
               <RememberCallout items={content.remember} />
 

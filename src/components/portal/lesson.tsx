@@ -1,5 +1,7 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Lightbulb, type LucideIcon } from "lucide-react";
+import { narrationWords } from "@/lib/narration";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs, Chip } from "./ui";
 
@@ -8,6 +10,21 @@ import { Breadcrumbs, Chip } from "./ui";
  * wider than the reading column, reading sections, key terms, the "remember" callout and prev/next cards.
  * Text stays in a `max-w-3xl` column; only the visual may go up to `max-w-6xl`.
  */
+
+/**
+ * Text that a lesson narration reads: with `spoken`, every word is its own span, so the narration can light the
+ * words up as they are said (LessonNarration); the words are cut exactly as the timings were (narrationWords).
+ */
+function Spoken({ text, spoken }: { text: string; spoken?: boolean }) {
+  if (!spoken) return text;
+  const words = narrationWords(text);
+  return words.map((w, i) => (
+    <Fragment key={i}>
+      <span data-nw="">{w}</span>
+      {i < words.length - 1 ? " " : null}
+    </Fragment>
+  ));
+}
 
 /** Reading column. */
 export function Reading({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -25,6 +42,8 @@ export function LessonHeader({
   grades,
   title,
   intro,
+  spoken,
+  children,
 }: {
   /** Breadcrumb above the title (subject › topic). */
   path: { label: string; href?: string }[];
@@ -32,6 +51,10 @@ export function LessonHeader({
   grades?: string;
   title: string;
   intro?: string;
+  /** The lesson has a narration: the introduction is read aloud (karaoke words). */
+  spoken?: boolean;
+  /** Under the introduction (the narration's play button). */
+  children?: React.ReactNode;
 }) {
   return (
     <header className="science-hero rounded-3xl border border-line p-5 shadow-card sm:p-8">
@@ -42,21 +65,28 @@ export function LessonHeader({
         {grades && <Chip>{grades} კლასი</Chip>}
       </div>
       <h1 className="mt-2 text-[1.75rem] leading-[1.4] text-ink [overflow-wrap:anywhere] sm:text-4xl">{title}</h1>
-      {intro && <p className="mt-3 max-w-3xl text-base leading-7 text-copy sm:text-lg sm:leading-8">{intro}</p>}
+      {intro && (
+        <p className="mt-3 max-w-3xl text-base leading-7 text-copy sm:text-lg sm:leading-8">
+          <Spoken text={intro} spoken={spoken} />
+        </p>
+      )}
+      {children}
     </header>
   );
 }
 
 /** The lesson's headed paragraphs. */
-export function LessonSections({ sections }: { sections: { heading: string; text: string[] }[] }) {
+export function LessonSections({ sections, spoken }: { sections: { heading: string; text: string[] }[]; spoken?: boolean }) {
   return (
     <>
       {sections.map((s) => (
         <section key={s.heading} className="lesson-paper mt-7">
-          <h2 className="border-b border-line pb-4 text-xl text-ink">{s.heading}</h2>
+          <h2 className="border-b border-line pb-4 text-xl text-ink">
+            <Spoken text={s.heading} spoken={spoken} />
+          </h2>
           {s.text.map((p) => (
             <p key={p.slice(0, 30)} className="mt-3 text-base leading-8 text-copy">
-              {p}
+              <Spoken text={p} spoken={spoken} />
             </p>
           ))}
         </section>

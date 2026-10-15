@@ -6,6 +6,7 @@ import { BIOLOGY_GRADES } from "@/lib/curriculum";
 import { visualForLesson } from "@/components/visuals/lesson-visuals";
 import { lessonPlace } from "@/lib/biology-topics";
 import { findLesson, lessonContent } from "@/lib/lessons";
+import { bioNarrationId, lessonNarration } from "@/lib/narration";
 
 type Params = Promise<{ grade: string; n: string }>;
 
@@ -29,5 +30,6 @@ export default async function Page({ params }: { params: Params }) {
   const user = await requireUser(`/biology/lesson/${r.grade.grade}/${encodeURIComponent(r.lesson.n || r.lesson.title)}`);
   const key = r.lesson.n || r.lesson.title;
   const place = lessonPlace(r.grade.grade, key);
-  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} topic={place?.topic ?? null} prev={place?.prev ?? null} next={place?.next ?? null} lesson={r.lesson} content={r.content} visual={visualForLesson(r.grade.grade, key)} />;
+  const narration = r.content.sensitive ? null : lessonNarration(bioNarrationId(r.grade.grade, key), r.content);
+  return <LessonPage locked={!!r.content.sensitive && user.role === "student"} topic={place?.topic ?? null} prev={place?.prev ?? null} next={place?.next ?? null} lesson={r.lesson} content={r.content} visual={visualForLesson(r.grade.grade, key)} narration={narration} />;
 }
