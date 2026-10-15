@@ -11,7 +11,9 @@ import { latLonToVec3 } from "../globe/coords";
 import { GlobeScene } from "../globe/GlobeScene";
 import { MapButton } from "../globe/MapButton";
 import { globePath, pathTube, type GlobePath } from "../globe/paths";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { VoyageShip } from "./ship";
+import { VOYAGE_CUES, type VoyageShot } from "./voyages-cues";
 import { CONTINENTS, VOYAGES, type Voyage, type VoyageId } from "./voyages-data";
 
 /*
@@ -60,7 +62,8 @@ export function VoyagesGlobe() {
   const labelsRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
   /** What the scene draws; read every frame. The state below repeats it for the page a few times a second. */
-  const simRef = useRef({ id: "columbus" as VoyageId, progress: 0, playing: false, showAll: false });
+  /** `target`/`rate`: the stop the narration sends the ship to, and how fast she goes (progress per second). */
+  const simRef = useRef({ id: "columbus" as VoyageId, progress: 0, playing: false, showAll: false, target: null as number | null, rate: 0 });
   const [id, setId] = useState<VoyageId>("columbus");
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -127,9 +130,24 @@ export function VoyagesGlobe() {
       const sim = simRef.current;
       const cur = built.get(sim.id)!;
 
+      // Sailing to the stop the narration names, at a pace that gets her there while the voice tells the leg.
+      if (sim.target !== null) {
+        const step = sim.rate * dt;
+        if (Math.abs(sim.target - sim.progress) <= step) {
+          sim.progress = sim.target;
+          sim.target = null;
+          setProgress(sim.progress);
+        } else {
+          sim.progress += Math.sign(sim.target - sim.progress) * step;
+          if (now - told > 90) {
+            told = now;
+            setProgress(sim.progress);
+          }
+        }
+      }
       // Sailing. The page hears about it a few times a second; the ship moves every frame.
-      const sailing = sim.playing;
-      if (sailing) {
+      const sailing = sim.playing || sim.target !== null;
+      if (sim.playing) {
         sim.progress = Math.min(1, sim.progress + dt / sailTime(cur.path.km));
         if (sim.progress >= 1) {
           sim.playing = false;
@@ -227,6 +245,41 @@ export function VoyagesGlobe() {
     setPlaying(play);
     followRef.current = true;
   };
+  // The narration drives the globe: the voyage it tells, the ship sailing to the stop it names (or put there at
+  // once when the narration jumps), all routes with the continents, or the camera on the place it talks about.
+  const direct = (s: Partial<VoyageShot>, jump: boolean) => {
+    const sim = simRef.current;
+    sim.playing = false;
+    setPlaying(false);
+    if (s.voyage && s.voyage !== sim.id) {
+      sim.id = s.voyage;
+      sim.progress = 0;
+      sim.target = null;
+      setId(s.voyage);
+      setProgress(0);
+    }
+    if (s.all !== undefined) {
+      sim.showAll = s.all;
+      setShowAll(s.all);
+    }
+    if (s.to !== undefined) {
+      const path = PATHS[sim.id];
+      const goal = path.stopAt[s.to] ?? 0;
+      const gap = goal - sim.progress;
+      if (jump || gap < -1e-4 || gap > 0.5) {
+        sim.progress = goal;
+        sim.target = null;
+        setProgress(goal);
+      } else if (gap > 1e-4) {
+        sim.target = goal;
+        sim.rate = gap / Math.min(6, Math.max(2.5, gap * sailTime(path.km) * 0.6));
+      }
+    }
+    followRef.current = !s.look;
+    if (s.look) globeRef.current?.focus(s.look[0], s.look[1], s.look[2]);
+  };
+  useNarrationDirector(VOYAGE_CUES, direct);
+
   const choose = (v: VoyageId) => {
     simRef.current.id = v;
     setId(v);

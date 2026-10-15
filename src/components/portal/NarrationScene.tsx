@@ -25,10 +25,12 @@ let directors = 0;
 export const hasSceneDirector = () => directors > 0;
 
 /**
- * The scene follows the narration: `apply` gets the scene's state whenever the voice reaches another cue (or
- * jumps). Returns whether the narration is driving the scene now (the scene's own autoplay should rest then).
+ * The scene follows the narration: `apply` gets the scene's state whenever the voice reaches another cue, with
+ * `jump` true when it did not just go on to the next one (a click on a word, the timeline): the scene should be
+ * there at once then, not travel. Returns whether the narration is driving the scene now (the scene's own
+ * autoplay should rest then).
  */
-export function useNarrationDirector<S>(cues: Cue<S>[], apply: (state: Partial<S>) => void) {
+export function useNarrationDirector<S>(cues: Cue<S>[], apply: (state: Partial<S>, jump: boolean) => void) {
   const blocks = useNarrationText();
   const resolved = useMemo(() => (blocks ? resolveCues(blocks, cues) : []), [blocks, cues]);
   const [driving, setDriving] = useState(false);
@@ -49,8 +51,9 @@ export function useNarrationDirector<S>(cues: Cue<S>[], apply: (state: Partial<S
       const at = stateAt(resolved, w);
       const index = at ? at.index : -1;
       if (index === last) return;
+      const jump = last !== -2 && index !== last + 1;
       last = index;
-      if (at) applyRef.current(at.state);
+      if (at) applyRef.current(at.state, jump);
     });
     return () => {
       directors--;
