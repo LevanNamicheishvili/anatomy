@@ -7,6 +7,12 @@
  *   --voice  a Gemini prebuilt voice (default Charon)
  *   --check  have Gemini transcribe each section back and report words it did not hear (pronunciation check)
  *   --force  time the words again even if the lesson is up to date (the recordings come from the cache)
+ *   --dry    print the text as the voice would get it, record nothing
+ *   --parallel <n>  record n lessons at a time (default 1)
+ *   --wait   when the daily limit is reached, try again every 5 minutes (up to 8 hours) instead of stopping
+ *   --verify afterwards, have Gemini write down each recording and compare it with the text: a lesson where the
+ *            voice left out words (3 or more in a row) is listed, and with --redo recorded again — a new take, in
+ *            shorter pieces — until it is complete (at most 4 takes; takes are kept in scripts/data/narration-takes.json)
  *
  * Needs GEMINI_API_KEY in .env.local (never in git); GEMINI_API_KEY_2, _3… are used in turn when a key's daily
  * limit runs out (the free tier allows only a few recordings a day). Writes public/narration/<id>.m4a (AAC, made with macOS
@@ -19,6 +25,7 @@
  * and paragraph ends to long pauses, commas to short ones) by dynamic programming, choosing the matching whose
  * speaking rate stays most even; between two anchors the words share the time by spoken length.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -34,6 +41,7 @@ import type { LessonContent } from "../../src/lib/lessons/types";
 import { bioNarrationId, geoNarrationId, narrationBlocks, narrationHash, narrationWords, topicNarrationBlocks, topicNarrationId, type NarrationBlock } from "../../src/lib/narration";
 import { STRINGS } from "../../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/i18n";
 import { TOPICS } from "../../src/components/sites/human-atlas-co-f41dd540/root-8a5edab2/topics";
+import { loadSay, sayKey } from "./spoken-forms";
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "public/narration");
@@ -53,6 +61,41 @@ const what = args.find((a) => !a.startsWith("--")) ?? "";
 const voice = args.includes("--voice") ? args[args.indexOf("--voice") + 1] : "Charon";
 const check = args.includes("--check");
 const force = args.includes("--force");
+const waitForQuota = args.includes("--wait");
+const dry = args.includes("--dry");
+const verify = args.includes("--verify");
+const PARALLEL = args.includes("--parallel") ? Math.max(1, Number(args[args.indexOf("--parallel") + 1])) : 1;
+
+/** Run `work` over the items, `n` at a time. */
+async function pool<T>(items: T[], n: number, work: (item: T, index: number) => Promise<void>) {
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        await work(items[i], i);
+      }
+    }),
+  );
+}
+
+/**
+ * Lines a lesson logs while it is recorded, printed together when it is done (lessons run side by side): the
+ * lesson's async work runs in its own context, which `say` writes to.
+ */
+const logContext = new AsyncLocalStorage<string[]>();
+const say = (line: string) => {
+  const lines = logContext.getStore();
+  if (lines) lines.push(line);
+  else console.log(line);
+};
+const runLogged = <T>(lines: string[], work: () => Promise<T>) => logContext.run(lines, work);
+const redo = args.includes("--redo");
+const TAKES_FILE = path.join(ROOT, "scripts/data/narration-takes.json");
+/** Lessons recorded again because the voice left words out: id → take (1 when absent). */
+const TAKES: Record<string, number> = fs.existsSync(TAKES_FILE) ? JSON.parse(fs.readFileSync(TAKES_FILE, "utf8")) : {};
+/** Shorter pieces for a second take: the voice leaves words out less often in short texts. */
+const RETAKE_CHARS = 1300;
 const KEYS = [...fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").matchAll(/^GEMINI_API_KEY(?:_\d+)?=(.+)$/gm)].map((m) => m[1].trim());
 if (!KEYS.length) throw new Error("GEMINI_API_KEY is missing from .env.local");
 let keyAt = 0;
@@ -90,6 +133,9 @@ function jobs(): Job[] {
 
 // ---- Text as it is said ---------------------------------------------------------------------------------------------
 
+/** Readings of symbols, numbers and abbreviations in their context (scripts/narration/spoken-forms.ts). */
+const READINGS = loadSay();
+
 /** Abbreviations and signs, read out (Georgian textbook usage). The key is the word without its punctuation. */
 const SAY: Record<string, string> = {
   "კმ": "კილომეტრი", "კმ²": "კვადრატული კილომეტრი", "მ²": "კვადრატული მეტრი", "მ³": "კუბური მეტრი", "სმ": "სანტიმეტრი", "მმ": "მილიმეტრი",
@@ -105,15 +151,31 @@ const SAY2: [string, string, string, string][] = [
   ["დას.", "გრ.", "დასავლეთის", "გრძედი"],
   ["ძვ.", "წ.", "ძველი", "წელთაღრიცხვით"],
 ];
-/** Case endings joined to a unit with a hyphen ("კმ-ზე"): the unit's reading drops its final ი before them. */
-const stem = (w: string) => (w.endsWith("ი") ? w.slice(0, -1) : w);
+/**
+ * A unit with a case ending joined by a hyphen ("კმ-ზე", "კმ-მდე", "კმ-დან"), read out: the reading drops its
+ * final ი (or ა) and takes the ending — -მდე and -დან with their linking vowel (კილომეტრამდე, კილომეტრიდან).
+ */
+function withEnding(unit: string, ending: string) {
+  const stem = /[ია]$/.test(unit) ? unit.slice(0, -1) : unit;
+  if (ending.startsWith("მდე")) return `${stem}ა${ending}`;
+  if (ending.startsWith("დან") || ending.startsWith("ვით")) return `${stem}ი${ending}`;
+  return stem + ending;
+}
 
-/** One shown word → what is said for it (punctuation kept round it, so the voice still pauses there). */
-function spokenWords(words: string[]) {
+/**
+ * One shown word → what is said for it (punctuation kept round it, so the voice still pauses there). `keys`: the
+ * words as the readings file knows them (a heading without the full stop added for the voice).
+ */
+function spokenWords(words: string[], keys = words) {
   const out = [...words];
   for (let i = 0; i < words.length; i++) {
     const m = words[i].match(/^([„“"«(]*)(.*?)([.,!?:;…»“”")]*)$/u)!;
     const [, lead, core, tail] = m;
+    const reading = READINGS[sayKey(keys[i - 1] ?? "", keys[i], keys[i + 1] ?? "")];
+    if (reading) {
+      out[i] = lead + reading + tail;
+      continue;
+    }
     for (const [a, b, ra, rb] of SAY2)
       if (words[i] === a && words[i + 1]?.replace(/[,;:)]+$/, "") === b) {
         out[i] = ra;
@@ -135,7 +197,7 @@ function spokenWords(words: string[]) {
     const withCase = core.match(/^(.+?)-(.+)$/);
     if (SAY[core]) out[i] = lead + SAY[core] + tail;
     else if (SAY[core + "."] && tail.startsWith(".")) out[i] = lead + SAY[core + "."] + tail.slice(1);
-    else if (withCase && SAY[withCase[1]]) out[i] = lead + stem(SAY[withCase[1]]) + withCase[2] + tail;
+    else if (withCase && SAY[withCase[1]]) out[i] = lead + withEnding(SAY[withCase[1]], withCase[2]) + tail;
   }
   return out;
 }
@@ -154,9 +216,9 @@ const NUMBER_LETTERS = (n: string) => Math.min(40, 6 + n.replace(/\D/g, "").leng
 function piece(block: NarrationBlock) {
   const words: Word[] = [];
   const said: string[] = [];
-  const add = (text: string, last: number) => {
+  const add = (text: string, last: number, keyText = text) => {
     const shown = narrationWords(text);
-    const spoken = spokenWords(shown);
+    const spoken = spokenWords(shown, narrationWords(keyText));
     shown.forEach((w, i) => {
       const s = spoken[i];
       const letters = (s.match(/[ა-ჰ]/g)?.length ?? 0) + (s.match(/\d/) ? NUMBER_LETTERS(s) : 0) + (s.match(/[a-z]/gi)?.length ?? 0) * 1.5;
@@ -165,7 +227,7 @@ function piece(block: NarrationBlock) {
     });
     said.push(spoken.join(" "));
   };
-  if (block.heading) add(/[.!?:]$/.test(block.heading) ? block.heading : `${block.heading}.`, 3);
+  if (block.heading) add(/[.!?:]$/.test(block.heading) ? block.heading : `${block.heading}.`, 3, block.heading);
   block.paragraphs.forEach((p) => add(p, 3));
   // Headings get a full stop for the voice only; the page shows them without.
   if (block.heading && !/[.!?:]$/.test(block.heading)) {
@@ -208,9 +270,10 @@ async function gemini(url: string, body: unknown) {
 }
 
 /** PCM samples (24 kHz mono 16-bit) of one piece, from the cache or the voice. */
-async function speak(text: string): Promise<Int16Array> {
-  const key = createHash("sha1").update(JSON.stringify([MODEL, voice, STYLE, text])).digest("hex");
-  const file = path.join(CACHE, voice, `${key}.wav`);
+const cacheFile = (text: string, take: number) => path.join(CACHE, voice, `${createHash("sha1").update(JSON.stringify(take > 1 ? [MODEL, voice, STYLE, text, take] : [MODEL, voice, STYLE, text])).digest("hex")}.wav`);
+
+async function speak(text: string, take = 1): Promise<Int16Array> {
+  const file = cacheFile(text, take);
   if (!fs.existsSync(file)) {
     const body = await gemini("https://generativelanguage.googleapis.com/v1beta/interactions", {
       model: MODEL,
@@ -255,7 +318,7 @@ async function checkPiece(samples: Int16Array, said: string, label: string) {
   const a = norm(said).filter((w) => !/\d/.test(w) && w.length > 3);
   const b = new Set(norm(heard));
   const missed = a.filter((w) => !b.has(w));
-  console.log(`    check ${label}: ${missed.length ? `not heard: ${[...new Set(missed)].join(", ")}` : "all words heard"}`);
+  say(`    check ${label}: ${missed.length ? `not heard: ${[...new Set(missed)].join(", ")}` : "all words heard"}`);
 }
 
 // ---- Alignment --------------------------------------------------------------------------------------------------------
@@ -417,26 +480,36 @@ function writeManifest() {
   );
 }
 
-async function build(job: Job) {
-  const blocks = job.blocks;
-  const hash = narrationHash(blocks);
-  const jsonPath = path.join(OUT, `${job.id}.json`);
-  if (fs.existsSync(jsonPath)) {
-    const old = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-    if (old.hash === hash && old.voice === voice && !force) {
-      console.log(`${job.id}: up to date`);
-      return;
-    }
-  }
-  // Sections go together into pieces of up to PIECE_CHARS (most lessons: one piece).
+/** Sections go together into pieces of up to PIECE_CHARS (most lessons: one piece; a retake: shorter ones). */
+function pieceGroups(blocks: NarrationBlock[], take: number) {
+  const limit = take > 1 ? RETAKE_CHARS : PIECE_CHARS;
   const groups: NarrationBlock[][] = [];
   for (const block of blocks) {
     const size = JSON.stringify(block).length;
     const last = groups[groups.length - 1];
-    if (last && JSON.stringify(last).length + size <= PIECE_CHARS) last.push(block);
+    if (last && JSON.stringify(last).length + size <= limit) last.push(block);
     else groups.push([block]);
   }
-  console.log(`${job.id} (${job.title}): ${groups.length} piece${groups.length > 1 ? "s" : ""}`);
+  return groups;
+}
+
+/** Returns "done" (recorded now) or "kept" (already up to date). */
+async function build(job: Job, forced = force): Promise<"done" | "kept"> {
+  const blocks = job.blocks;
+  const hash = narrationHash(blocks);
+  const take = TAKES[job.id] ?? 1;
+  const groups = pieceGroups(blocks, take);
+  // What the voice is given: a recording is up to date only if it was made from exactly this (readings change it).
+  const speech = createHash("sha1").update(JSON.stringify([voice, take, groups.map((g) => g.map(piece).map((p) => p.said))])).digest("hex").slice(0, 12);
+  const jsonPath = path.join(OUT, `${job.id}.json`);
+  if (fs.existsSync(jsonPath)) {
+    const old = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+    if (old.hash === hash && old.speech === speech && !forced) {
+      say(`${job.id}: up to date`);
+      return "kept";
+    }
+  }
+  say(`${job.id} (${job.title}): ${groups.length} piece${groups.length > 1 ? "s" : ""}`);
   const pieces: Int16Array[] = [];
   const words: [number, number][] = [];
   let offset = 0;
@@ -445,7 +518,11 @@ async function build(job: Job) {
     // Within a piece, the end of each block is a paragraph break; the piece's last word ends the speech.
     const ws = parts.flatMap((p, k) => p.words.map((w, i) => (i === p.words.length - 1 && k < parts.length - 1 ? { ...w, brk: 3 } : w)));
     const said = parts.map((p) => p.said).join("\n\n");
-    const samples = await speak(said);
+    if (dry) {
+      say(said);
+      continue;
+    }
+    const samples = await speak(said, take);
     if (check) await checkPiece(samples, said, `piece ${g + 1}`);
     for (const [s, e] of align(samples, ws)) words.push([+(offset + s).toFixed(2), +(offset + e).toFixed(2)]);
     pieces.push(samples);
@@ -454,8 +531,9 @@ async function build(job: Job) {
       pieces.push(new Int16Array(Math.round(GAP * RATE)));
       offset += GAP;
     }
-    console.log(`  piece ${g + 1}/${groups.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words, ${report.splice(0).join(", ")}`);
+    say(`  piece ${g + 1}/${groups.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words, ${report.splice(0).join(", ")}`);
   }
+  if (dry) return "kept";
   const all = new Int16Array(pieces.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of pieces) {
@@ -470,25 +548,132 @@ async function build(job: Job) {
   fs.unlinkSync(tmp);
   // New audio or new timings: a new revision, so browsers fetch both again.
   const rev = createHash("sha1").update(fs.readFileSync(m4a)).update(JSON.stringify(words)).digest("hex").slice(0, 10);
-  fs.writeFileSync(jsonPath, JSON.stringify({ v: 1, id: job.id, voice, model: MODEL, hash, rev, duration: +offset.toFixed(2), words }));
-  console.log(`  → ${path.relative(ROOT, m4a)} (${(fs.statSync(m4a).size / 1024).toFixed(0)} KB, ${Math.floor(offset / 60)}:${String(Math.round(offset % 60)).padStart(2, "0")})`);
+  fs.writeFileSync(jsonPath, JSON.stringify({ v: 1, id: job.id, voice, model: MODEL, take, hash, speech, rev, duration: +offset.toFixed(2), words }));
+  say(`  → ${path.relative(ROOT, m4a)} (${(fs.statSync(m4a).size / 1024).toFixed(0)} KB, ${Math.floor(offset / 60)}:${String(Math.round(offset % 60)).padStart(2, "0")})`);
+  return "done";
+}
+
+// ---- Verification: did the voice say every word? ------------------------------------------------------------------
+
+/** Georgian words of a text, for comparing (numbers left out: the voice says them in words, writers in digits). */
+const wordsOf = (s: string) => s.toLowerCase().replace(/[^ა-ჰ0-9 ]+/g, " ").split(/\s+/).filter((w) => w && !/\d/.test(w));
+
+/** Runs of 3 or more words of the text that the transcript does not have (longest common subsequence). */
+function leftOut(text: string[], heard: string[]) {
+  const n = text.length;
+  const m = heard.length;
+  const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = text[i] === heard[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const runs: string[] = [];
+  let run: string[] = [];
+  let i = 0;
+  let j = 0;
+  const close = () => {
+    if (run.length >= 3) runs.push(run.join(" "));
+    run = [];
+  };
+  while (i < n) {
+    if (j < m && text[i] === heard[j]) {
+      close();
+      i++;
+      j++;
+    } else if (j < m && L[i][j + 1] >= L[i + 1][j]) j++;
+    else {
+      run.push(text[i]);
+      i++;
+    }
+  }
+  close();
+  return runs;
+}
+
+async function transcribe(samples: Int16Array) {
+  const body = await gemini(`https://generativelanguage.googleapis.com/v1beta/models/${CHECK_MODEL}:generateContent`, {
+    contents: [{ parts: [{ inline_data: { mime_type: "audio/wav", data: wavBytes(samples).toString("base64") } }, { text: "Transcribe this Georgian speech exactly as spoken, in Georgian script, word for word, writing numbers as words. Output only the transcript." }] }],
+  });
+  return body.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+}
+
+/** The words the recording of a lesson leaves out (empty: complete; null: not recorded). */
+async function missing(job: Job): Promise<string[] | null> {
+  const take = TAKES[job.id] ?? 1;
+  const runs: string[] = [];
+  for (const group of pieceGroups(job.blocks, take)) {
+    const said = group.map(piece).map((p) => p.said).join("\n\n");
+    const file = cacheFile(said, take);
+    if (!fs.existsSync(file)) return null;
+    runs.push(...leftOut(wordsOf(said), wordsOf(await transcribe(readWav(fs.readFileSync(file))))));
+  }
+  return runs;
+}
+
+async function verifyAll(list: Job[]) {
+  console.log(`\nverifying ${list.length} recordings…`);
+  const bad: Job[] = [];
+  await pool(list, PARALLEL, async (job, n) => {
+    const runs = await missing(job);
+    if (runs === null) return;
+    if (runs.length) {
+      console.log(`  [${n + 1}] ${job.id} (take ${TAKES[job.id] ?? 1}) leaves out: ${runs.map((r) => `„${r}“`).join("; ")}`);
+      bad.push(job);
+    }
+  });
+  console.log(`verified: ${list.length - bad.length} complete, ${bad.length} with words left out`);
+  return bad;
 }
 
 async function main() {
   const list = jobs();
   if (!list.length) throw new Error(`nothing matches "${what}"`);
-  try {
-    for (const job of list) {
-      await build(job);
-      writeManifest();
+  const deadline = Date.now() + 8 * 3600_000;
+  const tally = { done: 0, kept: 0, failed: [] as string[] };
+  console.log(`${list.length} narrations, voice ${voice}${check ? ", with the pronunciation check" : ""}`);
+  let stopped = false;
+  await pool(list, PARALLEL, async (job, n) => {
+    for (;;) {
+      if (stopped) return;
+      const lines: string[] = [];
+      try {
+        tally[await runLogged(lines, () => build(job))]++;
+        console.log([`[${n + 1}/${list.length}] ${lines[0] ?? job.id}`, ...lines.slice(1)].join("\n"));
+        break;
+      } catch (err) {
+        if (err instanceof DailyLimit) {
+          if (waitForQuota && Date.now() < deadline) {
+            console.log(`[${n + 1}/${list.length}] ${job.id}: the limit is closed; trying again in 5 minutes…`);
+            await sleep(5 * 60_000);
+            keyAt = 0;
+            continue;
+          }
+          stopped = true;
+          console.log("\nThe daily limit of the Gemini key is used up; run the same command again later to go on (done pieces are kept).");
+          return;
+        }
+        // Anything else: note it and go on with the next lesson.
+        console.log(`[${n + 1}/${list.length}] FAILED ${job.id}: ${String(err).slice(0, 300)}`);
+        tally.failed.push(job.id);
+        break;
+      }
     }
-  } catch (err) {
     writeManifest();
-    if (err instanceof DailyLimit) {
-      console.log("\nThe daily limit of the Gemini key is used up; run the same command tomorrow to go on (done pieces are kept).");
-      return;
-    }
-    throw err;
+  });
+  writeManifest();
+  if (stopped) return;
+  console.log(`\nfinished: ${tally.done} recorded, ${tally.kept} already up to date, ${tally.failed.length} failed${tally.failed.length ? `: ${tally.failed.join(", ")}` : ""}`);
+  if (!verify || dry) return;
+  let bad = await verifyAll(list);
+  while (redo && bad.length) {
+    const again = bad.filter((j) => (TAKES[j.id] ?? 1) < 4);
+    if (!again.length) break;
+    for (const job of again) TAKES[job.id] = (TAKES[job.id] ?? 1) + 1;
+    fs.writeFileSync(TAKES_FILE, JSON.stringify(TAKES, null, 1));
+    await pool(again, PARALLEL, async (job) => {
+      const lines: string[] = [];
+      await runLogged(lines, () => build(job, true));
+      console.log([`re-recorded ${job.id} (take ${TAKES[job.id]}): ${lines[0] ?? ""}`, ...lines.slice(1)].join("\n"));
+    });
+    writeManifest();
+    bad = await verifyAll(again);
   }
 }
 
