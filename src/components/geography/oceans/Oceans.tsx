@@ -32,7 +32,7 @@ export function Oceans() {
       {tab === "currents" && <CurrentsGlobe />}
       {tab === "floor" && <EchoSounder />}
       {tab === "tides" && <Tides />}
-      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დინებები და ფსკერის პროფილი გამარტივებულია; მიქცევა-მოქცევის სიმაღლე — ღია ოკეანის სანაპიროს ტიპური მნიშვნელობა. დედამიწის სურათი: NASA Blue Marble.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დინებები და ფსკერის პროფილი გამარტივებულია; მიქცევა-მოქცევის სიმაღლე — ღია ოკეანის სანაპიროს ტიპური მნიშვნელობა. დედამიწის სურათი: NASA Blue Marble; საზღვრები და სახელები: Natural Earth, Wikidata.</p>
     </section>
   );
 }

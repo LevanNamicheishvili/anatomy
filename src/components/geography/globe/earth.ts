@@ -1,23 +1,78 @@
 import * as THREE from "three";
 
 /*
- * The Earth itself: a textured sphere (NASA Blue Marble, public domain), a soft atmosphere rim and a
- * star field. While the photo loads, the sphere shows plain ocean blue so the scene is never empty.
+ * The Earth itself: a textured sphere (NASA Blue Marble Next Generation with relief and sea depths, public
+ * domain), a soft atmosphere rim and a star field. While the photo loads, the sphere shows plain ocean blue so the
+ * scene is never empty. Water is smoother than land, so the sun glints on the sea; with `night`, city lights
+ * (NASA Black Marble) glow on the side turned away from the sun.
  */
 
-export const EARTH_TEXTURE = "/geo/earth-blue-marble.jpg";
+export const EARTH_TEXTURE = "/geo/earth-2k.jpg";
+/** 4096×2048, for big screens (loaded after the small one). */
+const EARTH_TEXTURE_HD = "/geo/earth-4k.jpg";
+/** Roughness: water 0.45, land 1 (scripts/build-world-map.py). */
+const EARTH_WATER = "/geo/earth-water.jpg";
+const EARTH_NIGHT = "/geo/earth-night.jpg";
 
-export function earthMesh(radius: number, onLoad?: () => void) {
+export interface EarthOptions {
+  /** Load the 4096-pixel photo too (when the canvas is big and the graphics card takes it). */
+  hd?: boolean;
+  /** City lights on the night side; `sunView` is the direction to the sun in view space, kept current by the scene. */
+  night?: { sunView: THREE.Vector3 };
+}
+
+export function earthMesh(radius: number, opts: EarthOptions = {}) {
   const material = new THREE.MeshStandardMaterial({ color: "#2a5d9a", roughness: 0.85, metalness: 0 });
-  new THREE.TextureLoader().load(EARTH_TEXTURE, (tex) => {
+  const loader = new THREE.TextureLoader();
+  let disposed = false;
+  const photo = (tex: THREE.Texture) => {
+    if (disposed) return tex.dispose();
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
+    material.map?.dispose();
     material.map = tex;
     material.color.set("#ffffff");
     material.needsUpdate = true;
-    onLoad?.();
+  };
+  loader.load(EARTH_TEXTURE, (tex) => {
+    photo(tex);
+    if (opts.hd && !disposed) loader.load(EARTH_TEXTURE_HD, photo);
   });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 96, 64), material);
+  loader.load(EARTH_WATER, (tex) => {
+    if (disposed) return tex.dispose();
+    material.roughnessMap = tex;
+    material.roughness = 1;
+    material.needsUpdate = true;
+  });
+  const uniforms = { uNight: { value: null as THREE.Texture | null }, uSunView: { value: opts.night?.sunView ?? new THREE.Vector3() } };
+  // The scenes dispose the material when they close: the textures go with it (and late arrivals are dropped).
+  material.addEventListener("dispose", () => {
+    disposed = true;
+    material.map?.dispose();
+    material.roughnessMap?.dispose();
+    uniforms.uNight.value?.dispose();
+  });
+  if (opts.night) {
+    loader.load(EARTH_NIGHT, (tex) => {
+      if (disposed) return tex.dispose();
+      uniforms.uNight.value = tex;
+    });
+    material.customProgramCacheKey = () => "earth-night";
+    material.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, uniforms);
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uNight;\nuniform vec3 uSunView;").replace(
+        "#include <opaque_fragment>",
+        /* glsl */ `
+        #ifdef USE_MAP
+          // Lights fade in past the terminator; bright enough to show through the night shade above the ground.
+          float nightSide = 1.0 - smoothstep(-0.16, 0.08, dot(normalize(vNormal), uSunView));
+          outgoingLight += texture2D(uNight, vMapUv).r * vec3(1.0, 0.72, 0.38) * nightSide * 3.4;
+        #endif
+        #include <opaque_fragment>`,
+      );
+    };
+  }
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 128, 80), material);
   mesh.name = "earth";
   return mesh;
 }

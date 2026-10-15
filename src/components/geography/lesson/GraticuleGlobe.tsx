@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatLat, formatLon, type LatLon } from "../globe/coords";
 import { buildCrosshair, buildGraticule, SPECIAL_LINES, type SpecialLine } from "../globe/graticule";
 import { GlobeScene } from "../globe/GlobeScene";
+import { MapButton } from "../globe/MapButton";
 
 /*
  * Topic 4 — the degree grid. A globe with parallels and meridians every 15°, the named lines in colour,
@@ -56,6 +57,7 @@ export function GraticuleGlobe() {
   const [grid, setGrid] = useState(true);
   const [line, setLine] = useState<SpecialLine | null>(null);
   const [spin, setSpin] = useState(true);
+  const [map, setMap] = useState(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -63,6 +65,9 @@ export function GraticuleGlobe() {
     if (!canvas || !layer) return;
     const scene = new GlobeScene(canvas, { autoRotate: true, flatLight: true });
     sceneRef.current = scene;
+    // The task is to find Tbilisi by its coordinates: the map does not name it.
+    scene.map.setHidden(["თბილისი"]);
+    scene.map.avoid(layer);
     const graticule = buildGraticule(scene.radius);
     gridRef.current = graticule;
     const cross = buildCrosshair(scene.radius);
@@ -116,6 +121,9 @@ export function GraticuleGlobe() {
   useEffect(() => {
     sceneRef.current?.setAutoRotate(spin);
   }, [spin]);
+  useEffect(() => {
+    sceneRef.current?.setMapVisible(map);
+  }, [map]);
 
   const pickLine = (l: SpecialLine) => {
     setLine(l);
@@ -174,6 +182,7 @@ export function GraticuleGlobe() {
           <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} title="ბრუნვა" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", spin ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <RotateCw className="size-5" />
           </button>
+          <MapButton on={map} onClick={() => setMap((m) => !m)} />
           <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
 
@@ -229,7 +238,7 @@ export function GraticuleGlobe() {
           )}
         </div>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დედამიწის სურათი: NASA Visible Earth (Blue Marble), საჯარო საკუთრება.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">დედამიწის სურათი: NASA Visible Earth (Blue Marble), საჯარო საკუთრება; საზღვრები და სახელები: Natural Earth, Wikidata.</p>
     </section>
   );
 }

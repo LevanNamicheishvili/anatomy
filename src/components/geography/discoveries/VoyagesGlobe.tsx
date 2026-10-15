@@ -9,6 +9,7 @@ import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen"
 import { cn } from "@/lib/utils";
 import { latLonToVec3 } from "../globe/coords";
 import { GlobeScene } from "../globe/GlobeScene";
+import { MapButton } from "../globe/MapButton";
 import { globePath, pathTube, type GlobePath } from "../globe/paths";
 import { VoyageShip } from "./ship";
 import { CONTINENTS, VOYAGES, type Voyage, type VoyageId } from "./voyages-data";
@@ -30,6 +31,10 @@ interface Built {
 
 /** 12345 → "12 345" (Georgian style: a space between thousands). */
 const nf = (v: number) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+/** Ports and continents the lesson names itself: the map leaves them out. */
+const PORT_NAMES = VOYAGES.flatMap((v) => v.stops.flatMap((s) => (s.name ? [s.name] : [])));
+const CONTINENT_NAMES = CONTINENTS.map((c) => c.name);
+
 /** Paths on the unit globe (GlobeScene radius = 1), built once. They lie low so the hull covers the line under it. */
 const PATHS = Object.fromEntries(VOYAGES.map((v) => [v.id, globePath(v.stops, 1, 0.004)])) as Record<VoyageId, GlobePath>;
 /** Seconds a voyage takes on the screen: a longer route sails longer, so the ship never races. */
@@ -60,6 +65,8 @@ export function VoyagesGlobe() {
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [map, setMap] = useState(true);
+  const globeRef = useRef<GlobeScene | null>(null);
   const voyage = VOYAGES.find((v) => v.id === id)!;
 
   const named = voyage.stops.map((s, i) => ({ ...s, i })).filter((s) => s.name);
@@ -75,6 +82,8 @@ export function VoyagesGlobe() {
     const layer = labelsRef.current;
     if (!canvas || !layer) return;
     const globe = new GlobeScene(canvas, { flatLight: true });
+    globe.map.avoid(layer);
+    globeRef.current = globe;
     const built = new Map<VoyageId, Built>();
     for (const v of VOYAGES) {
       const path = PATHS[v.id];
@@ -155,6 +164,9 @@ export function VoyagesGlobe() {
       hull.copy(ship.group.position).project(globe.camera);
       const sx = ((hull.x + 1) / 2) * w;
       const sy = ((1 - hull.y) / 2) * h;
+      // Map names keep off the ship (from her masthead to just under the hull).
+      const mast = ((1 - top.y) / 2) * h;
+      globe.map.keepClear(facing ? [sx - px * 0.7, mast - 4, px * 1.4, sy - mast + px * 0.3 + 4] : []);
       // A name stands to the right of its dot. Near the ship it keeps to the side away from her, and goes
       // under the dot of the port she lies in; names that would cover one another move down.
       shown.length = 0;
@@ -196,8 +208,16 @@ export function VoyagesGlobe() {
     return () => {
       canvas.removeEventListener("pointerdown", letGo);
       globe.dispose();
+      globeRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    globeRef.current?.map.setHidden(showAll ? [...PORT_NAMES, ...CONTINENT_NAMES] : PORT_NAMES);
+  }, [showAll]);
+  useEffect(() => {
+    globeRef.current?.setMapVisible(map);
+  }, [map]);
 
   /** Put the ship at `p` (0…1) and sail on or stop; the camera follows her again. */
   const sail = (p: number, play: boolean) => {
@@ -261,6 +281,7 @@ export function VoyagesGlobe() {
           <button type="button" onClick={toggleAll} aria-pressed={showAll} title="სამივე მარშრუტი და კონტინენტები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showAll ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Ship className="size-5" />
           </button>
+          <MapButton on={map} onClick={() => setMap((m) => !m)} />
           <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
@@ -318,7 +339,7 @@ export function VoyagesGlobe() {
           })}
         </ol>
       </div>
-      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მარშრუტები გამარტივებულია (სასკოლო ატლასის სიზუსტით); ნაჩვენებია მხოლოდ გზა „იქით“. დედამიწის სურათი: NASA Blue Marble.</p>
+      <p className="px-5 pb-3 text-[11px] leading-4 text-faint">მარშრუტები გამარტივებულია (სასკოლო ატლასის სიზუსტით); ნაჩვენებია მხოლოდ გზა „იქით“. დედამიწის სურათი: NASA Blue Marble; საზღვრები და სახელები: Natural Earth, Wikidata.</p>
     </section>
   );
 }

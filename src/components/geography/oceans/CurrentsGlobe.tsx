@@ -6,6 +6,7 @@ import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GlobeScene } from "../globe/GlobeScene";
+import { MapButton } from "../globe/MapButton";
 import { globePath, pathTube, type GlobePath } from "../globe/paths";
 import { CURRENTS, type Current } from "./ocean-data";
 
@@ -25,13 +26,17 @@ export function CurrentsGlobe() {
   const labelsRef = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState<"all" | "warm" | "cold">("all");
   const [active, setActive] = useState<Current>(CURRENTS[1]);
+  const [map, setMap] = useState(true);
   const meshes = useRef<THREE.Object3D[][]>([]);
+  const globeRef = useRef<GlobeScene | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const layer = labelsRef.current;
     if (!canvas || !layer) return;
     const globe = new GlobeScene(canvas, { flatLight: true, autoRotate: true });
+    globe.map.avoid(layer);
+    globeRef.current = globe;
     const dotGeo = new THREE.ConeGeometry(0.012, 0.035, 8);
     dotGeo.rotateX(Math.PI / 2);
     const runners: { mesh: THREE.Mesh; path: GlobePath; i: number; speed: number }[] = [];
@@ -74,9 +79,14 @@ export function CurrentsGlobe() {
     };
     return () => {
       globe.dispose();
+      globeRef.current = null;
       meshes.current = [];
     };
   }, []);
+
+  useEffect(() => {
+    globeRef.current?.setMapVisible(map);
+  }, [map]);
 
   useEffect(() => {
     CURRENTS.forEach((c, k) => {
@@ -89,7 +99,10 @@ export function CurrentsGlobe() {
     <div ref={fsRef}>
       <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#14233a_0%,#05080f_80%)]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ოკეანის თბილი და ცივი დინებები გლობუსზე" />
-        <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-3 right-3" />
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+          <MapButton on={map} onClick={() => setMap((m) => !m)} />
+          <FullscreenButton full={fsOn} onClick={fsToggle} />
+        </div>
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {CURRENTS.map((c) => {
             const at = c.path[c.labelAt];

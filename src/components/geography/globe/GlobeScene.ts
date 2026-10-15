@@ -2,12 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { latLonToVec3, vec3ToLatLon, type LatLon } from "./coords";
 import { atmosphereMesh, earthMesh, starField } from "./earth";
+import { WorldMap } from "./worldMap";
 
 /*
- * Shared globe stage for geography lessons (graticule now; seasons, time zones, voyages, Polaris and
- * ocean currents later). One renderer, orbit camera, the Earth with its atmosphere, stars and a sun.
- * Everything that belongs to the Earth goes into `earth` (a group in latitude/longitude space), so it turns
- * with the planet. React places HTML labels through `onFrame(project)`.
+ * Shared globe stage for geography lessons (degree grid, seasons and time zones, voyages, ocean currents). One
+ * renderer, orbit camera, the Earth with its atmosphere, stars and a sun, and the political map over it (borders
+ * and names, worldMap.ts). Everything that belongs to the Earth goes into `earth` (a group in latitude/longitude
+ * space), so it turns with the planet. React places HTML labels through `onFrame(project)`.
  */
 
 export interface GlobeOptions {
@@ -15,7 +16,7 @@ export interface GlobeOptions {
   autoRotate?: boolean;
   /** Direction towards the sun, in world space. */
   sun?: THREE.Vector3;
-  /** Lit from all sides (no night side): best for reading maps and grids. */
+  /** Lit from all sides (no night side): best for reading maps and grids. Without it, city lights show at night. */
   flatLight?: boolean;
 }
 
@@ -32,6 +33,8 @@ export class GlobeScene {
   readonly camera = new THREE.PerspectiveCamera(35, 1, 0.05, 200);
   readonly earth = new THREE.Group();
   readonly controls: OrbitControls;
+  /** Borders and place names; `map.setHidden([...])` leaves out names the lesson labels itself. */
+  readonly map: WorldMap;
   /** Called every frame: project(lat, lon, lift) → screen pixels in the canvas. */
   onFrame: ((project: (lat: number, lon: number, lift?: number) => Projected) => void) | null = null;
   /** Point under the cursor (null when off the globe). */
@@ -45,11 +48,13 @@ export class GlobeScene {
   private pointer = new THREE.Vector2();
   private observer: ResizeObserver;
   private frame = 0;
-  private clock = new THREE.Clock();
+  private last = performance.now();
   private tween: { from: THREE.Vector3; to: THREE.Vector3; start: number; dur: number } | null = null;
   private reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   private down: { x: number; y: number } | null = null;
   private tmp = new THREE.Vector3();
+  /** Direction to the sun in view space (for the city lights on the night side). */
+  private sunView = new THREE.Vector3();
   private camDir = new THREE.Vector3();
   private disposed = false;
 
@@ -61,8 +66,11 @@ export class GlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    this.globe = earthMesh(this.radius);
-    this.earth.add(this.globe);
+    // The 4096-pixel photo where it shows: a big canvas and a graphics card that takes it.
+    const hd = canvas.clientWidth >= 640 && this.renderer.capabilities.maxTextureSize >= 4096;
+    this.globe = earthMesh(this.radius, { hd, night: opts.flatLight ? undefined : { sunView: this.sunView } });
+    this.map = new WorldMap(this.radius);
+    this.earth.add(this.globe, this.map.group);
     this.scene.add(this.earth, atmosphereMesh(this.radius), starField());
 
     if (opts.flatLight) {
@@ -107,6 +115,11 @@ export class GlobeScene {
 
   setSun(dir: THREE.Vector3) {
     this.sunLight.position.copy(dir).setLength(5);
+  }
+
+  /** Borders and names on or off. */
+  setMapVisible(on: boolean) {
+    this.map.group.visible = on;
   }
 
   setAutoRotate(on: boolean) {
@@ -177,6 +190,7 @@ export class GlobeScene {
     const h = this.canvas.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
+    this.map.resize(w, h, this.renderer.getPixelRatio());
     this.camera.aspect = w / h;
     // Keep the whole globe in view on narrow (portrait) screens.
     this.camera.fov = w < h ? 35 / Math.max(0.55, w / h) : 35;
@@ -186,7 +200,9 @@ export class GlobeScene {
   private loop = () => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.loop);
-    this.clock.getDelta();
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.last) / 1000);
+    this.last = now;
     if (this.tween) {
       const k = Math.min(1, (performance.now() - this.tween.start) / this.tween.dur);
       const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
@@ -198,6 +214,10 @@ export class GlobeScene {
       if (k >= 1) this.tween = null;
     }
     this.controls.update();
+    this.camera.updateMatrixWorld();
+    this.earth.updateMatrixWorld();
+    this.sunView.copy(this.sunLight.position).transformDirection(this.camera.matrixWorldInverse);
+    this.map.update(this.camera, this.earth, this.canvas, dt);
     this.renderer.render(this.scene, this.camera);
     this.onFrame?.(this.project);
   };
@@ -211,6 +231,7 @@ export class GlobeScene {
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.controls.dispose();
+    this.map.dispose();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();

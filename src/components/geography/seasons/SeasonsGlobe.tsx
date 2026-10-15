@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { formatLat, latLonToVec3, vec3ToLatLon } from "../globe/coords";
 import { AXIAL_TILT, meridian, parallel, SPECIAL_LINES } from "../globe/graticule";
 import { GlobeScene } from "../globe/GlobeScene";
+import { MapButton } from "../globe/MapButton";
 import { CITIES, cityOffset, clock, dateLabel, dayLength, dayShift, declination, noonAltitude, orbitAngle, TBILISI_UTC, TURNING_POINTS, utcLabel } from "./sun-math";
 
 /*
@@ -133,6 +134,7 @@ export function SeasonsGlobe() {
   const [tbTime, setTbTime] = useState(16); // Tbilisi clock
   const [playing, setPlaying] = useState(false);
   const [showZones, setShowZones] = useState(true);
+  const [map, setMap] = useState(true);
   const utc = (((tbTime - TBILISI_UTC) % 24) + 24) % 24;
   const decl = declination(day);
   const tp = TURNING_POINTS.find((t) => Math.abs(t.day - day) < 1);
@@ -145,6 +147,9 @@ export function SeasonsGlobe() {
     if (!canvas || !layer) return;
     const globe = new GlobeScene(canvas, { sun: SUN_DIR.clone() });
     globe.setSun(SUN_DIR.clone());
+    // The lesson labels these cities itself (with their clocks).
+    globe.map.setHidden(CITIES.map((c) => c.name));
+    globe.map.avoid(layer);
     const zones = timeZones(globe.radius);
     globe.earth.add(axisAndLines(globe.radius), zones.group);
     for (const c of CITIES) {
@@ -203,6 +208,10 @@ export function SeasonsGlobe() {
   }, [day, utc, noonZone]);
 
   useEffect(() => {
+    sceneRef.current?.globe.setMapVisible(map);
+  }, [map]);
+
+  useEffect(() => {
     if (sceneRef.current) sceneRef.current.zones.group.visible = showZones;
     labelsRef.current?.querySelectorAll<HTMLElement>("[data-kind=zone]").forEach((el) => el.classList.toggle("invisible", !showZones));
   }, [showZones]);
@@ -258,6 +267,7 @@ export function SeasonsGlobe() {
           <button type="button" onClick={() => setShowZones((s) => !s)} aria-pressed={showZones} title="საათის სარტყლები" className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", showZones ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
             <Clock className="size-5" />
           </button>
+          <MapButton on={map} onClick={() => setMap((m) => !m)} />
           <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>
       </div>
@@ -324,7 +334,7 @@ export function SeasonsGlobe() {
         </div>
       </div>
       <p className="px-5 pb-3 text-[11px] leading-4 text-faint">
-        მოდელი გამარტივებულია: სარტყლები ნაჩვენებია „იდეალური“ 15°-იანი ზოლებით (ნამდვილი საზღვრები ქვეყნების საზღვრებს მიჰყვება); თარიღები ზუსტია ±1 დღით. დედამიწის სურათი: NASA Blue Marble.
+        მოდელი გამარტივებულია: სარტყლები ნაჩვენებია „იდეალური“ 15°-იანი ზოლებით (ნამდვილი საზღვრები ქვეყნების საზღვრებს მიჰყვება); თარიღები ზუსტია ±1 დღით. დედამიწის სურათი: NASA Blue Marble, ღამის განათება: NASA Black Marble; საზღვრები და სახელები: Natural Earth, Wikidata.
       </p>
     </section>
   );
