@@ -37,6 +37,18 @@ export interface CoastAnchors {
   lowland: THREE.Vector3;
 }
 export type CoastAnchor = keyof CoastAnchors;
+
+/** Where the camera can be sent (the narration shows what it talks about): position and point looked at. */
+export const COAST_VIEWS = {
+  overview: [new THREE.Vector3(0, 7, 22), new THREE.Vector3(0.5, 2.2, 0)],
+  surface: [new THREE.Vector3(3.2, 1.7, 8.5), new THREE.Vector3(2.4, 0.4, 0)],
+  coast: [new THREE.Vector3(-1.2, 2.8, 10), new THREE.Vector3(0, 0.5, 0)],
+  mountain: [new THREE.Vector3(17, 4.6, 16.5), new THREE.Vector3(9, 2.6, 2)],
+  loop: [new THREE.Vector3(-1, 5.5, 19.5), new THREE.Vector3(-1.2, 2.8, 0)],
+  clouds: [new THREE.Vector3(7, 6.2, 11), new THREE.Vector3(5, 5, 0)],
+  far: [new THREE.Vector3(0, 12, 34), new THREE.Vector3(0, 2, 0)],
+} as const;
+export type CoastView = keyof typeof COAST_VIEWS;
 export type Projector = (p: THREE.Vector3) => { x: number; y: number; visible: boolean };
 
 /** The detailed part round the breeze: x from the open sea to the mountains, z from behind the loop (−Z) to
@@ -380,6 +392,34 @@ export class CoastScene {
   private sunLight = new THREE.DirectionalLight("#fff3d6", 3);
   private moonLight = new THREE.DirectionalLight("#9fb4ff", 0);
   private sunDir = new THREE.Vector3(0, 1, 0);
+  /** Camera on its way to a view: from, to, start time. */
+  private flight: { from: [THREE.Vector3, THREE.Vector3]; to: readonly [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
+  /** Sunbeams falling on the land ("the sun warms the ground, the ground the air"). */
+  private rays = new THREE.Group();
+  private rayMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: /* glsl */ `
+      varying float vY;
+      varying float vFacing;
+      void main() {
+        vY = uv.y;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vFacing = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      varying float vY;
+      varying float vFacing;
+      void main() {
+        float pulse = 0.6 + 0.4 * smoothstep(0.6, 1.0, fract(vY * 5.0 + uTime * 0.8));
+        float fade = smoothstep(0.0, 0.1, vY) * smoothstep(1.0, 0.6, vY);
+        gl_FragColor = vec4(vec3(1.0, 0.78, 0.38) * pulse, 0.55 * fade * vFacing * vFacing);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
   private water = waterUniforms();
   private stars: THREE.Points;
   private moon: THREE.Sprite;
@@ -475,6 +515,13 @@ export class CoastScene {
     this.moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: "#f4f6ff", transparent: true, depthWrite: false, fog: false }));
     this.moon.scale.setScalar(22);
     this.scene.add(this.stars, this.moon);
+    for (let i = 0; i < 6; i++) {
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 10, 1, true), this.rayMat);
+      beam.renderOrder = 4;
+      this.rays.add(beam);
+    }
+    this.rays.visible = false;
+    this.scene.add(this.rays);
 
     // Air parcels and their short trails.
     this.parcelMat = new THREE.ShaderMaterial({ uniforms: { uScale: { value: 60 }, uOpacity: { value: 1 } }, vertexShader: PARCEL_VERTEX, fragmentShader: PARCEL_FRAGMENT, transparent: true, depthWrite: false });
@@ -587,6 +634,8 @@ export class CoastScene {
     this.camera.position.set(0, 7, 22);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.target.set(0.5, 2.2, 0);
+    // Dragging the scene takes the camera back from the narration.
+    this.controls.addEventListener("start", () => (this.flight = null));
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.enablePan = false;
@@ -717,6 +766,31 @@ export class CoastScene {
     add(palm, palms, [0, 0.02], [0.98, 1]);
   }
 
+  /** Fly the camera to one of the views. */
+  view(name: CoastView) {
+    this.flight = { from: [this.camera.position.clone(), this.controls.target.clone()], to: COAST_VIEWS[name], start: performance.now() };
+  }
+
+  /** Sunbeams on the land, on or off. */
+  setRays(on: boolean) {
+    this.rays.visible = on;
+    this.placeRays();
+  }
+
+  private placeRays() {
+    const up = new THREE.Vector3(0, 1, 0);
+    this.rays.children.forEach((beam, i) => {
+      const x = 0.9 + i * 1.0;
+      const z = 2.2 + (i % 3) * 1.4;
+      const hit = new THREE.Vector3(x, ground(x, z) + 0.02, z);
+      const len = 9;
+      beam.scale.set(1, len, 1);
+      beam.position.copy(hit).addScaledVector(this.sunDir, len / 2);
+      beam.quaternion.setFromUnitVectors(up, this.sunDir);
+      beam.visible = this.sunDir.y > 0.05;
+    });
+  }
+
   /** Hour of the day and the breeze it produces. */
   set(hour: number, b: BreezeState) {
     this.k = b.k;
@@ -728,6 +802,7 @@ export class CoastScene {
     const dir = this.sunDir.set(Math.cos(a), Math.sin(a) * 0.82, 0.4).normalize();
     this.sky.material.uniforms.sunPosition.value.copy(dir);
     this.sunLight.position.copy(dir).multiplyScalar(40);
+    if (this.rays.visible) this.placeRays();
     const up = smooth(dir.y, -0.02, 0.3);
     this.sunLight.intensity = 3.2 * up;
     this.sunLight.color.set("#ff9a55").lerp(new THREE.Color("#fff4e2"), smooth(dir.y, 0.02, 0.4));
@@ -871,6 +946,18 @@ export class CoastScene {
     this.sky.material.uniforms.time.value = t;
     this.updateAir(dt);
     this.updateProps(t);
+    this.rayMat.uniforms.uTime.value = t;
+    if (this.flight) {
+      const k = Math.min(1, (now - this.flight.start) / 1800);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+      this.camera.position.lerpVectors(this.flight.from[0], this.flight.to[0], e);
+      this.controls.target.lerpVectors(this.flight.from[1], this.flight.to[1], e);
+      if (k >= 1 || this.reduceMotion) {
+        this.camera.position.copy(this.flight.to[0]);
+        this.controls.target.copy(this.flight.to[1]);
+        this.flight = null;
+      }
+    }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.onFrame?.(this.project, this.anchors);

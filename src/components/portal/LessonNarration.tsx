@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Headphones, Pause, Play, RotateCcw, X } from "lucide-react";
 import { narrationAudio, narrationTimings, type NarrationInfo } from "@/lib/narration";
+import { narrationAt } from "@/lib/narration-cues";
+import { hasSceneDirector, NarrationSubtitles } from "./NarrationScene";
 import { cn } from "@/lib/utils";
 
 /*
@@ -12,7 +14,8 @@ import { cn } from "@/lib/utils";
  * screen holds the controls; in the atlas's topic panel ("sheet") the controls stay in the panel. When "start by
  * itself" is on (the default), the narration starts as the lesson opens — where the browser allows sound without
  * a click; otherwise the button waits for one. `onBlock` hears which part is being read (the board mode turns
- * its slides with the voice).
+ * its slides with the voice). When the lesson's 3D scene follows the voice (NarrationScene), the page keeps the
+ * scene in view instead of the text, and the sentence being said runs as subtitles over it.
  */
 
 const AUTO_KEY = "lesson-narration-auto";
@@ -84,6 +87,7 @@ export function LessonNarration({
   /** Light the words up to word i (−1: none) and keep it in view. */
   const show = useCallback((i: number, now: boolean) => {
     shown.current = i;
+    narrationAt(i);
     const { blockStarts: starts, onBlock: tell } = hooks.current;
     if (starts && tell && i >= 0) {
       let b = 0;
@@ -94,7 +98,9 @@ export function LessonNarration({
       }
     }
     paint(i, now);
-    // Keep the spoken line in view, unless the pupil is reading elsewhere just now.
+    // Keep the spoken line in view (or, when the scene follows the voice, the scene), unless the pupil is
+    // reading elsewhere just now.
+    if (hasSceneDirector()) return;
     const el = document.querySelector<HTMLElement>(`[data-nw="${i}"]`);
     if (el && now && performance.now() - userScrolled.current > 4000) {
       const r = el.getBoundingClientRect();
@@ -163,6 +169,8 @@ export function LessonNarration({
     try {
       await a.play();
       setBlocked(false);
+      // The scene shows what the voice explains: bring it into view.
+      if (hasSceneDirector() && variant === "page") document.querySelector("[data-scene]")?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch {
       // The browser wants a click first.
       setBlocked(true);
@@ -178,6 +186,7 @@ export function LessonNarration({
     shown.current = -1;
     block.current = -1;
     paint(-1, false);
+    narrationAt(-1);
     delete document.documentElement.dataset.narrating;
   }, []);
 
@@ -210,6 +219,7 @@ export function LessonNarration({
       shown.current = -1;
       block.current = -1;
       paint(-1, false);
+      narrationAt(-1);
       delete document.documentElement.dataset.narrating;
     };
     // Once per narration.
@@ -316,6 +326,7 @@ export function LessonNarration({
         {blocked && <span className={cn("text-mute", sheet ? "text-xs" : "text-sm")}>დააჭირე ღილაკს — ბრაუზერი ხმას პირველი დაჭერის შემდეგ რთავს.</span>}
       </div>
 
+      {!sheet && active && <NarrationSubtitles onToggle={toggle} playing={playing} />}
       {!sheet && active && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/96 shadow-[0_-6px_24px_rgb(0_0_0/0.08)] backdrop-blur" role="region" aria-label="გაკვეთილის გახმოვანება">
           {controls}

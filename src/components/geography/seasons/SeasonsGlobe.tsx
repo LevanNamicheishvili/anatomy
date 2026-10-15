@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { Clock, Moon, Pause, Play, Sun } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
@@ -11,6 +11,8 @@ import { formatLat, latLonToVec3, vec3ToLatLon } from "../globe/coords";
 import { AXIAL_TILT, meridian, parallel, SPECIAL_LINES } from "../globe/graticule";
 import { GlobeScene } from "../globe/GlobeScene";
 import { MapButton } from "../globe/MapButton";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
+import { SEASONS_CUES, type SeasonsLit, type SeasonsShot, type SeasonsView } from "./seasons-cues";
 import { CITIES, cityOffset, clock, dateLabel, dayLength, dayShift, declination, noonAltitude, orbitAngle, TBILISI_UTC, TURNING_POINTS, utcLabel } from "./sun-math";
 
 /*
@@ -104,15 +106,28 @@ function timeZones(radius: number) {
   return { group, setNoon };
 }
 
+/** A soft, pulsing halo round a line or the axis: what the narration is talking about lights up. */
+function halo(color: string) {
+  return new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+}
+
 function axisAndLines(radius: number) {
   const g = new THREE.Group();
   const axis = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.008, radius * 0.008, radius * 2.7, 8), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
-  g.add(axis);
+  const glows = new Map<string, THREE.Mesh>();
+  const axisGlow = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.03, radius * 0.03, radius * 2.7, 12), halo("#ffffff"));
+  axisGlow.visible = false;
+  g.add(axis, axisGlow);
+  glows.set("axis", axisGlow);
   for (const l of SPECIAL_LINES) {
     if (l.kind !== "parallel") continue;
     g.add(parallel(radius * 1.004, l.value, radius * 0.0035, new THREE.MeshBasicMaterial({ color: l.color, transparent: true, opacity: 0.85 })));
+    const glow = parallel(radius * 1.006, l.value, radius * 0.024, halo(l.color));
+    glow.visible = false;
+    g.add(glow);
+    glows.set(l.id, glow);
   }
-  return g;
+  return { group: g, glows };
 }
 
 const ZONES = Array.from({ length: 24 }, (_, k) => k - 11); // −11 … +12
@@ -129,7 +144,7 @@ export function SeasonsGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<{ globe: GlobeScene; zones: ReturnType<typeof timeZones> } | null>(null);
+  const sceneRef = useRef<{ globe: GlobeScene; zones: ReturnType<typeof timeZones>; glows: Map<string, THREE.Mesh>; side: THREE.Vector3 } | null>(null);
   const [day, setDay] = useState(172);
   const [tbTime, setTbTime] = useState(16); // Tbilisi clock
   const [playing, setPlaying] = useState(false);
@@ -140,6 +155,85 @@ export function SeasonsGlobe() {
   const tp = TURNING_POINTS.find((t) => Math.abs(t.day - day) < 1);
   const tbLen = dayLength(41.72, decl);
   const noonZone = ((Math.round(12 - utc) + 35) % 24) - 11; // zone where the clock shows 12:00 now (−11 … +12)
+  const [lit, setLit] = useState<SeasonsLit | null>(null);
+  const [yearRun, setYearRun] = useState(false);
+
+  // The narration drives the globe: the date and the clock glide to the cue's values (the axis is seen swinging
+  // round the year, the Earth turning), the camera flies to the view, and the line or label talked about lights up.
+  const now = useRef({ day, tbTime });
+  useEffect(() => {
+    now.current = { day, tbTime };
+  }, [day, tbTime]);
+  const glide = useRef(0);
+  const glideTo = useCallback((toDay: number | undefined, toTime: number | undefined) => {
+    cancelAnimationFrame(glide.current);
+    const from = now.current;
+    let dd = toDay === undefined ? 0 : (((toDay - from.day) % 365) + 365) % 365;
+    if (dd > 182) dd -= 365;
+    let dt = toTime === undefined ? 0 : (((toTime - from.tbTime) % 24) + 24) % 24;
+    if (dt > 12) dt -= 24;
+    const start = performance.now();
+    const dur = Math.min(2200, 500 + Math.abs(dd) * 8 + Math.abs(dt) * 90);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - start) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      if (dd) setDay(Math.round((((from.day - 1 + dd * e) % 365) + 365) % 365) + 1);
+      if (dt) setTbTime(+((((from.tbTime + dt * e) % 24) + 24) % 24).toFixed(3));
+      if (k < 1) glide.current = requestAnimationFrame(step);
+    };
+    step();
+  }, []);
+  useEffect(() => () => cancelAnimationFrame(glide.current), []);
+  const direct = useCallback(
+    (s: Partial<SeasonsShot>) => {
+      const sc = sceneRef.current;
+      setPlaying(s.run === "day");
+      setYearRun(s.run === "year");
+      if (s.run !== "year") glideTo(s.day, s.run === "day" ? undefined : s.time);
+      if (s.zones !== undefined) setShowZones(s.zones);
+      setLit(s.lit ?? null);
+      if (!sc) return;
+      for (const [id, m] of sc.glows) m.visible = id === s.lit;
+      // Where the camera goes: sideways, sunward or over a pole (fixed in space), or onto a place on the Earth as it
+      // will stand at the cue's date and time.
+      const places: Partial<Record<SeasonsView, [number, number, number]>> = {
+        tbilisi: [41.7, 44.8, 3.2],
+        greenwich: [45, 0, 3.4],
+        dateline: [12, 180, 3.4],
+        australia: [-25, 134, 3.3],
+        cities: [36, 62, 3.9],
+      };
+      const view = s.view ?? "side";
+      const place = places[view];
+      let to: THREE.Vector3;
+      if (place) {
+        const q = earthQuaternion(s.day ?? now.current.day, (((s.time ?? now.current.tbTime) - TBILISI_UTC) % 24 + 24) % 24);
+        to = latLonToVec3(place[0], place[1], 1).applyQuaternion(q).setLength(place[2]);
+      } else {
+        const side = sc.side;
+        const dir =
+          view === "day"
+            ? side.clone().lerp(SUN_DIR, 0.55)
+            : view === "north"
+              ? new THREE.Vector3(0, 1, 0).addScaledVector(side, 0.35)
+              : view === "south"
+                ? new THREE.Vector3(0, -1, 0).addScaledVector(side, 0.35)
+                : side.clone();
+        to = dir.setLength(view === "north" || view === "south" ? 3.3 : 3.6);
+      }
+      sc.globe.flyTo(to);
+    },
+    [glideTo],
+  );
+  const narrated = useNarrationDirector(SEASONS_CUES, direct);
+  // Round the sun: the date runs while the voice tells it (about 40 days a second).
+  useEffect(() => {
+    if (!yearRun || !narrated) return;
+    const id = window.setInterval(() => setDay((d) => (d % 365) + 2), 50);
+    return () => window.clearInterval(id);
+  }, [yearRun, narrated]);
+  const cityLit = (id: string) => lit === "cities" || (lit === "tbilisi" && id === "tbilisi") || (lit === "london" && id === "london");
+  const glowCls = "ring-4 ring-[#ffd76a] scale-115 z-10";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -151,22 +245,31 @@ export function SeasonsGlobe() {
     globe.map.setHidden(CITIES.map((c) => c.name));
     globe.map.avoid(layer);
     const zones = timeZones(globe.radius);
-    globe.earth.add(axisAndLines(globe.radius), zones.group);
+    const lines = axisAndLines(globe.radius);
+    globe.earth.add(lines.group, zones.group);
     for (const c of CITIES) {
       const dot = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 8), new THREE.MeshBasicMaterial({ color: c.id === "tbilisi" ? "#ff3b30" : "#ffffff" }));
       latLonToVec3(c.lat, c.lon, globe.radius * 1.006, dot.position);
       globe.earth.add(dot);
     }
     const { sun, beams } = sunMesh();
-    globe.scene.add(nightShade(globe.radius), terminatorRing(globe.radius), sun, beams);
-    sceneRef.current = { globe, zones };
+    const terminator = terminatorRing(globe.radius);
+    const termGlow = new THREE.Mesh(new THREE.TorusGeometry(globe.radius * 1.008, globe.radius * 0.016, 6, 180), halo("#ffcf66"));
+    termGlow.quaternion.copy(terminator.quaternion);
+    termGlow.visible = false;
+    lines.glows.set("terminator", termGlow);
+    globe.scene.add(nightShade(globe.radius), terminator, termGlow, sun, beams);
     // Start over the Caucasus and the Middle East, with the evening terminator in view on the right.
     earthQuaternion(172, 12, globe.earth.quaternion);
     globe.camera.position.copy(globe.position(28, 62)).setLength(3.6);
+    sceneRef.current = { globe, zones, glows: lines.glows, side: globe.camera.position.clone().normalize() };
 
     const els = [...layer.querySelectorAll<HTMLElement>("[data-kind]")];
     const v = new THREE.Vector3();
     globe.onFrame = (project) => {
+      // The line the narration talks about pulses.
+      const pulse = 0.55 + 0.3 * Math.sin(performance.now() / 260);
+      for (const m of lines.glows.values()) if (m.visible) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
       const view = globe.viewCenter();
       for (const el of els) {
         const kind = el.dataset.kind;
@@ -231,7 +334,7 @@ export function SeasonsGlobe() {
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="დედამიწა, მზე, დღე და ღამე" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden">
           {ZONES.map((z) => (
-            <span key={z} data-kind="zone" data-lat={0} data-lon={z * 15} className={cn("absolute top-0 left-0 rounded px-1 text-[10px] font-semibold whitespace-nowrap opacity-0", z === noonZone ? "bg-[#ffd84d] text-ink" : "text-[#ddd6fe] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]")}>
+            <span key={z} data-kind="zone" data-lat={0} data-lon={z * 15} className={cn("absolute top-0 left-0 rounded px-1 text-[10px] font-semibold whitespace-nowrap opacity-0", z === noonZone ? "bg-[#ffd84d] text-ink" : "text-[#ddd6fe] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]", (lit === "zones" || (lit === "dateline" && Math.abs(z) >= 11)) && glowCls)}>
               {z === 0 ? "0" : `${z > 0 ? "+" : "−"}${Math.abs(z)}`}
             </span>
           ))}
@@ -239,13 +342,13 @@ export function SeasonsGlobe() {
             const off = cityOffset(c, day);
             const alt = sunAltitude(c.lat, c.lon, decl, utc);
             return (
-              <span key={c.id} data-kind="city" data-lat={c.lat} data-lon={c.lon} className="absolute top-0 left-0 flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-white opacity-0">
+              <span key={c.id} data-kind="city" data-lat={c.lat} data-lon={c.lon} className={cn("absolute top-0 left-0 flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-white opacity-0", cityLit(c.id) && glowCls)}>
                 {alt > 0 ? <Sun className="size-3 text-[#ffd84d]" /> : <Moon className="size-3 text-[#c7d2fe]" />}
                 {c.name} <span className="tabular-nums">{clock(utc + off)}</span>
               </span>
             );
           })}
-          <span data-kind="pole" className="absolute top-0 left-0 rounded bg-card/90 px-1.5 py-0.5 text-[11px] font-semibold text-ink opacity-0">
+          <span data-kind="pole" className={cn("absolute top-0 left-0 rounded bg-card/90 px-1.5 py-0.5 text-[11px] font-semibold text-ink opacity-0", lit === "axis" && glowCls)}>
             ჩრდ. პოლუსი · ღერძი 23,44°
           </span>
           <span data-kind="sun" className="absolute top-0 left-0 rounded bg-[#ffd84d] px-1.5 py-0.5 text-[11px] font-semibold text-ink opacity-0">

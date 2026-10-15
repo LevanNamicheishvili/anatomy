@@ -3,7 +3,8 @@ import { LessonNarration } from "@/components/portal/LessonNarration";
 import { LessonQuiz } from "@/components/portal/LessonQuiz";
 import { TopicHeader } from "@/components/portal/TopicHeader";
 import type { GeoLesson } from "@/lib/geography-lessons";
-import { geoNarrationId, lessonNarration, narrationWords } from "@/lib/narration";
+import { geoNarrationId, lessonNarration, narrationBlocks, narrationWords } from "@/lib/narration";
+import { NarrationTextProvider } from "@/components/portal/NarrationScene";
 import { GeoVisual } from "./GeoVisual";
 
 const COLOR = "#2f6fb0";
@@ -17,6 +18,7 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink">
       <TopicHeader subject={{ name: "გეოგრაფია", href: "/geography" }} topic={lesson.title} color={COLOR} icon={lesson.icon} />
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-10">
+        <NarrationTextProvider blocks={narration ? narrationBlocks(lesson) : null}>
         <Reading>
           <LessonHeader
             path={[{ label: "გეოგრაფია", href: "/geography" }, { label: lesson.title }]}
@@ -41,6 +43,7 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
           <LessonQuiz quiz={lesson.quiz} />
           <LessonNav prev={link(prev)} next={link(next)} back={{ href: "/geography", label: "ყველა თემა" }} color={COLOR} />
         </Reading>
+        </NarrationTextProvider>
       </main>
     </div>
   );

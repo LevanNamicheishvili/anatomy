@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Moon, Pause, Play, Sun, Thermometer, Wind } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { breeze, LAPSE } from "./breeze-math";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
+import { BREEZE_CUES, type BreezeEmph, type BreezeShot } from "./breeze-cues";
 import { CoastScene, type CoastAnchor } from "./CoastScene";
 
 /*
@@ -69,8 +71,60 @@ export function SeaBreeze() {
   const [hour, setHour] = useState(14);
   const [playing, setPlaying] = useState(false);
   const [pressure, setPressure] = useState(true);
+  const [emph, setEmph] = useState<BreezeEmph | null>(null);
   const b = breeze(hour);
   const day = hour >= 6 && hour < 18;
+
+  // The narration drives the scene: the clock glides to the cue's hour (the sun sets or rises on screen), the
+  // camera flies to the view, and the label the voice talks about lights up.
+  const hourRef = useRef(hour);
+  useEffect(() => {
+    hourRef.current = hour;
+  }, [hour]);
+  const glide = useRef(0);
+  const glideTo = useCallback((target: number) => {
+    cancelAnimationFrame(glide.current);
+    const from = hourRef.current;
+    let delta = (((target - from) % 24) + 24) % 24;
+    if (delta > 14) delta -= 24;
+    const start = performance.now();
+    const dur = Math.min(1600, 400 + Math.abs(delta) * 110);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - start) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      setHour(+((((from + delta * e) % 24) + 24) % 24).toFixed(3));
+      if (k < 1) glide.current = requestAnimationFrame(step);
+    };
+    step();
+  }, []);
+  useEffect(() => () => cancelAnimationFrame(glide.current), []);
+  const direct = useCallback(
+    (s: Partial<BreezeShot>) => {
+      if (s.hour !== undefined) glideTo(s.hour);
+      if (s.pressure !== undefined) setPressure(s.pressure);
+      setEmph(s.emph ?? null);
+      sceneRef.current?.view(s.view ?? "overview");
+      sceneRef.current?.setRays(!!s.rays);
+    },
+    [glideTo],
+  );
+  const narrated = useNarrationDirector(BREEZE_CUES, direct);
+  /** Labels the voice is talking about (the low and high pressure swap sides between day and night). */
+  const lowAt: CoastAnchor = b.diff > 0 ? "landLow" : "seaLow";
+  const highAt: CoastAnchor = b.diff > 0 ? "seaLow" : "landLow";
+  const lit: Record<BreezeEmph, CoastAnchor[]> = {
+    temps: ["sea", "land"],
+    land: ["land"],
+    sea: ["sea"],
+    lapse: ["km1", "km2", "km3", "mountain"],
+    mountain: ["mountain"],
+    pressure: ["landLow", "seaLow", "landHigh", "seaHigh"],
+    low: [lowAt],
+    high: [highAt],
+    upper: ["landHigh", "seaHigh"],
+    wind: ["wind"],
+  };
+  const glow = (at: CoastAnchor) => (emph && lit[emph].includes(at) ? "ring-4 ring-[#ffd76a] scale-115 z-10 shadow-lg" : "");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -96,11 +150,13 @@ export function SeaBreeze() {
     sceneRef.current?.set(hour, breeze(hour));
   }, [hour]);
 
+  // The clock's own play rests while the narration drives the scene.
+  const running = playing && !narrated;
   useEffect(() => {
-    if (!playing) return;
+    if (!running) return;
     const id = window.setInterval(() => setHour((h) => (h + 0.05) % 24), 50);
     return () => window.clearInterval(id);
-  }, [playing]);
+  }, [running]);
 
   const landLow = b.diff > 0;
   const cell = (low: boolean) => (low ? "bg-[#d64545] text-white" : "bg-[#2f6fb0] text-white");
@@ -111,44 +167,44 @@ export function SeaBreeze() {
       <div className={cn("relative", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
-          <span data-at="sea" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
+          <span data-at="sea" className={cn(glow("sea"), "absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm")}>
             <Thermometer className="size-3.5 text-[#2f6fb0]" />
             შავი ზღვა · {t1(b.sea)}
           </span>
-          <span data-at="land" className="absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm">
+          <span data-at="land" className={cn(glow("land"), "absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm")}>
             <Thermometer className="size-3.5 text-[#d64545]" />
             ხმელეთი · {t1(b.land)}
           </span>
-          <span data-at="mountain" className="absolute top-0 left-0 rounded bg-card/85 px-1.5 py-0.5 text-ink opacity-0">
+          <span data-at="mountain" className={cn(glow("mountain"), "absolute top-0 left-0 rounded bg-card/85 px-1.5 py-0.5 text-ink opacity-0")}>
             კავკასიონი · ~4,5 კმ · {t1(b.land - LAPSE * 4.5)}
           </span>
-          <span data-at="town" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+          <span data-at="town" className={cn(glow("town"), "absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0")}>
             ფოთი
           </span>
-          <span data-at="river" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+          <span data-at="river" className={cn(glow("river"), "absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0")}>
             მდ. რიონი
           </span>
-          <span data-at="lowland" className="absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0">
+          <span data-at="lowland" className={cn(glow("lowland"), "absolute top-0 left-0 rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white opacity-0")}>
             კოლხეთის დაბლობი
           </span>
           {([1, 2, 3] as const).map((km) => (
-            <span key={km} data-at={`km${km}`} className="absolute top-0 left-0 translate-x-2 rounded bg-card/80 px-1 text-[11px] text-copy opacity-0">
+            <span key={km} data-at={`km${km}`} className={cn(glow(`km${km}` as CoastAnchor), "absolute top-0 left-0 translate-x-2 rounded bg-card/80 px-1 text-[11px] text-copy opacity-0")}>
               {km} კმ · {t1(b.land - LAPSE * km)}
             </span>
           ))}
-          <span data-at="landLow" data-hidden={showP} className={cn("absolute top-0 left-0 rounded-full px-2 py-0.5 opacity-0 shadow", cell(landLow))}>
+          <span data-at="landLow" data-hidden={showP} className={cn(glow("landLow"), "absolute top-0 left-0 rounded-full px-2 py-0.5 opacity-0 shadow", cell(landLow))}>
             {landLow ? "დ · დაბალი წნევა" : "მ · მაღალი წნევა"} · {Math.round(b.pLand)} ჰპა
           </span>
-          <span data-at="seaLow" data-hidden={showP} className={cn("absolute top-0 left-0 rounded-full px-2 py-0.5 opacity-0 shadow", cell(!landLow))}>
+          <span data-at="seaLow" data-hidden={showP} className={cn(glow("seaLow"), "absolute top-0 left-0 rounded-full px-2 py-0.5 opacity-0 shadow", cell(!landLow))}>
             {landLow ? "მ · მაღალი წნევა" : "დ · დაბალი წნევა"} · {Math.round(b.pSea)} ჰპა
           </span>
-          <span data-at="landHigh" data-hidden={showP} className={cn("absolute top-0 left-0 rounded-full px-2 py-0.5 text-[11px] opacity-0", cell(!landLow))}>
+          <span data-at="landHigh" data-hidden={showP} className={cn(glow("landHigh"), "absolute top-0 left-0 rounded-full px-2 py-0.5 text-[11px] opacity-0", cell(!landLow))}>
             ზემოთ: {landLow ? "მ" : "დ"}
           </span>
-          <span data-at="seaHigh" data-hidden={showP} className={cn("absolute top-0 left-0 rounded-full px-2 py-0.5 text-[11px] opacity-0", cell(landLow))}>
+          <span data-at="seaHigh" data-hidden={showP} className={cn(glow("seaHigh"), "absolute top-0 left-0 rounded-full px-2 py-0.5 text-[11px] opacity-0", cell(landLow))}>
             ზემოთ: {landLow ? "დ" : "მ"}
           </span>
-          <span data-at="wind" data-hidden={b.kind === "calm" ? "1" : "0"} className="absolute top-0 left-0 flex items-center gap-1 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0">
+          <span data-at="wind" data-hidden={b.kind === "calm" ? "1" : "0"} className={cn(glow("wind"), "absolute top-0 left-0 flex items-center gap-1 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0")}>
             <Wind className="size-3.5" />
             {b.kind === "sea" ? "ზღვის ბრიზი →" : "← ხმელეთის ბრიზი"} · {b.speed.toFixed(0)} მ/წმ
           </span>

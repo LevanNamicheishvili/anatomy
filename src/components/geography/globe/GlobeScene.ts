@@ -137,6 +137,16 @@ export class GlobeScene {
     this.tween = { from: this.camera.position.clone(), to, start: performance.now(), dur: 1300 };
   }
 
+  /** Swing the camera to a point in space (world coordinates), round the globe. */
+  flyTo(to: THREE.Vector3) {
+    if (this.reduceMotion) {
+      this.camera.position.copy(to);
+      return;
+    }
+    this.controls.autoRotate = false;
+    this.tween = { from: this.camera.position.clone(), to: to.clone(), start: performance.now(), dur: 1500 };
+  }
+
   /** Latitude/longitude at the centre of the view (where the camera looks onto the globe). */
   viewCenter(): LatLon {
     return vec3ToLatLon(this.earth.worldToLocal(this.camera.position.clone()));
