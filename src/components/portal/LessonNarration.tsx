@@ -16,6 +16,20 @@ import { cn } from "@/lib/utils";
 const AUTO_KEY = "lesson-narration-auto";
 const RATES = [1, 1.2, 0.85];
 
+/**
+ * The one narration that may sound. A second voice would be heard as an echo of the first (React mounts a
+ * component twice in development; a quick move between lessons does it too), so a new one silences the old.
+ */
+let sounding: HTMLAudioElement | null = null;
+
+function silence(a: HTMLAudioElement | null) {
+  if (!a) return;
+  a.pause();
+  a.removeAttribute("src");
+  a.load();
+  if (sounding === a) sounding = null;
+}
+
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function readAuto() {
@@ -84,7 +98,9 @@ export function LessonNarration({ narration }: { narration: NarrationInfo }) {
 
   const load = useCallback(async () => {
     if (audio.current) return audio.current;
+    silence(sounding);
     const a = new Audio(narrationAudio(narration));
+    sounding = a;
     a.preload = "auto";
     a.addEventListener("play", () => {
       setState("playing");
@@ -116,6 +132,8 @@ export function LessonNarration({ narration }: { narration: NarrationInfo }) {
   const play = useCallback(async () => {
     setState((s) => (s === "idle" ? "loading" : s));
     const a = await load();
+    // Closed (or replaced) while the timings were loading: this one must stay quiet.
+    if (a !== audio.current || a !== sounding) return silence(a);
     a.playbackRate = rate;
     document.documentElement.dataset.narrating = "";
     try {
@@ -160,7 +178,7 @@ export function LessonNarration({ narration }: { narration: NarrationInfo }) {
       removeEventListener("wheel", mark);
       removeEventListener("touchmove", mark);
       cancelAnimationFrame(frame.current);
-      audio.current?.pause();
+      silence(audio.current);
       audio.current = null;
       for (const w of words.current) w.classList.remove("nw-said", "nw-now");
       delete document.documentElement.dataset.narrating;

@@ -6,6 +6,7 @@
  *   <what>   geo:<slug> | bio:<grade>:<number> | geo | bio | all
  *   --voice  a Gemini prebuilt voice (default Charon)
  *   --check  have Gemini transcribe each section back and report words it did not hear (pronunciation check)
+ *   --force  time the words again even if the lesson is up to date (the recordings come from the cache)
  *
  * Needs GEMINI_API_KEY in .env.local (never in git); GEMINI_API_KEY_2, _3… are used in turn when a key's daily
  * limit runs out (the free tier allows only a few recordings a day). Writes public/narration/<id>.m4a (AAC, made with macOS
@@ -47,6 +48,7 @@ const args = process.argv.slice(2);
 const what = args.find((a) => !a.startsWith("--")) ?? "";
 const voice = args.includes("--voice") ? args[args.indexOf("--voice") + 1] : "Charon";
 const check = args.includes("--check");
+const force = args.includes("--force");
 const KEYS = [...fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").matchAll(/^GEMINI_API_KEY(?:_\d+)?=(.+)$/gm)].map((m) => m[1].trim());
 if (!KEYS.length) throw new Error("GEMINI_API_KEY is missing from .env.local");
 let keyAt = 0;
@@ -323,6 +325,9 @@ function align(samples: Int16Array, words: Word[]): [number, number][] {
   const route: [number, number][] = [];
   for (let node: number | null = end; node !== null; node = best.get(node)![1]) route.push([Math.floor(node / 100000), node % 100000]);
   route.reverse();
+  const strong = A.slice(1, -1).filter((a) => a[1] >= 2).length;
+  const matched = route.slice(1, -1).filter(([i]) => A[i][1] >= 2).length;
+  report.push(`sentence ends on pauses ${matched}/${strong}`);
   for (let r = 0; r + 1 < route.length; r++) {
     const [i2, j2] = route[r];
     const [i, j] = route[r + 1];
@@ -351,10 +356,26 @@ function align(samples: Int16Array, words: Word[]): [number, number][] {
         starts[k] = e;
       }
     }
+    // Inside a stretch of speech, a boundary between words moves to the nearest dip in loudness, if there is a
+    // clear one close by (the voice drops for a moment between most words).
+    for (let m = 1; m < starts.length; m++) {
+      if (starts[m] !== ends[m - 1]) continue; // on a pause already
+      const c = Math.round(starts[m] * 100);
+      let low = c;
+      for (let k = c - 9; k <= c + 9; k++) if (k > 0 && k < rms.length && rms[k] < rms[low]) low = k;
+      let peak = 0;
+      for (let k = low - 12; k <= low + 12; k++) if (k >= 0 && k < rms.length) peak = Math.max(peak, rms[k]);
+      const lo = (starts[m - 1] + 0.08) * 100;
+      const hi = (ends[m] - 0.08) * 100;
+      if (rms[low] < peak * 0.45 && low > lo && low < hi) starts[m] = ends[m - 1] = low / 100;
+    }
     for (let m = 0; m < w1 - w0; m++) times[w0 + m] = [starts[m], Math.max(starts[m], ends[m])];
   }
   return times;
 }
+
+/** What the alignment of the current piece found (printed with the piece). */
+const report: string[] = [];
 
 // ---- Output -------------------------------------------------------------------------------------------------------
 
@@ -393,7 +414,7 @@ async function build(job: Job) {
   const jsonPath = path.join(OUT, `${job.id}.json`);
   if (fs.existsSync(jsonPath)) {
     const old = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-    if (old.hash === hash && old.voice === voice) {
+    if (old.hash === hash && old.voice === voice && !force) {
       console.log(`${job.id}: up to date`);
       return;
     }
@@ -413,7 +434,7 @@ async function build(job: Job) {
       pieces.push(new Int16Array(Math.round(GAP * RATE)));
       offset += GAP;
     }
-    console.log(`  piece ${b + 1}/${blocks.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words`);
+    console.log(`  piece ${b + 1}/${blocks.length}: ${(samples.length / RATE).toFixed(1)} s, ${ws.length} words, ${report.splice(0).join(", ")}`);
   }
   const all = new Int16Array(pieces.reduce((n, p) => n + p.length, 0));
   let at = 0;
@@ -427,7 +448,8 @@ async function build(job: Job) {
   const m4a = path.join(OUT, `${job.id}.m4a`);
   execFileSync("afconvert", ["-f", "m4af", "-d", "aac", "-b", "48000", "-q", "127", tmp, m4a]);
   fs.unlinkSync(tmp);
-  const rev = createHash("sha1").update(fs.readFileSync(m4a)).digest("hex").slice(0, 10);
+  // New audio or new timings: a new revision, so browsers fetch both again.
+  const rev = createHash("sha1").update(fs.readFileSync(m4a)).update(JSON.stringify(words)).digest("hex").slice(0, 10);
   fs.writeFileSync(jsonPath, JSON.stringify({ v: 1, id: job.id, voice, model: MODEL, hash, rev, duration: +offset.toFixed(2), words }));
   console.log(`  → ${path.relative(ROOT, m4a)} (${(fs.statSync(m4a).size / 1024).toFixed(0)} KB, ${Math.floor(offset / 60)}:${String(Math.round(offset % 60)).padStart(2, "0")})`);
 }

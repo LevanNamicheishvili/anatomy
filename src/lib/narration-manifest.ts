@@ -2,7 +2,7 @@
 export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; duration: number; voice: string }> = {
   "geo-atmosphere": {
     "hash": "daf28003",
-    "rev": "33ff148b7c",
+    "rev": "508adeb16e",
     "duration": 203.16,
     "voice": "Charon"
   }
