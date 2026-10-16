@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { latLonToVec3, vec3ToLatLon, type LatLon } from "./coords";
 import { atmosphereMesh, earthMesh, starField } from "./earth";
-import { mapDetail, onMapDetail } from "./mapDetail";
+import { mapLayers, onMapLayers } from "./mapLayers";
 import { WorldMap } from "./worldMap";
 
 /*
@@ -36,7 +36,7 @@ export class GlobeScene {
   readonly controls: OrbitControls;
   /** Borders and place names; `map.setHidden([...])` leaves out names the lesson labels itself. */
   readonly map: WorldMap;
-  private offDetail: () => void;
+  private offLayers: () => void;
   /** Called every frame: project(lat, lon, lift) → screen pixels in the canvas. */
   onFrame: ((project: (lat: number, lon: number, lift?: number) => Projected) => void) | null = null;
   /** Point under the cursor (null when off the globe). */
@@ -72,9 +72,9 @@ export class GlobeScene {
     const hd = canvas.clientWidth >= 640 && this.renderer.capabilities.maxTextureSize >= 4096;
     this.globe = earthMesh(this.radius, { hd, night: opts.flatLight ? undefined : { sunView: this.sunView } });
     this.map = new WorldMap(this.radius);
-    // Countries only, or the details too: the same on every globe, as the teacher sets it.
-    this.map.setDetail(mapDetail());
-    this.offDetail = onMapDetail((on) => this.map.setDetail(on));
+    // What the map shows (countries, continents, details): the same on every globe, as the teacher sets it.
+    this.map.setLayers(mapLayers());
+    this.offLayers = onMapLayers((l) => this.map.setLayers(l));
     this.earth.add(this.globe, this.map.group);
     this.scene.add(this.earth, atmosphereMesh(this.radius), starField());
 
@@ -246,7 +246,7 @@ export class GlobeScene {
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.controls.dispose();
-    this.offDetail();
+    this.offLayers();
     this.map.dispose();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;

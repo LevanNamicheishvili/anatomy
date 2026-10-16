@@ -133,6 +133,8 @@ export class MapLabels {
   private hidden = new Set<number>();
   /** Kinds of name shown (null: all). */
   private kinds: ReadonlySet<LabelKind> | null = null;
+  /** The continents' names stay at every zoom (when no country names take their place). */
+  private continentsAlways = false;
   private hideNames = new Set<string>();
   // Per instance (text instances first, then dots).
   private alpha: Float32Array;
@@ -217,6 +219,7 @@ export class MapLabels {
   /** Only these kinds of name (null: all of them). */
   setKinds(kinds: ReadonlySet<LabelKind> | null) {
     this.kinds = kinds;
+    this.continentsAlways = !!kinds && kinds.has("continent") && !kinds.has("country");
   }
 
   /** Canvas size changed: bigger names on a big screen (a smart board in full screen), redrawn sharp. */
@@ -436,7 +439,7 @@ export class MapLabels {
     // Zoom range, with a little slack once shown so that names do not flicker at the edge.
     const slack = was ? 0.9 : 1;
     const min = l.s !== undefined ? bw / (l.s * FIT) : (l.z ?? 0);
-    if (v.ppd < min * slack || (l.x !== undefined && v.ppd > l.x / slack)) return 0;
+    if (v.ppd < min * slack || (l.x !== undefined && v.ppd > l.x / slack && !(this.continentsAlways && l.t === "continent"))) return 0;
     // Facing the camera: the world-space normal against the direction to the camera.
     const { m, e } = v;
     const dx = this.dir[i * 3];

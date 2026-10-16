@@ -187,7 +187,7 @@ OCEANS = [
 ]
 CONTINENTS = [
     ("ევროპა", 53.5, 26), ("აზია", 47, 92), ("აფრიკა", 6, 20),
-    ("ჩრდილოეთ ამერიკა", 51, -103), ("სამხრეთ ამერიკა", -12, -58), ("ანტარქტიდა", -80, 40),
+    ("ჩრდილოეთ ამერიკა", 51, -103), ("სამხრეთ ამერიკა", -12, -58), ("ავსტრალია", -25, 134), ("ანტარქტიდა", -80, 40),
 ]
 #: Seas, gulfs and lakes: Wikidata id (for the name), where the name goes, smallest zoom; the name only where
 #: Wikidata's differs from the one school maps use.

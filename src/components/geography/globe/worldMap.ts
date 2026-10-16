@@ -3,17 +3,21 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { latLonToVec3 } from "./coords";
-import { COUNTRY_LABELS } from "./mapDetail";
+import { labelKinds, MAP_PRESETS, type MapLayers } from "./mapLayers";
 import { MapLabels, type MapLabel } from "./mapLabels";
 
 /*
  * The political map over the globe: coasts and big lakes, country borders (disputed ones dashed), Georgia's
- * outline, and the Georgian names (mapLabels.ts). By default only the countries show (borders, coasts, country
- * names); `setDetail(true)` adds the lakes and the names of oceans, seas, continents, capitals and cities. Data: public/geo/world-map.json, built by
+ * outline, and the Georgian names (mapLabels.ts). What shows is set by layers (mapLayers.ts): by default only the
+ * countries (borders, coasts, country names); the continents can be painted in their colours
+ * (public/geo/continents.png, scripts/build-continents.py) with their names, and the details added. Data: public/geo/world-map.json, built by
  * scripts/build-world-map.py from Natural Earth. Everything sits in the globe's turning group.
  */
 
 export const WORLD_MAP = "/geo/world-map.json";
+const CONTINENTS = "/geo/continents.png";
+/** The continents' colours lie just over the ground, under the lines. */
+const TINT_LIFT = 0.0008;
 
 type LineKind = "coast" | "lake" | "border" | "disputed" | "georgia";
 
@@ -55,7 +59,8 @@ export class WorldMap {
   private materials: { mat: LineMaterial; width: number }[] = [];
   private names: MapLabels | null = null;
   private hidden: string[] = [];
-  private detail = false;
+  private shown: MapLayers = MAP_PRESETS.countries;
+  private tint: THREE.Mesh | null = null;
   private layers: HTMLElement[] = [];
   private avoidBoxes: number[] = [];
   private clearBoxes: number[] = [];
@@ -107,23 +112,47 @@ export class WorldMap {
       if (style.dashed) segments.computeLineDistances();
       segments.renderOrder = kind === "georgia" ? 3 : 2;
       segments.name = `map-${kind}`;
-      if (kind === "lake") segments.visible = this.detail;
+
       this.group.add(segments);
       this.materials.push({ mat, width: style.width });
     }
     this.names = new MapLabels(data.labels, this.radius);
     this.names.setHidden(this.hidden);
-    this.names.setKinds(this.detail ? null : COUNTRY_LABELS);
+    this.setLayers(this.shown);
     this.group.add(this.names.mesh);
     this.resize(this.size.w, this.size.h, this.size.dpr);
   }
 
-  /** Countries only (false) or the details too: lakes, oceans, seas, continents, capitals, cities. */
-  setDetail(on: boolean) {
-    this.detail = on;
+  /** What the map shows: borders, the countries' names, the continents in colour, oceans and seas, capitals, cities, lakes. */
+  setLayers(layers: MapLayers) {
+    this.shown = layers;
+    for (const name of ["map-border", "map-disputed"]) {
+      const o = this.group.getObjectByName(name);
+      if (o) o.visible = layers.borders;
+    }
     const lakes = this.group.getObjectByName("map-lake");
-    if (lakes) lakes.visible = on;
-    this.names?.setKinds(on ? null : COUNTRY_LABELS);
+    if (lakes) lakes.visible = layers.lakes;
+    this.names?.setKinds(labelKinds(layers));
+    if (layers.continents && !this.tint && !this.disposed) this.tint = this.continents();
+    if (this.tint) this.tint.visible = layers.continents;
+  }
+
+  /** The continents in colour: a sphere just over the Earth with the continents picture (loaded when first shown). */
+  private continents() {
+    const mat = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0, roughness: 1, metalness: 0, depthWrite: false });
+    new THREE.TextureLoader().load(CONTINENTS, (tex) => {
+      if (this.disposed) return tex.dispose();
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      mat.map = tex;
+      mat.opacity = 1;
+      mat.needsUpdate = true;
+    });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(this.radius * (1 + TINT_LIFT), 96, 64), mat);
+    mesh.name = "map-continents";
+    mesh.renderOrder = 1;
+    this.group.add(mesh);
+    return mesh;
   }
 
   /** Place names the lesson shows itself (its own labels): left out of the map. */
@@ -180,6 +209,12 @@ export class WorldMap {
   dispose() {
     this.disposed = true;
     this.names?.dispose();
+    if (this.tint) {
+      const mat = this.tint.material as THREE.MeshStandardMaterial;
+      mat.map?.dispose();
+      mat.dispose();
+      this.tint.geometry.dispose();
+    }
     for (const o of this.group.children) {
       if (o instanceof LineSegments2) {
         o.geometry.dispose();
