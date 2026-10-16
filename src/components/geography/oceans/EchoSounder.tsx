@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Radio } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
+import { cn } from "@/lib/utils";
 import { depthAt, PROFILE, PROFILE_PARTS, SOUND_WATER } from "./ocean-data";
 
 /*
@@ -22,9 +23,19 @@ const sy = (m: number) => SEA + (m / MAX_M) * (H - SEA - 12);
 const nf = (v: number) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 const f2 = (v: number) => v.toFixed(2).replace(".", ",");
 
-export function EchoSounder() {
-  const [km, setKm] = useState(700);
-  const [anim, setAnim] = useState<number | null>(null);
+/** What the narration sets: where the ship is and how many pings have been sent (a new number sends one). */
+export interface EchoNarr {
+  km: number;
+  ping: number;
+}
+
+/** `scene`: classes that make the picture the lesson's scene while the voice speaks (room for the subtitles). */
+export function EchoSounder({ narr, scene }: { narr?: EchoNarr | null; scene?: string }) {
+  const [kmChosen, setKm] = useState(700);
+  const km = narr?.km ?? kmChosen;
+  /** Progress of the ping (0…1) and where the ship was when it was sent. */
+  const [pinged, setAnim] = useState<{ k: number; km: number } | null>(null);
+  const anim = pinged && pinged.km === km ? pinged.k : null;
   const frame = useRef(0);
   const depth = depthAt(km);
   const t = (2 * depth) / SOUND_WATER;
@@ -32,17 +43,27 @@ export function EchoSounder() {
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
-  const ping = () => {
+  const ping = (at = km, slow = 1) => {
     cancelAnimationFrame(frame.current);
-    const dur = Math.max(600, t * 300);
+    // The narration's pings take at most ~3,5 s, however deep the sea (the voice goes on meanwhile).
+    const dur = Math.min(slow > 1 ? 3500 : Infinity, Math.max(600, ((2 * depthAt(at)) / SOUND_WATER) * 300 * slow));
     const start = performance.now();
     const tick = () => {
       const k = Math.min(1, (performance.now() - start) / dur);
-      setAnim(k);
+      setAnim({ k, km: at });
       if (k < 1) frame.current = requestAnimationFrame(tick);
     };
-    tick();
+    frame.current = requestAnimationFrame(tick);
   };
+  // The narration sends a ping, slowly enough to follow the sound down and back.
+  const narrPing = narr ? `${narr.ping} ${narr.km}` : "";
+  useEffect(() => {
+    if (!narrPing) return;
+    const [n, at] = narrPing.split(" ").map(Number);
+    if (n > 0) ping(at, 2.2);
+    // ping is redefined every render; the narration's ping number and place are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [narrPing]);
   const move = (v: number) => {
     cancelAnimationFrame(frame.current);
     setAnim(null);
@@ -58,7 +79,8 @@ export function EchoSounder() {
 
   return (
     <div className="px-5 py-4">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full rounded-lg bg-[#e8f3fb]" role="img" aria-label="ოკეანის ფსკერის პროფილი და ექოლოტი">
+      <div className={cn(scene)} data-scene={scene ? true : undefined}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full rounded-lg bg-[#e8f3fb]" role="img" aria-label="ოკეანის ფსკერის პროფილი და ექოლოტი">
         <defs>
           <linearGradient id="echo-water" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#5aa9e0" />
@@ -102,13 +124,14 @@ export function EchoSounder() {
             {nf(depth)} მ
           </text>
         )}
-      </svg>
+        </svg>
+      </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_16rem]">
         <div className="flex flex-col gap-3">
           <LabeledSlider label="გემის ადგილი" value={km} display={`ნაპირიდან ${nf(km)} კმ`} min={10} max={2030} step={5} onChange={move} color="#1f5f99" />
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={ping} className="flex h-11 items-center gap-2 rounded-lg bg-[#1f5f99] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#194e7f]">
+            <button type="button" onClick={() => ping()} className="flex h-11 items-center gap-2 rounded-lg bg-[#1f5f99] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#194e7f]">
               <Radio className="size-4" />
               ბგერითი სიგნალი
             </button>

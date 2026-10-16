@@ -20,12 +20,23 @@ const COLD = "#3b82f6";
 const DOTS = 7;
 const PATHS: GlobePath[] = CURRENTS.map((c) => globePath(c.path, 1, 0.008));
 
-export function CurrentsGlobe() {
+/** What the narration sets: which currents are drawn, which light up, where the globe turns to. */
+export interface CurrentsNarr {
+  show: "all" | "warm" | "cold";
+  lit: string[];
+  /** Latitude, longitude, distance (Earth radii). */
+  focus: [number, number, number];
+}
+
+export function CurrentsGlobe({ narr }: { narr?: CurrentsNarr | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { ref: fsRef, full: fsOn, toggle: fsToggle } = useFullscreen();
   const labelsRef = useRef<HTMLDivElement>(null);
-  const [show, setShow] = useState<"all" | "warm" | "cold">("all");
-  const [active, setActive] = useState<Current>(CURRENTS[1]);
+  const [chosen, setShow] = useState<"all" | "warm" | "cold">("all");
+  const [picked, setActive] = useState<Current>(CURRENTS[1]);
+  const show = narr?.show ?? chosen;
+  const lit = new Set(narr?.lit ?? []);
+  const active = CURRENTS.find((c) => c.id === narr?.lit[0]) ?? picked;
   const [map, setMap] = useState(true);
   const meshes = useRef<THREE.Object3D[][]>([]);
   const globeRef = useRef<GlobeScene | null>(null);
@@ -88,6 +99,13 @@ export function CurrentsGlobe() {
     globeRef.current?.setMapVisible(map);
   }, [map]);
 
+  const focus = narr?.focus.join(" ");
+  useEffect(() => {
+    if (!focus) return;
+    const [lat, lon, dist] = focus.split(" ").map(Number);
+    globeRef.current?.focus(lat, lon, dist);
+  }, [focus]);
+
   useEffect(() => {
     CURRENTS.forEach((c, k) => {
       const on = show === "all" || (show === "warm") === c.warm;
@@ -108,7 +126,7 @@ export function CurrentsGlobe() {
             const at = c.path[c.labelAt];
             const on = show === "all" || (show === "warm") === c.warm;
             return (
-              <button key={c.id} type="button" data-lat={at.lat} data-lon={at.lon} data-on={on ? "1" : "0"} onClick={() => setActive(c)} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 text-white opacity-0 shadow", active.id === c.id && "ring-2 ring-white")} style={{ backgroundColor: c.warm ? WARM : COLD }}>
+              <button key={c.id} type="button" data-lat={at.lat} data-lon={at.lon} data-on={on ? "1" : "0"} onClick={() => setActive(c)} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 text-white opacity-0 shadow", active.id === c.id && "ring-2 ring-white", lit.has(c.id) && "z-10 text-[14px] ring-2 ring-[#ffd76a]")} style={{ backgroundColor: c.warm ? WARM : COLD }}>
                 {c.name}
               </button>
             );

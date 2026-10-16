@@ -30,10 +30,19 @@ const PHASES = [
   { name: "ბოლო მეოთხედი", day: 22.1 },
 ];
 
-export function Tides() {
-  const [day, setDay] = useState(0);
+/** What the narration sets: the Moon's phase (day of the month) and whether the Earth turns. */
+export interface TidesNarr {
+  day: number;
+  playing: boolean;
+}
+
+/** `scene`: classes that make the pictures the lesson's scene while the voice speaks (room for the subtitles). */
+export function Tides({ narr, scene }: { narr?: TidesNarr | null; scene?: string }) {
+  const [dayChosen, setDay] = useState(0);
   const [hour, setHour] = useState(3);
-  const [playing, setPlaying] = useState(false);
+  const [playChosen, setPlaying] = useState(false);
+  const day = narr?.day ?? dayChosen;
+  const playing = narr ? narr.playing : playChosen;
   const moon = moonAngle(day);
   const h = height(townAngle(hour), moon);
   const slope = height(townAngle(hour + 0.2), moon) - height(townAngle(hour - 0.2), moon);
@@ -70,7 +79,7 @@ export function Tides() {
 
   return (
     <div className="px-5 py-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={cn("grid gap-4 md:grid-cols-2", scene)} data-scene={scene ? true : undefined}>
         <svg viewBox="0 0 300 260" className="w-full rounded-lg bg-[#0b1426]" role="img" aria-label="დედამიწა, მთვარე და მიქცევა-მოქცევის ტალღები ზემოდან">
           <circle cx={cx} cy={cy} r={105} fill="none" stroke="#3b4d6e" strokeDasharray="3 4" />
           <circle cx={6} cy={cy} r={22} fill="#ffd84d" />

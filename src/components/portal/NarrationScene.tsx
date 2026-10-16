@@ -89,10 +89,10 @@ export function NarrationSubtitles({ onToggle, playing }: { onToggle: () => void
   const [frame, setFrame] = useState<HTMLElement | null>(null);
   useEffect(() => onNarration(setWord), []);
   useEffect(() => {
-    // The first scene on the page (a lesson has one).
+    // The first scene on the page (a lesson has one; a lesson with several tools swaps it as the voice moves on).
     const find = () => setFrame(document.querySelector<HTMLElement>("[data-scene]"));
     find();
-    const id = window.setInterval(find, 1000);
+    const id = window.setInterval(find, 300);
     return () => window.clearInterval(id);
   }, []);
   if (!text || !frame || word < 0) return null;
