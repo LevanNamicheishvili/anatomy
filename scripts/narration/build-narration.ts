@@ -610,8 +610,21 @@ async function missing(job: Job): Promise<string[] | null> {
 async function verifyAll(list: Job[]) {
   console.log(`\nverifying ${list.length} recordings…`);
   const bad: Job[] = [];
-  await pool(list, PARALLEL, async (job, n) => {
-    const runs = await missing(job);
+  // Each check uploads a whole recording: two at a time, and a dropped connection is tried again.
+  await pool(list, Math.min(PARALLEL, 2), async (job, n) => {
+    let runs: string[] | null = null;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        runs = await missing(job);
+        break;
+      } catch (err) {
+        if (err instanceof DailyLimit || attempt >= 4) {
+          console.log(`  [${n + 1}] ${job.id}: not checked (${String(err).slice(0, 120)})`);
+          return;
+        }
+        await sleep(10_000 * attempt);
+      }
+    }
     if (runs === null) return;
     if (runs.length) {
       console.log(`  [${n + 1}] ${job.id} (take ${TAKES[job.id] ?? 1}) leaves out: ${runs.map((r) => `„${r}“`).join("; ")}`);

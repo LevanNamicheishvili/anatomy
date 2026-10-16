@@ -222,16 +222,52 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "duration": 98.76,
     "voice": "Charon"
   },
+  "bio-12-0ea99720": {
+    "hash": "fa2e024a",
+    "rev": "729056a9a9",
+    "duration": 77.96,
+    "voice": "Charon"
+  },
+  "bio-12-10d1f4ed": {
+    "hash": "435bc00f",
+    "rev": "f9487e1d98",
+    "duration": 88.28,
+    "voice": "Charon"
+  },
+  "bio-12-19515697": {
+    "hash": "3a5892c0",
+    "rev": "73d695b4d4",
+    "duration": 71.68,
+    "voice": "Charon"
+  },
+  "bio-12-1982b976": {
+    "hash": "18de2775",
+    "rev": "9842488592",
+    "duration": 91.8,
+    "voice": "Charon"
+  },
   "bio-12-1a6e1552": {
     "hash": "52ef7f58",
     "rev": "f552209425",
     "duration": 75.4,
     "voice": "Charon"
   },
+  "bio-12-20c7b7b3": {
+    "hash": "051bf299",
+    "rev": "709b26840d",
+    "duration": 91.72,
+    "voice": "Charon"
+  },
   "bio-12-23e9256a": {
     "hash": "b3894760",
     "rev": "7b4868f3fb",
     "duration": 67.64,
+    "voice": "Charon"
+  },
+  "bio-12-2598609b": {
+    "hash": "79f9f105",
+    "rev": "909928a835",
+    "duration": 75.76,
     "voice": "Charon"
   },
   "bio-12-2d7cc6d8": {
@@ -244,6 +280,30 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "hash": "8995960e",
     "rev": "9fed5234c6",
     "duration": 81.44,
+    "voice": "Charon"
+  },
+  "bio-12-3ab5f16f": {
+    "hash": "06f791c6",
+    "rev": "792f70d7ba",
+    "duration": 72.6,
+    "voice": "Charon"
+  },
+  "bio-12-4aecdce1": {
+    "hash": "69588727",
+    "rev": "0c10a14623",
+    "duration": 98.04,
+    "voice": "Charon"
+  },
+  "bio-12-5491ee45": {
+    "hash": "50bdea61",
+    "rev": "0c7fd5db11",
+    "duration": 88.28,
+    "voice": "Charon"
+  },
+  "bio-12-7658f276": {
+    "hash": "63662f30",
+    "rev": "cec63501db",
+    "duration": 87.6,
     "voice": "Charon"
   },
   "bio-12-96678405": {
@@ -270,10 +330,22 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "duration": 83.48,
     "voice": "Charon"
   },
+  "bio-12-bf70cfdc": {
+    "hash": "365b9211",
+    "rev": "fdda635fdb",
+    "duration": 65.2,
+    "voice": "Charon"
+  },
   "bio-12-dc151094": {
     "hash": "5989b56a",
     "rev": "e91f8d8984",
     "duration": 82.04,
+    "voice": "Charon"
+  },
+  "bio-12-fa742441": {
+    "hash": "c6024ca2",
+    "rev": "d6c9716c39",
+    "duration": 98.24,
     "voice": "Charon"
   },
   "bio-8-1-2": {
