@@ -8,8 +8,8 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
   },
   "bio-10-1-1-10": {
     "hash": "4f83c6d8",
-    "rev": "180039623e",
-    "duration": 70.72,
+    "rev": "da85aafc35",
+    "duration": 69.28,
     "voice": "Charon"
   },
   "bio-10-1-1-2": {
@@ -92,8 +92,8 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
   },
   "bio-11-1-11": {
     "hash": "999835a6",
-    "rev": "50d7668c28",
-    "duration": 88.44,
+    "rev": "1ea80aafe5",
+    "duration": 94.76,
     "voice": "Charon"
   },
   "bio-11-1-12": {
@@ -134,8 +134,8 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
   },
   "bio-11-1-2": {
     "hash": "4741a705",
-    "rev": "90a7f91cf1",
-    "duration": 83.44,
+    "rev": "7fdb1e99c9",
+    "duration": 82.64,
     "voice": "Charon"
   },
   "bio-11-1-3": {
@@ -518,8 +518,8 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
   },
   "bio-9-2-1": {
     "hash": "6a9f909a",
-    "rev": "7b2668495f",
-    "duration": 82.24,
+    "rev": "5cd906f3bd",
+    "duration": 77.96,
     "voice": "Charon"
   },
   "bio-9-2-3": {
@@ -596,8 +596,8 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
   },
   "geo-seasons": {
     "hash": "31cf9f8b",
-    "rev": "05b98ab956",
-    "duration": 224.08,
+    "rev": "de9c6855f6",
+    "duration": 239.28,
     "voice": "Charon"
   },
   "geo-solar-power": {

@@ -558,6 +558,19 @@ async function build(job: Job, forced = force): Promise<"done" | "kept"> {
 /** Georgian words of a text, for comparing (numbers left out: the voice says them in words, writers in digits). */
 const wordsOf = (s: string) => s.toLowerCase().replace(/[^ა-ჰ0-9 ]+/g, " ").split(/\s+/).filter((w) => w && !/\d/.test(w));
 
+/**
+ * Words the transcript writes differently from how they are said, so they look left out when they are not:
+ * abbreviations read letter by letter (დე ენ ემის → „დნმ-ის“, პე აში → „pH“) and numbers (ათას რვაას ოცდაორიდან →
+ * „1822-დან“). A run made mostly of these is not counted as left out.
+ */
+const LETTERS = /^(ა|ბე|გე|დე|ე|ვე|ზე|თე|ი|კა|ლა|მი|ნა|ო|პე|ჟე|რა|სა|ტე|უ|ფე|ქა|ღა|ყა|შა|ჩა|ცა|ძა|წა|ჭა|ხა|ჯა|ჰა|ბი|სი|დი|ეფ|ჯი|ეიჩ|ჰაშ|აშ|ელ|ემ|ენ|პი|ერ|ეს|ტი|ვი|იქს|იგრეკ|ზეტ|ცე|ქუ)(ი|ის|ს|ში|შია|ზე|საც|ია|ით|მა|ად|თან|დან|მდე)?$/;
+const NUMBERS = /^(ნულ|ერთ|ორ|სამ|ოთხ|ხუთ|ექვს|შვიდ|რვა|ცხრა|ათ|თერთმეტ|თორმეტ|ცამეტ|თოთხმეტ|თხუთმეტ|თექვსმეტ|ჩვიდმეტ|თვრამეტ|ცხრამეტ|ოც|ორმოც|სამოც|ოთხმოც|ას|მილიონ|მთელ|მეათედ|მეასედ)/;
+const writtenOtherwise = (run: string) => {
+  const words = run.split(" ");
+  const odd = words.filter((w) => LETTERS.test(w) || NUMBERS.test(w) || (w.length <= 3 && !/[აეიოუ]/.test(w))).length;
+  return odd >= words.length * 0.6;
+};
+
 /** Runs of 3 or more words of the text that the transcript does not have (longest common subsequence). */
 function leftOut(text: string[], heard: string[]) {
   const n = text.length;
@@ -569,7 +582,7 @@ function leftOut(text: string[], heard: string[]) {
   let i = 0;
   let j = 0;
   const close = () => {
-    if (run.length >= 3) runs.push(run.join(" "));
+    if (run.length >= 3 && !writtenOtherwise(run.join(" "))) runs.push(run.join(" "));
     run = [];
   };
   while (i < n) {
@@ -610,6 +623,7 @@ async function missing(job: Job): Promise<string[] | null> {
 async function verifyAll(list: Job[]) {
   console.log(`\nverifying ${list.length} recordings…`);
   const bad: Job[] = [];
+  let unchecked = 0;
   // Each check uploads a whole recording: two at a time, and a dropped connection is tried again.
   await pool(list, Math.min(PARALLEL, 2), async (job, n) => {
     let runs: string[] | null = null;
@@ -620,6 +634,7 @@ async function verifyAll(list: Job[]) {
       } catch (err) {
         if (err instanceof DailyLimit || attempt >= 4) {
           console.log(`  [${n + 1}] ${job.id}: not checked (${String(err).slice(0, 120)})`);
+          unchecked++;
           return;
         }
         await sleep(10_000 * attempt);
@@ -631,7 +646,7 @@ async function verifyAll(list: Job[]) {
       bad.push(job);
     }
   });
-  console.log(`verified: ${list.length - bad.length} complete, ${bad.length} with words left out`);
+  console.log(`verified: ${list.length - bad.length - unchecked} complete, ${bad.length} with words left out${unchecked ? `, ${unchecked} not checked` : ""}`);
   return bad;
 }
 
