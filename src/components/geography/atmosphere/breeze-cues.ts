@@ -15,11 +15,13 @@ export interface BreezeShot {
   view: CoastView;
   rays: boolean;
   emph: BreezeEmph | null;
+  /** The picture of straight and slanted sunbeams (what "the angle the rays fall at" means). */
+  beams: boolean;
 }
 
 export const BREEZE_CUES: Cue<BreezeShot>[] = [
   // Introduction.
-  { at: "ზაფხულში ბათუმის", set: { hour: 14, pressure: false, view: "overview", rays: false, emph: null } },
+  { at: "ზაფხულში ბათუმის", set: { hour: 14, pressure: false, view: "overview", rays: false, emph: null, beams: false } },
   { at: "დღისით ზღვიდან გრილი ნიავი", set: { emph: "wind" } },
   { at: "ღამით კი", set: { hour: 2 } },
   { at: "ეს ბრიზია", set: { hour: 14, emph: null } },
@@ -29,8 +31,8 @@ export const BREEZE_CUES: Cue<BreezeShot>[] = [
   { at: "ამოძრავე საათი", set: { emph: null } },
   // What the air's temperature depends on: the sun warms the ground, the ground the air; height.
   { at: "რაზეა დამოკიდებული ჰაერის ტემპერატურა", block: 1, set: { view: "surface", hour: 12, rays: true, pressure: false, emph: "land" } },
-  { at: "დაცემის კუთხეზე", set: { hour: 8.5 } },
-  { at: "დღის ხანგრძლივობაზე", set: { hour: 12.5 } },
+  { at: "დაცემის კუთხეზე", set: { hour: 8.5, beams: true } },
+  { at: "დღის ხანგრძლივობაზე", set: { hour: 12.5, beams: false } },
   { at: "ზედაპირის სახეობაზე", set: { view: "coast", emph: "temps" } },
   { at: "ზღვიდან დაშორებაზე", set: { view: "overview", rays: false, emph: null } },
   { at: "სიმაღლის მატებასთან", set: { view: "mountain", hour: 14, emph: "lapse" } },

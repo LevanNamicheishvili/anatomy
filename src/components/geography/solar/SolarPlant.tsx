@@ -12,6 +12,9 @@ import { SolarInsetCard } from "./insets";
 import { SOLAR_CUES, type SolarLit, type SolarShot } from "./solar-cues";
 import { SolarScene } from "./SolarScene";
 
+/** The angle of incidence in plain words. */
+const plainAngle = (a: number) => (a <= 10 ? "სხივი პირდაპირ ეცემა" : a <= 45 ? "სხივი ცოტა ირიბად ეცემა" : a < 90 ? "სხივი ძალიან ირიბად ეცემა" : "სხივი პანელს არ ეცემა");
+
 /*
  * Topic 9 — how a solar power plant works and why the angle matters. Move the sun (noon elevation) and the
  * panel tilt; the read-out shows the angle of incidence and how much power 1 m² of panel gives.
@@ -137,7 +140,7 @@ export function SolarPlant() {
             მზე · {elevation}°
           </span>
           <span data-at="normal" className={cn("absolute top-0 left-0 rounded bg-card px-1.5 py-0.5 text-ink opacity-0 shadow-sm", lit("normal") && LIT)}>
-            ნორმალი · დაცემის კუთხე {Math.round(r.incidence)}°
+            დაცემის კუთხე {Math.round(r.incidence)}° · {plainAngle(r.incidence)}
           </span>
           <span data-at="inverter" className={cn("absolute top-0 left-0 rounded bg-deep/80 px-1.5 py-0.5 text-white opacity-0", lit("inverter") && LIT)}>
             ინვერტორი: მუდმივი → ცვლადი დენი
@@ -193,8 +196,8 @@ export function SolarPlant() {
         </div>
         <dl className="grid grid-cols-2 gap-2 self-start">
           {[
-            { k: "დაცემის კუთხე", v: `${Math.round(r.incidence)}°` },
-            { k: "cos (დაცემის კუთხე)", v: r.cosine.toFixed(2) },
+            { k: "დაცემის კუთხე (0° — სხივი პირდაპირ ეცემა)", v: `${Math.round(r.incidence)}°` },
+            { k: "პანელს ხვდება სხივის სინათლის", v: `${Math.round(Math.max(0, r.cosine) * 100)}%` },
             { k: "პირდაპირი სხივი", v: `${fmt(r.beam)} ვტ/მ²` },
             { k: "პანელზე ეცემა", v: `${fmt(r.onPanel)} ვტ/მ²` },
             { k: "ელექტროენერგია (ქ.მ.კ. 20%)", v: `${fmt(r.electric)} ვტ` },

@@ -12,6 +12,8 @@ import { GlobeScene } from "../globe/GlobeScene";
 import { MapButton } from "../globe/MapButton";
 import { globePath, pathTube, type GlobePath } from "../globe/paths";
 import { useNarrationDirector } from "@/components/portal/NarrationScene";
+import { InstrumentsCard } from "../lesson/Instruments";
+import { compassName } from "../polaris/sky-data";
 import { VoyageShip } from "./ship";
 import { VOYAGE_CUES, type VoyageShot } from "./voyages-cues";
 import { CONTINENTS, VOYAGES, type Voyage, type VoyageId } from "./voyages-data";
@@ -70,6 +72,9 @@ export function VoyagesGlobe() {
   const [showAll, setShowAll] = useState(false);
   const [map, setMap] = useState(true);
   const globeRef = useRef<GlobeScene | null>(null);
+  /** The ship's compass: her course as an azimuth (set every frame, outside React). */
+  const headingRef = useRef<HTMLDivElement>(null);
+  const [tools, setTools] = useState(false);
   const voyage = VOYAGES.find((v) => v.id === id)!;
 
   const named = voyage.stops.map((s, i) => ({ ...s, i })).filter((s) => s.name);
@@ -121,6 +126,15 @@ export function VoyagesGlobe() {
     const axis = new THREE.Vector3();
     const north = new THREE.Vector3(0, 1, 0);
     let pennant: VoyageId | null = null;
+    const heading = headingRef.current;
+    const needle = heading?.querySelector<HTMLElement>("[data-needle]");
+    const degEl = heading?.querySelector<HTMLElement>("[data-deg]");
+    const nameEl = heading?.querySelector<HTMLElement>("[data-name]");
+    const hp = new THREE.Vector3();
+    const ht = new THREE.Vector3();
+    const hEast = new THREE.Vector3();
+    const hNorth = new THREE.Vector3();
+    let shownAz = -1;
     let last = performance.now();
     let told = 0;
     globe.onFrame = (project) => {
@@ -163,6 +177,19 @@ export function VoyagesGlobe() {
         ship.setColor(cur.voyage.color);
       }
       ship.place(cur.path, cur.len, sim.progress, globe.camera, dt, sailing);
+      // Her course: the way the route runs here, measured from north, clockwise.
+      const u = THREE.MathUtils.clamp(sim.progress, 0.002, 0.998);
+      cur.path.curve.getPointAt(u, hp).normalize();
+      cur.path.curve.getTangentAt(u, ht);
+      hEast.crossVectors(north, hp).normalize();
+      hNorth.crossVectors(hp, hEast);
+      const az = ((Math.atan2(ht.dot(hEast), ht.dot(hNorth)) * 180) / Math.PI + 360) % 360;
+      if (needle && degEl && nameEl && Math.abs(az - shownAz) > 0.5) {
+        shownAz = az;
+        needle.style.transform = `rotate(${az.toFixed(1)}deg)`;
+        degEl.textContent = `${Math.round(az)}°`;
+        nameEl.textContent = compassName(az);
+      }
       for (const b of built.values()) {
         const active = b === cur;
         // The drawn line ends under the stern.
@@ -277,8 +304,9 @@ export function VoyagesGlobe() {
     }
     followRef.current = !s.look;
     if (s.look) globeRef.current?.focus(s.look[0], s.look[1], s.look[2]);
+    setTools(!!s.tools);
   };
-  useNarrationDirector(VOYAGE_CUES, direct);
+  const driving = useNarrationDirector(VOYAGE_CUES, direct);
 
   const choose = (v: VoyageId) => {
     simRef.current.id = v;
@@ -336,6 +364,28 @@ export function VoyagesGlobe() {
           </button>
           <MapButton on={map} onClick={() => setMap((m) => !m)} />
           <FullscreenButton full={fsOn} onClick={fsToggle} />
+        </div>
+        {driving && tools && <InstrumentsCard kind="tools" />}
+        {/* The ship's compass: her course as an azimuth. */}
+        <div ref={headingRef} className="pointer-events-none absolute top-[15.5rem] right-3 flex flex-row-reverse items-center gap-2 rounded-xl bg-card/92 px-2.5 py-2 shadow-sm">
+          <div className="relative size-14 shrink-0 rounded-full border-2 border-[#b8862b] bg-[#f5f0e1] text-[9px] leading-none font-bold">
+            <span className="absolute top-0.5 left-1/2 -translate-x-1/2 text-[#c81e1e]">ჩ</span>
+            <span className="absolute top-1/2 right-0.5 -translate-y-1/2">აღ</span>
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2">ს</span>
+            <span className="absolute top-1/2 left-0.5 -translate-y-1/2">დს</span>
+            <div data-needle className="absolute inset-0 transition-transform duration-300">
+              <svg viewBox="0 0 56 56" className="size-full">
+                <path d="M28 9 L33 30 L28 26 L23 30 Z" fill="#e09f00" stroke="#7a5200" strokeWidth={0.8} />
+              </svg>
+            </div>
+          </div>
+          <div className="text-right text-sm leading-5 max-sm:hidden">
+            <p className="text-[11px] text-mute">გემის კურსი (აზიმუტი)</p>
+            <p className="font-bold tabular-nums">
+              <span data-deg>0°</span>
+            </p>
+            <p data-name className="text-[12px] text-copy" />
+          </div>
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">{current?.name}</p>

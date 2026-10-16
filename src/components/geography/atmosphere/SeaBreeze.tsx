@@ -8,6 +8,7 @@ import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen"
 import { cn } from "@/lib/utils";
 import { breeze, LAPSE } from "./breeze-math";
 import { useNarrationDirector } from "@/components/portal/NarrationScene";
+import { SunAngleCard } from "../lesson/SunAngle";
 import { BREEZE_CUES, type BreezeEmph, type BreezeShot } from "./breeze-cues";
 import { CoastScene, type CoastAnchor } from "./CoastScene";
 
@@ -72,6 +73,7 @@ export function SeaBreeze() {
   const [playing, setPlaying] = useState(false);
   const [pressure, setPressure] = useState(true);
   const [emph, setEmph] = useState<BreezeEmph | null>(null);
+  const [beams, setBeams] = useState(false);
   const b = breeze(hour);
   const day = hour >= 6 && hour < 18;
 
@@ -103,6 +105,7 @@ export function SeaBreeze() {
       if (s.hour !== undefined) glideTo(s.hour);
       if (s.pressure !== undefined) setPressure(s.pressure);
       setEmph(s.emph ?? null);
+      setBeams(!!s.beams);
       sceneRef.current?.view(s.view ?? "overview");
       sceneRef.current?.setRays(!!s.rays);
     },
@@ -166,6 +169,15 @@ export function SeaBreeze() {
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ზღვის სანაპიროს ჭრილი: ბრიზი" />
+        {narrated && beams && (
+          <SunAngleCard
+            lit={null}
+            title="სხივების დაცემის კუთხე — მარტივად"
+            high={{ alt: 75, title: "მზე მაღლაა", note: "სხივი პირდაპირ → ცხელა" }}
+            low={{ alt: 22, title: "მზე დაბლაა", note: "სხივი ირიბად → გრილა" }}
+            note="„დაცემის კუთხე“ ნიშნავს, რამდენად პირდაპირ ან ირიბად ეცემა სხივი მიწას. ეკვატორთან და ზაფხულში მზე მაღლაა — ცხელა; პოლუსებთან და ზამთარში დაბლაა — გრილა."
+          />
+        )}
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           <span data-at="sea" className={cn(glow("sea"), "absolute top-0 left-0 flex items-center gap-1 rounded bg-card/90 px-1.5 py-0.5 text-ink opacity-0 shadow-sm")}>
             <Thermometer className="size-3.5 text-[#2f6fb0]" />

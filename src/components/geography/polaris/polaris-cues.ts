@@ -5,7 +5,8 @@ import type { SkyLit, SkyView } from "./SkyScene";
  * What the night sky shows while the narration reads the lesson (geography-lessons.ts, "polaris"): where the
  * camera looks, the latitude and the sky's turn (sidereal time, hours), whether the sky turns by itself, what
  * lights up, the pointer line drawn out to Polaris, the stars' circles round the pole, the axis to the celestial
- * pole, the altitude arc, and the azimuth arrow on the ground (a pair sweeps from the first angle to the second).
+ * pole, the altitude arc, the azimuth arrow on the ground (a pair sweeps from the first angle to the second), and a
+ * picture over the sky for what the sky cannot show (the instruments, the azimuth on Georgia's map and on a voyage).
  */
 
 export interface PolarisShot {
@@ -23,6 +24,11 @@ export interface PolarisShot {
   azArc: boolean;
   /** The place the azimuth points to (from Tbilisi). */
   place: string | null;
+  /**
+   * A picture over the sky: the astrolabe and the sextant, the compass measuring an azimuth, Georgia's map with the
+   * azimuth from Tbilisi to the town named, Vasco da Gama's course told in azimuths.
+   */
+  inset: "instruments" | "compass" | "georgia" | "gama" | null;
 }
 
 const TBILISI_LAT = 41.7;
@@ -30,7 +36,7 @@ const TBILISI_LAT = 41.7;
 const DIPPER_SIDE = 18;
 /** The Big Dipper low over the northern horizon, Cassiopeia high above Polaris. */
 const DIPPER_LOW = 0.5;
-const CLEAR = { pointer: "off", trails: false, axis: false, arc: false, az: null, azArc: false, place: null } as const;
+const CLEAR = { pointer: "off", trails: false, axis: false, arc: false, az: null, azArc: false, place: null, inset: null } as const;
 
 export const POLARIS_CUES: Cue<PolarisShot>[] = [
   // Introduction.
@@ -69,8 +75,8 @@ export const POLARIS_CUES: Cue<PolarisShot>[] = [
   { at: "ეკვატორზე (0°)", set: { lat: 0 } },
   { at: "ჩრდილოეთ პოლუსზე (90°)", set: { lat: 90 } },
   { at: "თბილისში (41,7°", set: { lat: TBILISI_LAT } },
-  { at: "ასე ადგენდნენ მეზღვაურები", set: { view: "north" } },
-  { at: "სამხრეთ ნახევარსფეროში", set: { view: "side", lat: -30, time: 12.5, arc: false } },
+  { at: "ასე ადგენდნენ მეზღვაურები", set: { view: "north", inset: "instruments" } },
+  { at: "სამხრეთ ნახევარსფეროში", set: { view: "side", lat: -30, time: 12.5, arc: false, inset: null } },
   { at: "სამხრეთის ჯვარს", set: { view: "south", lit: ["crux"] } },
   // Azimuth.
   { at: "აზიმუტი", block: 4, set: { view: "ground", lat: TBILISI_LAT, time: DIPPER_SIDE, turning: false, lit: ["n"], ...CLEAR, az: 0, azArc: true } },
@@ -79,9 +85,9 @@ export const POLARIS_CUES: Cue<PolarisShot>[] = [
   { at: "აღმოსავლეთი — 90°", set: { az: 90, lit: ["e"] } },
   { at: "სამხრეთი — 180°", set: { az: 180, lit: ["s"] } },
   { at: "დასავლეთი — 270°", set: { az: 270, lit: ["w"] } },
-  { at: "აზიმუტს კომპასით", set: { az: [0, 60], lit: ["n"] } },
-  { at: "თბილისიდან ყაზბეგი", set: { az: 353.3, lit: [], place: "ყაზბეგი" } },
+  { at: "აზიმუტს კომპასით", set: { az: [0, 60], lit: ["n"], inset: "compass" } },
+  { at: "თბილისიდან ყაზბეგი", set: { az: 353.3, lit: [], place: "ყაზბეგი", inset: "georgia" } },
   { at: "თელავი", block: 4, set: { az: 68.2, place: "თელავი" } },
   { at: "ბათუმი", block: 4, set: { az: 269.1, place: "ბათუმი" } },
-  { at: "ტყეში ან მთაში", set: { place: null } },
+  { at: "ტყეში ან მთაში", set: { place: null, inset: "gama" } },
 ];

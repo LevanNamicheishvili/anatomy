@@ -1,16 +1,18 @@
 "use client";
 
 import { SceneInset } from "../lesson/SceneInset";
+import { SunAngleCard } from "../lesson/SunAngle";
 
 /*
  * Pictures the narration puts over the solar plant for what the 3D scene cannot show: inside a photovoltaic cell,
- * direct current turned into alternating, the same beam spread over a bigger area when it falls slantwise, and the
- * longer way low sunlight takes through the air.
+ * direct current turned into alternating, what the angle of incidence means in plain words (straight or slanted
+ * light), the same beam spread over a bigger area when it falls slantwise, and the longer way low sunlight takes
+ * through the air.
  */
 
-export type SolarInset = "cell" | "dcac" | "spread" | "airmass";
+export type SolarInset = "cell" | "dcac" | "angle" | "angle-straight" | "spread" | "airmass";
 
-const TITLES: Record<SolarInset, string> = {
+const TITLES: Record<Exclude<SolarInset, "angle" | "angle-straight">, string> = {
   cell: "ფოტოელემენტი: სინათლე → დენი",
   dcac: "ინვერტორი: მუდმივი დენი → ცვლადი დენი",
   spread: "დახრილი სხივი უფრო დიდ ფართობზე ნაწილდება",
@@ -18,6 +20,17 @@ const TITLES: Record<SolarInset, string> = {
 };
 
 export function SolarInsetCard({ inset }: { inset: SolarInset }) {
+  if (inset === "angle" || inset === "angle-straight")
+    return (
+      <SunAngleCard
+        lit={inset === "angle" ? null : "high"}
+        title="დაცემის კუთხე — მარტივად"
+        high={{ alt: 90, title: "კუთხე 0°: პირდაპირ", note: "ბევრი დენი" }}
+        low={{ alt: 35, title: "კუთხე 55°: ირიბად", note: "ნაკლები დენი" }}
+        note="დაცემის კუთხე გვიჩვენებს, რამდენად ირიბად ეცემა სხივი პანელს. 0° — სხივი პირდაპირ ეცემა და პანელს ყველაზე მეტი სინათლე ხვდება; რაც მეტია კუთხე, მით უფრო იშლება სინათლე და ნაკლებ დენს იძლევა."
+        ground="#3a6fd8"
+      />
+    );
   return (
     <SceneInset title={TITLES[inset]}>
       <svg viewBox="0 0 240 140" className="block w-full rounded-lg bg-[#0d1726]" role="img" aria-label={TITLES[inset]}>

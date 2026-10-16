@@ -4,7 +4,7 @@ import type { VoyageId } from "./voyages-data";
 /*
  * What the voyages globe shows while the narration reads the lesson (geography-lessons.ts, "discoveries"): which
  * voyage, the named stop the ship sails to while the voice tells that leg (the camera riding along), all the
- * routes and the continents, or the camera on a place the voice talks about.
+ * routes and the continents, or the camera on a place the voice talks about; and the navigators' instruments.
  */
 
 export interface VoyageShot {
@@ -15,19 +15,22 @@ export interface VoyageShot {
   all: boolean;
   /** Where the camera looks when it does not ride with the ship: latitude, longitude, distance. */
   look: [number, number, number] | null;
+  /** The compass and the astrolabe drawn over the scene. */
+  tools: boolean;
 }
 
 export const VOYAGE_CUES: Cue<VoyageShot>[] = [
   // Introduction.
-  { at: "XV საუკუნის ბოლოს", set: { voyage: "columbus", to: 0, all: false, look: [42, 25, 3.3] } },
+  { at: "XV საუკუნის ბოლოს", set: { voyage: "columbus", to: 0, all: false, look: [42, 25, 3.3], tools: false } },
   { at: "ოკეანეები გადაცურეს", set: { all: true, look: [15, -25, 4.2] } },
   { at: "გაჰყევი სამ ყველაზე", set: { look: [10, -10, 4.6] } },
   // Why they went to sea.
   { at: "რატომ წავიდნენ ზღვაში", block: 1, set: { all: false, look: [32, 55, 3.6] } },
   { at: "ესპანეთი და პორტუგალია", set: { look: [39, -7, 3.0] } },
   { at: "ამას ახალი ტექნიკა", set: { voyage: "columbus", to: 0, look: [37.2, -6.9, 1.7] } },
+  { at: "კომპასი, ასტროლაბია", set: { tools: true } },
   // Columbus.
-  { at: "კოლუმბი: ამერიკა", block: 2, set: { voyage: "columbus", to: 0, all: false, look: null } },
+  { at: "კოლუმბი: ამერიკა", block: 2, set: { voyage: "columbus", to: 0, all: false, look: null, tools: false } },
   { at: "კანარის კუნძულებიდან", set: { to: 1 } },
   { at: "12 ოქტომბერს ბაჰამის", set: { to: 4 } },
   { at: "შემდეგ კუბა", set: { to: 6 } },

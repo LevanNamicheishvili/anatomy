@@ -10,6 +10,26 @@ const D = Math.PI / 180;
 export const MONTHS = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
+/** Month (0–11) of a day of the year (1–365). */
+export function monthOf(day: number) {
+  let d = Math.round(day);
+  for (let m = 0; m < 12; m++) {
+    if (d <= MONTH_DAYS[m]) return m;
+    d -= MONTH_DAYS[m];
+  }
+  return 11;
+}
+
+export type Season = "winter" | "spring" | "summer" | "autumn";
+export const SEASON_NAMES: Record<Season, string> = { winter: "ზამთარი", spring: "გაზაფხული", summer: "ზაფხული", autumn: "შემოდგომა" };
+
+/** The season by the calendar months (winter: December–February), in the northern or the southern half. */
+export function seasonOf(day: number, south = false): Season {
+  const order: Season[] = ["winter", "spring", "summer", "autumn"];
+  const k = Math.floor(((monthOf(day) + 1) % 12) / 3);
+  return order[south ? (k + 2) % 4 : k];
+}
+
 /** Day of the year (1–365) → "21 ივნისი". */
 export function dateLabel(day: number) {
   let d = Math.round(day);
@@ -81,19 +101,30 @@ export interface City {
   lon: number;
   /** Standard UTC offset, hours. */
   utc: number;
-  /** Summer time (+1 h) between these days of the year, if the country uses it. */
+  /** Summer time (+1 h) from the first day to the second (round the new year when the first is later). */
   dst?: [number, number];
+  /** Average temperature of each month, °C (climate normals, rounded). */
+  temps: number[];
 }
 
 export const CITIES: City[] = [
-  { id: "tbilisi", name: "თბილისი", lat: 41.72, lon: 44.79, utc: 4 },
-  { id: "london", name: "ლონდონი", lat: 51.5, lon: -0.13, utc: 0, dst: [88, 298] },
-  { id: "new-york", name: "ნიუ-იორკი", lat: 40.71, lon: -74.01, utc: -5, dst: [68, 305] },
-  { id: "tokyo", name: "ტოკიო", lat: 35.68, lon: 139.69, utc: 9 },
+  { id: "tbilisi", name: "თბილისი", lat: 41.72, lon: 44.79, utc: 4, temps: [1, 3, 7, 13, 18, 22, 25, 25, 20, 14, 7, 3] },
+  { id: "london", name: "ლონდონი", lat: 51.5, lon: -0.13, utc: 0, dst: [88, 298], temps: [5, 5, 7, 10, 13, 16, 19, 18, 16, 12, 8, 6] },
+  { id: "new-york", name: "ნიუ-იორკი", lat: 40.71, lon: -74.01, utc: -5, dst: [68, 305], temps: [0, 2, 6, 12, 17, 22, 25, 25, 21, 14, 9, 3] },
+  { id: "tokyo", name: "ტოკიო", lat: 35.68, lon: 139.69, utc: 9, temps: [5, 6, 9, 15, 19, 22, 26, 27, 24, 18, 13, 8] },
+  { id: "sydney", name: "სიდნეი", lat: -33.87, lon: 151.21, utc: 10, dst: [278, 96], temps: [23, 23, 22, 19, 16, 13, 12, 13, 16, 18, 20, 22] },
 ];
 
 export function cityOffset(c: City, day: number) {
-  return c.utc + (c.dst && day >= c.dst[0] && day < c.dst[1] ? 1 : 0);
+  if (!c.dst) return c.utc;
+  const [a, b] = c.dst;
+  return c.utc + ((a < b ? day >= a && day < b : day >= a || day < b) ? 1 : 0);
+}
+
+/** The month's average temperature in a city, as a forecast shows it: "+25°". */
+export function cityTemp(c: City, day: number) {
+  const t = c.temps[monthOf(day)];
+  return `${t > 0 ? "+" : t < 0 ? "−" : ""}${Math.abs(t)}°`;
 }
 
 export const TBILISI_UTC = 4;

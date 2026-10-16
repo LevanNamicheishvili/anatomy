@@ -59,6 +59,7 @@ export class GlobeScene {
   private sunView = new THREE.Vector3();
   private camDir = new THREE.Vector3();
   private disposed = false;
+  private paused = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -125,6 +126,17 @@ export class GlobeScene {
   /** Borders and names on or off. */
   setMapVisible(on: boolean) {
     this.map.group.visible = on;
+  }
+
+  /** Stop drawing while the scene is hidden (another view of the lesson is shown in its place). */
+  setPaused(paused: boolean) {
+    if (paused === this.paused) return;
+    this.paused = paused;
+    if (!paused) {
+      cancelAnimationFrame(this.frame);
+      this.last = performance.now();
+      this.loop();
+    }
   }
 
   setAutoRotate(on: boolean) {
@@ -213,7 +225,7 @@ export class GlobeScene {
   }
 
   private loop = () => {
-    if (this.disposed) return;
+    if (this.disposed || this.paused) return;
     this.frame = requestAnimationFrame(this.loop);
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.last) / 1000);

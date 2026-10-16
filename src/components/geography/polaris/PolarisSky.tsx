@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNarrationDirector } from "@/components/portal/NarrationScene";
-import { Compass, MapPin, Pause, Play, Star } from "lucide-react";
+import { Compass, MapPin, Pause, Play, Ruler, Star } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { bearing, compassName, horizonDir, LATITUDES, POLARIS, TARGETS, TBILISI } from "./sky-data";
 import { POLARIS_CUES, type PolarisShot } from "./polaris-cues";
 import { SkyScene, type SkyAnchor, type SkyLit } from "./SkyScene";
+import { GamaAzimuthCard, GeorgiaAzimuthCard } from "./AzimuthMaps";
+import { InstrumentsCard } from "../lesson/Instruments";
 
 /*
  * Topic 5 — finding north by Polaris, and the azimuth. The sky turns round Polaris; its height above the
@@ -54,6 +56,13 @@ export function PolarisSky() {
   const [playing, setPlaying] = useState(false);
   const [step, setStep] = useState(0);
   const [az, setAz] = useState(0);
+  /** The pupil's own pictures: Georgia's map with the azimuth to a town, the astrolabe and the sextant. */
+  const [mapPlace, setMapPlace] = useState<string | null>(null);
+  const [tools, setTools] = useState(false);
+  const turnTo = (a: number) => {
+    setAz(a);
+    setMapPlace(null);
+  };
   /** Set by the narration. */
   const [shot, setShot] = useState<Partial<PolarisShot> | null>(null);
   const glides = useRef({ lat: 0, time: 0, az: 0 });
@@ -161,6 +170,7 @@ export function PolarisSky() {
   const hideArc = (narr ? !narr.arc : !(step === 0 || step === 3)) || polAlt <= 0;
   const hideAz = narr ? narr.az === null || narr.az === undefined : !(step === 0 || step === 4);
   const lit = new Set((narr?.lit ?? []).flatMap((k) => LIT_LABELS[k]));
+  const inset = narr ? (narr.inset ?? null) : mapPlace ? "georgia" : tools ? "instruments" : null;
 
   return (
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
@@ -179,6 +189,11 @@ export function PolarisSky() {
             აზიმუტი {Math.round(az)}°{narr?.place ? ` · ${narr.place}` : ""}
           </span>
         </div>
+
+        {inset === "instruments" && <InstrumentsCard kind="star-height" />}
+        {inset === "compass" && <InstrumentsCard kind="azimuth" />}
+        {inset === "georgia" && <GeorgiaAzimuthCard place={narr ? (narr.place ?? null) : mapPlace} />}
+        {inset === "gama" && <GamaAzimuthCard />}
 
         <div className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-lg bg-card/92 px-3 py-2 text-sm shadow-sm">
           <p className="font-semibold">განედი: {lat === 0 ? "0° (ეკვატორი)" : `${fmtDeg(Math.abs(lat))} ${lat > 0 ? "ჩ. გ." : "ს. გ."}`}</p>
@@ -233,6 +248,18 @@ export function PolarisSky() {
             ))}
           </ol>
           <LabeledSlider label="შენი განედი" value={lat} display={fmtDeg(lat)} min={-30} max={90} step={0.1} onChange={setLat} color="#2f6fb0" className="mt-4" />
+          <button
+            type="button"
+            onClick={() => {
+              setTools(!tools);
+              setMapPlace(null);
+            }}
+            aria-pressed={tools}
+            className={cn("mt-3 flex h-9 items-center gap-1.5 rounded-full px-3 text-sm", tools ? "bg-deep font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
+          >
+            <Ruler className="size-4" />
+            რით ზომავდნენ: ასტროლაბია და სექსტანტი
+          </button>
           <LabeledSlider label="ცის ბრუნვა (ღამის საათები)" value={time} display={`${Math.round(time * 15)}°`} min={0} max={23.95} step={0.05} onChange={setTime} color="#2f6fb0" className="mt-3" />
           <p className="mt-2 text-[13px] leading-5 text-mute">
             {lat < 0
@@ -248,10 +275,10 @@ export function PolarisSky() {
               აზიმუტი
             </p>
             <p className="mt-1 text-[13px] leading-5 text-mute">კუთხე ჩრდილოეთის მიმართულებიდან საგნის მიმართულებამდე, საათის ისრის მოძრაობით (0°–360°).</p>
-            <LabeledSlider label={compassName(az)} value={Math.round(az)} display={`${Math.round(az)}°`} min={0} max={359} onChange={setAz} color="#2f6fb0" className="mt-2" />
+            <LabeledSlider label={compassName(az)} value={Math.round(az)} display={`${Math.round(az)}°`} min={0} max={359} onChange={turnTo} color="#2f6fb0" className="mt-2" />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {[0, 90, 180, 270].map((a) => (
-                <button key={a} type="button" onClick={() => setAz(a)} className={cn("h-8 rounded-full px-3 text-sm", Math.round(az) === a ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}>
+                <button key={a} type="button" onClick={() => turnTo(a)} className={cn("h-8 rounded-full px-3 text-sm", Math.round(az) === a ? "bg-[#2f6fb0] font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}>
                   {a}°
                 </button>
               ))}
@@ -273,6 +300,8 @@ export function PolarisSky() {
                     onClick={() => {
                       setAz(b);
                       setStep(0);
+                      setMapPlace(t.name);
+                      setTools(false);
                     }}
                     className={cn("h-8 rounded-full px-3 text-sm", on ? "bg-deep font-semibold text-white" : "bg-[#f1f4f3] text-copy hover:bg-[#e6ecea]")}
                   >

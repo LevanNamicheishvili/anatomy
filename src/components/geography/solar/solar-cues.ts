@@ -40,9 +40,9 @@ export const SOLAR_CUES: Cue<SolarShot>[] = [
   { at: "და ენერგია ელექტროქსელში", set: { view: "grid", lit: ["grid"] } },
   // Why the angle matters.
   { at: "რატომ არის მნიშვნელოვანი კუთხე", block: 2, set: { view: "panel", ...RESET, lit: ["normal"] } },
-  { at: "სხივის დაცემის კუთხე არის", set: { lit: ["normal", "sun"] } },
-  { at: "როცა სხივი პანელს მართობულად", set: { tilt: 90 - EQUINOX, lit: ["normal"] } },
-  { at: "1 მ²-ზე ყველაზე მეტი", set: { lit: ["power"] } },
+  { at: "სხივის დაცემის კუთხე არის", set: { lit: ["normal", "sun"], inset: "angle" } },
+  { at: "როცა სხივი პანელს მართობულად", set: { tilt: 90 - EQUINOX, lit: ["normal"], inset: "angle-straight" } },
+  { at: "1 მ²-ზე ყველაზე მეტი", set: { lit: ["power"], inset: null } },
   { at: "დახრილი სხივი", set: { elevation: 45, tilt: 0, lit: ["normal", "power"], inset: "spread" } },
   { at: "დაბალი მზის შუქი", set: { elevation: 12, tilt: 35, lit: ["sun"], inset: "airmass" } },
   { at: "ამიტომ ზამთარში", set: { view: "overview", elevation: 25, lit: ["sun", "power"], inset: null } },
