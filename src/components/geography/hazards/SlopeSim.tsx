@@ -23,7 +23,7 @@ import { evaluate, type SlopeInput } from "./slope-math";
  *  - Avalanche: a dense snow slab breaks up and flows; a billowing powder cloud grows and outruns it.
  */
 
-const PRESETS: Record<HazardKind, SlopeInput> = {
+export const PRESETS: Record<HazardKind, SlopeInput> = {
   landslide: { angle: 28, water: 0.3, snow: 0, forest: false },
   mudflow: { angle: 22, water: 0.3, snow: 0, forest: false },
   avalanche: { angle: 38, water: 0, snow: 20, forest: false },
@@ -1236,6 +1236,49 @@ class SlopeScene {
 }
 
 /* ------------------------------------------------------------------ component */
+
+/**
+ * The slope model alone, set from outside (the narration): the slope is rebuilt when the input changes and the
+ * model runs whenever `run` changes (and is above 0).
+ */
+export function SlopeView({ kind, input, run }: { kind: HazardKind; input: SlopeInput; run: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<SlopeScene | null>(null);
+  const [failed, setFailed] = useState(false);
+  const triggered = evaluate(kind, input).triggered;
+  const key = `${kind} ${input.angle} ${input.water} ${input.snow} ${input.forest}`;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const scene = new SlopeScene(canvas, kind);
+      sceneRef.current = scene;
+      return () => {
+        scene.dispose();
+        sceneRef.current = null;
+      };
+    } catch {
+      setFailed(true);
+    }
+  }, [kind]);
+  useEffect(() => {
+    sceneRef.current?.setInput(input, triggered);
+    // The key stands for the input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  useEffect(() => {
+    if (run > 0) sceneRef.current?.run();
+  }, [run, kind]);
+
+  return (
+    <div className="relative size-full bg-[linear-gradient(#cfe6f7,#eef6fb)]">
+      <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" role="img" aria-label={`ფერდობის მოდელი: ${HAZARD_INFO[kind].name}`} />
+      <span className="pointer-events-none absolute bottom-2 left-3 rounded bg-card/85 px-1.5 py-0.5 text-xs font-bold text-ink">{input.angle}°</span>
+      {failed && <p className="absolute inset-0 flex items-center justify-center text-sm text-copy">3D ვერ ჩაიტვირთა</p>}
+    </div>
+  );
+}
 
 export function SlopeSim({ kind }: { kind: HazardKind }) {
   const [input, setInput] = useState<SlopeInput>(PRESETS[kind]);

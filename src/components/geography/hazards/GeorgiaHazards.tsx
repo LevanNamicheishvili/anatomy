@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
 import { HeroView } from "../heroes/HeroView";
+import { HAZARD_CUES, type HazardShot } from "./hazards-cues";
 import { HAZARD_INFO, HAZARD_ZONES, type HazardKind, type HazardZone } from "./hazards-data";
-import { SlopeSim } from "./SlopeSim";
+import { SlopeForces } from "./SlopeForces";
+import { SlopeSim, SlopeView } from "./SlopeSim";
 
 /*
  * Topic 7 — landslides, mudflows and avalanches. Top: the Georgia relief map (the same GeorgiaScene as the
@@ -27,6 +30,8 @@ export function GeorgiaHazards() {
   const [kind, setKind] = useState<HazardKind>("landslide");
   const [active, setActive] = useState<HazardZone | null>(null);
   const info = HAZARD_INFO[kind];
+  /** Set by the narration. */
+  const [shot, setShot] = useState<Partial<HazardShot> | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,6 +81,24 @@ export function GeorgiaHazards() {
     setActive(null);
   };
 
+  const last = useRef<Partial<HazardShot>>({});
+  const direct = (s: Partial<HazardShot>, jump: boolean) => {
+    const before = last.current;
+    last.current = s;
+    if (jump || s.focus !== before.focus) {
+      const z = HAZARD_ZONES.find((x) => x.id === s.focus);
+      if (z) sceneRef.current?.flyTo(z.lon, z.lat, Math.max(0.5, z.r * 5), Math.max(0.4, z.r * 3.5));
+      else sceneRef.current?.home();
+    }
+    if (s.kinds?.length === 1) setKind(s.kinds[0]);
+    setActive(null);
+    setShot(s);
+  };
+  const driving = useNarrationDirector(HAZARD_CUES, direct);
+  const narr = driving ? shot : null;
+  const shownKinds = narr?.kinds ?? [kind];
+  const lit = new Set(narr?.lit ?? []);
+
   return (
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#dfe7ea]", sceneFrame)} data-scene>
@@ -83,14 +106,23 @@ export function GeorgiaHazards() {
         <FullscreenButton full={fsOn} onClick={fsToggle} className="absolute top-[3.75rem] right-3" />
         <div ref={labelsRef} className="absolute inset-0 overflow-hidden">
           {HAZARD_ZONES.map((z) => (
-            <button key={z.id} type="button" data-id={z.id} data-on={z.kind === kind ? "1" : "0"} onClick={() => open(z)} className={cn("absolute top-0 left-0 size-0 opacity-0 transition-opacity", active?.id === z.id && "z-10")}>
+            <button key={z.id} type="button" data-id={z.id} data-on={shownKinds.includes(z.kind) || lit.has(z.id) ? "1" : "0"} onClick={() => open(z)} className={cn("absolute top-0 left-0 size-0 opacity-0 transition-opacity", (active?.id === z.id || lit.has(z.id)) && "z-10")}>
               <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 rounded-full border-2" style={{ borderColor: HAZARD_INFO[z.kind].color, backgroundColor: `${HAZARD_INFO[z.kind].color}33` }} />
-              <span className={cn("absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[12px] font-semibold whitespace-nowrap text-white shadow-md", active?.id === z.id && "ring-2 ring-white")} style={{ backgroundColor: HAZARD_INFO[z.kind].color }}>
+              <span className={cn("absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[12px] font-semibold whitespace-nowrap text-white shadow-md", active?.id === z.id && "ring-2 ring-white", lit.has(z.id) && "text-[15px] ring-2 ring-[#ffd76a]")} style={{ backgroundColor: HAZARD_INFO[z.kind].color }}>
                 {z.name}
               </span>
             </button>
           ))}
         </div>
+        {narr?.panel && (
+          <div className="absolute inset-x-3 top-14 bottom-24 z-20 mx-auto max-w-4xl overflow-hidden rounded-xl shadow-xl ring-1 ring-black/10 sm:bottom-28">
+            {narr.panel === "forces" ? (
+              <SlopeForces angle={narr.angle ?? 30} water={narr.water ?? 0} snow={narr.snow ?? 0} roots={!!narr.forest} push={!!narr.push} emph={narr.emph ?? null} />
+            ) : (
+              <SlopeView kind={narr.slope ?? "landslide"} input={{ angle: narr.angle ?? 28, water: narr.water ?? 0, snow: narr.snow ?? 0, forest: !!narr.forest }} run={narr.go ?? 0} />
+            )}
+          </div>
+        )}
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">
