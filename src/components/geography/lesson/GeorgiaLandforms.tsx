@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { Loader2, RotateCcw } from "lucide-react";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { GeorgiaScene } from "../GeorgiaScene";
+import { Delta } from "../oceans/RiverPanel";
 import { WaterfallView } from "../waterfall/WaterfallView";
 import { WATERFALL_IDS, type WaterfallId } from "../waterfall/waterfall-data";
+import { CanyonDiagram, CourseDiagram, UpliftDiagram, WaterfallDiagram } from "./LandformDiagrams";
+import { LANDFORM_CUES, type LandformShot } from "./landforms-cues";
 import { KIND_INFO, RIVER_LANDFORMS, type LandformKind, type RiverLandform } from "./landforms-data";
 
 /*
@@ -72,6 +76,27 @@ export function GeorgiaLandforms() {
   };
   const info = KIND_INFO[kind];
 
+  /** Set by the narration. */
+  const [shot, setShot] = useState<Partial<LandformShot> | null>(null);
+  const last = useRef<Partial<LandformShot>>({});
+  const direct = (s: Partial<LandformShot>, jump: boolean) => {
+    const before = last.current;
+    last.current = s;
+    if (jump || JSON.stringify(s.focus) !== JSON.stringify(before.focus)) {
+      const f = typeof s.focus === "string" ? RIVER_LANDFORMS.find((x) => x.id === s.focus) : null;
+      if (f) sceneRef.current?.flyTo(f.lon, f.lat, f.span, f.span * 0.7);
+      else if (Array.isArray(s.focus)) sceneRef.current?.flyTo(s.focus[0], s.focus[1], s.focus[2], s.focus[2] * 0.7);
+      else sceneRef.current?.home();
+    }
+    if (s.kinds?.length === 1) setKind(s.kinds[0]);
+    setActive(null);
+    setShot(s);
+  };
+  const driving = useNarrationDirector(LANDFORM_CUES, direct);
+  const narr = driving ? shot : null;
+  const shownKinds = narr?.kinds ?? [kind];
+  const lit = new Set(narr?.lit ?? []);
+
   return (
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#dfe7ea]", sceneFrame)} data-scene>
@@ -83,14 +108,14 @@ export function GeorgiaLandforms() {
               key={f.id}
               type="button"
               data-id={f.id}
-              data-on={f.kind === kind ? "1" : "0"}
+              data-on={shownKinds.includes(f.kind) || lit.has(f.id) ? "1" : "0"}
               onClick={() => open(f)}
               className={cn(
                 "absolute top-0 left-0 flex flex-col items-center opacity-0 transition-opacity",
-                active?.id === f.id ? "z-10" : "",
+                active?.id === f.id || lit.has(f.id) ? "z-10" : "",
               )}
             >
-              <span className={cn("rounded-md px-2 py-1 text-[12px] font-semibold whitespace-nowrap text-white shadow-md", active?.id === f.id && "ring-2 ring-white")} style={{ backgroundColor: KIND_INFO[f.kind].color }}>
+              <span className={cn("rounded-md px-2 py-1 text-[12px] font-semibold whitespace-nowrap text-white shadow-md", active?.id === f.id && "ring-2 ring-white", lit.has(f.id) && "text-[15px] ring-2 ring-[#ffd76a]")} style={{ backgroundColor: KIND_INFO[f.kind].color }}>
                 {f.name}
               </span>
               <span className="h-3 w-0.5 bg-card" />
@@ -98,6 +123,21 @@ export function GeorgiaLandforms() {
             </button>
           ))}
         </div>
+        {narr?.panel && (
+          <div className="absolute inset-x-3 top-14 bottom-24 z-20 mx-auto max-w-4xl overflow-hidden rounded-xl shadow-xl ring-1 ring-black/10 sm:bottom-28">
+            {narr.panel === "course" ? (
+              <CourseDiagram zone={narr.zone ?? null} />
+            ) : narr.panel === "uplift" ? (
+              <UpliftDiagram />
+            ) : narr.panel === "canyon" ? (
+              <CanyonDiagram />
+            ) : narr.panel === "waterfall" ? (
+              <WaterfallDiagram stage={narr.stage ?? "layers"} />
+            ) : (
+              <Delta />
+            )}
+          </div>
+        )}
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 text-sm font-semibold text-copy shadow-sm">

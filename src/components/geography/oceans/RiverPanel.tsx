@@ -132,7 +132,7 @@ export function RiverPanel({ mode }: { mode: RiverMode }) {
 }
 
 /** A delta: the river slows at the sea, drops its silt and splits into arms; the land grows into the sea. */
-function Delta() {
+export function Delta() {
   return (
     <div className="flex size-full flex-col bg-[#0d1726]">
       <p className="px-4 pt-3 pb-2 text-center text-[15px] font-semibold text-white">{TITLES.delta}</p>
