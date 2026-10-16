@@ -355,6 +355,27 @@ const ANCHORS = {
 };
 export type VolcanoAnchor = keyof typeof ANCHORS;
 
+/** A view looking straight at the cross-section, centred a little below `[x, y]` (subtitles run along the bottom). */
+const look = (x: number, y: number, dist: number, up = 0.8) => {
+  const target = new THREE.Vector3(x, y - dist * 0.07, 0);
+  return [new THREE.Vector3(x, target.y + up, dist), target] as const;
+};
+/** Where the narration sends the camera. */
+export const VOLCANO_VIEWS = {
+  overview: [new THREE.Vector3(0, -0.4, 27.5), new THREE.Vector3(0, -3.1, 0)],
+  trench: look(-2, -2.6, 14),
+  mantle: look(1, -6.5, 17),
+  melt: look(5.2, -5.4, 13),
+  rise: look(6.4, -3.6, 14),
+  chamber: look(7.5, -1.4, 12.5),
+  volcano: look(7.5, 1.6, 15),
+  eruption: look(7.2, 3.4, 20, 1.2),
+  quake: look(-0.5, -2.2, 15),
+  ocean: look(-8, -0.6, 15),
+  coast: look(COAST + 1.5, 0.2, 13),
+} as const;
+export type VolcanoView = keyof typeof VOLCANO_VIEWS;
+
 interface Particle {
   p: THREE.Vector3;
   v: THREE.Vector3;
@@ -390,6 +411,11 @@ export class VolcanoScene {
   private step: VolcanoStep = "plates";
   private t = 0;
   private eventT = 0;
+  /** The event of the step waits (the stress before an earthquake builds while the voice tells of it). */
+  private held = false;
+  private heldT = 0;
+  private stress: THREE.Mesh;
+  private flight: { from: [THREE.Vector3, THREE.Vector3]; to: readonly [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
   private groups: Record<"plates" | "magma" | "eruption" | "quake", THREE.Group> = { plates: new THREE.Group(), magma: new THREE.Group(), eruption: new THREE.Group(), quake: new THREE.Group() };
   private blobs: THREE.Mesh[] = [];
   private rings: THREE.Mesh[] = [];
@@ -589,7 +615,11 @@ export class VolcanoScene {
       this.rings.push(r);
       this.groups.quake.add(r);
     }
-    this.scene.add(this.groups.plates, this.groups.magma, this.groups.eruption, this.groups.quake);
+    // Stress building where the plates are locked, before they slip.
+    this.stress = new THREE.Mesh(new THREE.ShapeGeometry(ellipse(FOCUS.x, FOCUS.y, 1.4, 0.7), 32), new THREE.MeshBasicMaterial({ color: "#ff2a1a", transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.stress.position.z = FZ + 0.015;
+    this.stress.visible = false;
+    this.scene.add(this.groups.plates, this.groups.magma, this.groups.eruption, this.groups.quake, this.stress);
 
     this.camera.position.set(0, -0.4, 27.5);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -602,6 +632,7 @@ export class VolcanoScene {
     this.controls.minAzimuthAngle = -Math.PI / 3;
     this.controls.maxAzimuthAngle = Math.PI / 3;
     this.controls.maxPolarAngle = Math.PI * 0.62;
+    this.controls.addEventListener("start", () => (this.flight = null));
     // Plain wheel scrolls the page; zoom only with Ctrl/Cmd + wheel (trackpad pinch sends ctrlKey).
     this.wheelGate = (e: WheelEvent) => {
       this.controls.enableZoom = e.ctrlKey || e.metaKey;
@@ -649,8 +680,28 @@ export class VolcanoScene {
     this.restart();
   }
 
+  /** Fly the camera to a view (`instant`: be there at once). */
+  view(name: VolcanoView, instant = false) {
+    const to = VOLCANO_VIEWS[name];
+    if (instant || this.reduceMotion) {
+      this.flight = null;
+      this.camera.position.copy(to[0]);
+      this.controls.target.copy(to[1]);
+      return;
+    }
+    this.flight = { from: [this.camera.position.clone(), this.controls.target.clone()], to, start: performance.now() };
+  }
+
+  /** Keep the event from starting (the locked plates build up stress) until `restart`. */
+  hold() {
+    this.held = true;
+    this.heldT = 0;
+    this.eventT = -1;
+  }
+
   /** Run the event of the current step again (eruption, earthquake, tsunami). */
   restart() {
+    this.held = false;
     this.eventT = 0;
     this.pulses = { l: QX, r: QX };
     this.flash = 0;
@@ -992,7 +1043,19 @@ export class VolcanoScene {
     this.timer.update();
     const dt = this.reduceMotion ? 0 : Math.min(0.05, this.timer.getDelta());
     this.t += dt;
-    this.eventT += this.reduceMotion ? 10 : dt;
+    if (this.held) {
+      this.heldT += dt;
+      this.eventT = -1;
+    } else this.eventT += this.reduceMotion ? 10 : dt;
+    this.stress.visible = this.held && (this.step === "quake" || this.step === "tsunami");
+    if (this.stress.visible) (this.stress.material as THREE.MeshBasicMaterial).opacity = Math.min(0.75, 0.15 + this.heldT * 0.12) * (0.75 + 0.25 * Math.sin(this.t * 6));
+    if (this.flight) {
+      const k = Math.min(1, (performance.now() - this.flight.start) / 1700);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+      this.camera.position.lerpVectors(this.flight.from[0], this.flight.to[0], e);
+      this.controls.target.lerpVectors(this.flight.from[1], this.flight.to[1], e);
+      if (k >= 1) this.flight = null;
+    }
 
     // Plate arrows creep in their direction and start again.
     const s = (this.t * 0.35) % 1;
@@ -1035,7 +1098,7 @@ export class VolcanoScene {
     this.updateWater(dt);
 
     this.controls.update();
-    const shake = quakeOn && qt < 1.6 && !this.reduceMotion ? 0.12 * (1 - qt / 1.6) : 0;
+    const shake = quakeOn && qt >= 0 && qt < 1.6 && !this.reduceMotion ? 0.12 * (1 - qt / 1.6) : 0;
     const off = this.shakeOff.set((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, 0);
     this.camera.position.add(off);
     this.renderer.render(this.scene, this.camera);

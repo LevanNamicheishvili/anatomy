@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { RotateCcw } from "lucide-react";
 import { LabeledSlider, PillButton } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { HeroView } from "../heroes/HeroView";
+import { VolcanoInsetCard } from "./insets";
+import { VOLCANO_CUES, type VolcanoShot } from "./volcano-cues";
 import { VolcanoScene, type VolcanoAnchor, type VolcanoStep } from "./VolcanoScene";
 
 /*
@@ -89,6 +92,8 @@ export function Volcanoes() {
   const [depth, setDepth] = useState(4000);
   const [distance, setDistance] = useState(600);
   const [cone, setCone] = useState<"kazbegi" | "javakheti" | null>(null);
+  /** Set by the narration. */
+  const [shot, setShot] = useState<Partial<VolcanoShot> | null>(null);
   const info = STEPS.find((s) => s.id === step)!;
   const v = Math.sqrt(G * depth); // m/s
   const kmh = v * 3.6;
@@ -122,17 +127,34 @@ export function Volcanoes() {
     sceneRef.current?.setStep(s);
   };
 
+  const last = useRef<Partial<VolcanoShot>>({});
+  const direct = (s: Partial<VolcanoShot>, jump: boolean) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const before = last.current;
+    last.current = s;
+    if (s.step && (jump || s.step !== before.step)) choose(s.step);
+    else if (s.go !== before.go && !s.hold) scene.restart();
+    if (s.hold && (jump || !before.hold || s.step !== before.step)) scene.hold();
+    if (s.view && (jump || s.view !== before.view)) scene.view(s.view, jump);
+    setShot(s);
+  };
+  const driving = useNarrationDirector(VOLCANO_CUES, direct);
+  const narr = driving ? shot : null;
+  const lit = new Set(narr?.lit ?? []);
+
   return (
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
       <div className={cn("relative bg-[#a9d4f0]", sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label="ფილების საზღვრის ჭრილი: ვულკანი, მიწისძვრა, ცუნამი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[12px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
-            <span key={l.at} data-at={l.at} data-on={l.steps.includes(step) ? "1" : "0"} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-card/90 text-ink")}>
+            <span key={l.at} data-at={l.at} data-on={l.steps.includes(step) || lit.has(l.at) ? "1" : "0"} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 shadow-sm transition-opacity", l.tone ? TONES[l.tone] : "bg-card/90 text-ink", lit.has(l.at) && "z-10 text-[14px] ring-2 ring-[#ffd76a]")}>
               {l.text}
             </span>
           ))}
         </div>
+        {narr?.inset && <VolcanoInsetCard key={narr.inset} inset={narr.inset} />}
         <div className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5">
           {STEPS.map((s) => (
             <PillButton key={s.id} onClick={() => choose(s.id)} pressed={step === s.id} color="#c2410c" className="shadow-sm">
