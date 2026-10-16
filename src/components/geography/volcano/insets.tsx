@@ -1,6 +1,7 @@
 "use client";
 
 import { PLATE_BOUNDARIES } from "../earth/plates";
+import { SceneInset } from "../lesson/SceneInset";
 import { GEORGIA_OUTLINES } from "../georgia-outline";
 
 /*
@@ -48,8 +49,7 @@ const TITLES: Record<VolcanoInset, string> = {
 
 export function VolcanoInsetCard({ inset }: { inset: VolcanoInset }) {
   return (
-    <figure className="pointer-events-none absolute top-14 right-3 z-10 w-[min(46%,23rem)] overflow-hidden rounded-xl bg-[#0d1726]/88 p-2 text-white shadow-lg ring-1 ring-white/15 backdrop-blur-sm">
-      <figcaption className="px-1 pb-1.5 text-[13px] leading-4 font-semibold">{TITLES[inset]}</figcaption>
+    <SceneInset title={TITLES[inset]}>
       {inset === "world" || inset === "ring" || inset === "tsunamis" ? (
         <WorldMap mode={inset} />
       ) : inset === "georgia" || inset.startsWith("ge-") ? (
@@ -57,7 +57,7 @@ export function VolcanoInsetCard({ inset }: { inset: VolcanoInset }) {
       ) : (
         <Diagram kind={inset} />
       )}
-    </figure>
+    </SceneInset>
   );
 }
 

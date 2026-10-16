@@ -16,7 +16,10 @@ export interface SolarLabels {
   sun: THREE.Vector3;
   normal: THREE.Vector3;
   inverter: THREE.Vector3;
+  transformer: THREE.Vector3;
   grid: THREE.Vector3;
+  south: THREE.Vector3;
+  tilt: THREE.Vector3;
 }
 
 const ROWS = 4;
@@ -34,6 +37,16 @@ const FENCE_Z = 19;
 const STATION = new THREE.Vector3(-9.5, 0, -12.5);
 const POLES = [new THREE.Vector3(-22, 0, -14.5), new THREE.Vector3(-32.5, 0, -18), new THREE.Vector3(-43, 0, -21.5)];
 const POLE_H = 8;
+
+/** Where the narration sends the camera: position and the point looked at. */
+export const SOLAR_VIEWS = {
+  overview: [new THREE.Vector3(17, 6, 15), new THREE.Vector3(-1, 3, 0)],
+  panel: [new THREE.Vector3(7.5, 3.6, 15.5), new THREE.Vector3(0.6, 2.2, 8.4)],
+  station: [new THREE.Vector3(-1.5, 5.5, -2.5), new THREE.Vector3(-9.5, 2, -13)],
+  grid: [new THREE.Vector3(-10, 6.5, -2), new THREE.Vector3(-29, 5.5, -17)],
+  side: [new THREE.Vector3(25, 4.5, 3), new THREE.Vector3(0, 1.2, 1)],
+} as const;
+export type SolarView = keyof typeof SOLAR_VIEWS;
 
 const rand = (() => {
   let s = 11;
@@ -355,7 +368,16 @@ export class SolarScene {
   private beamMat = beamMaterial();
   private normalArrow = arrow("#ffffff", 2.2);
   private beamArrow = arrow("#ff9500", 2.2);
-  private labels: SolarLabels = { sun: new THREE.Vector3(), normal: new THREE.Vector3(), inverter: STATION.clone().add(new THREE.Vector3(0, 3.6, 0)), grid: POLES[1].clone().setY(POLE_H + 1.2) };
+  private labels: SolarLabels = {
+    sun: new THREE.Vector3(),
+    normal: new THREE.Vector3(),
+    inverter: STATION.clone().add(new THREE.Vector3(0, 3.6, 0)),
+    transformer: STATION.clone().add(new THREE.Vector3(2.6, 2.6, 0.6)),
+    grid: POLES[1].clone().setY(POLE_H + 1.2),
+    south: new THREE.Vector3(18, 3.2, 4.5),
+    tilt: new THREE.Vector3(),
+  };
+  private flight: { from: [THREE.Vector3, THREE.Vector3]; to: readonly [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
   /** The middle wire, from the transformer to the grid (the current runs along it). */
   private wire = new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]);
   private pulses: THREE.Sprite[] = [];
@@ -434,6 +456,7 @@ export class SolarScene {
     this.controls.minDistance = 7;
     this.controls.maxDistance = 55;
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
+    this.controls.addEventListener("start", () => (this.flight = null));
 
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
@@ -687,6 +710,8 @@ export class SolarScene {
     this.beamArrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
     this.beamArrow.visible = elevation > 0;
     this.labels.normal.copy(centre).addScaledVector(normal, 2.6);
+    // The table's lower (southern) edge, at the end of the row facing the camera.
+    this.labels.tilt.copy(front.position).add(new THREE.Vector3(ROW_LEN / 2 + 0.3, -Math.sin(b) * (MODULE_H + 0.1) - 0.2, Math.cos(b) * (MODULE_H + 0.1)));
 
 
     // Parallel sunbeams onto the front two rows (the sun is that far away).
@@ -701,6 +726,18 @@ export class SolarScene {
       beam.visible = elevation > 0;
       if (i === 2) this.sunHit.copy(hit);
     });
+  }
+
+  /** Fly the camera to a view (`instant`: be there at once). */
+  view(name: SolarView, instant = false) {
+    const to = SOLAR_VIEWS[name];
+    if (instant || this.reduceMotion) {
+      this.flight = null;
+      this.camera.position.copy(to[0]);
+      this.controls.target.copy(to[1]);
+      return;
+    }
+    this.flight = { from: [this.camera.position.clone(), this.controls.target.clone()], to, start: performance.now() };
   }
 
   private updateEnvironment() {
@@ -739,6 +776,13 @@ export class SolarScene {
       p.visible = this.power > 0.02;
       this.wire.getPointAt(u, p.position);
     });
+    if (this.flight) {
+      const k = Math.min(1, (now - this.flight.start) / 1800);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+      this.camera.position.lerpVectors(this.flight.from[0], this.flight.to[0], e);
+      this.controls.target.lerpVectors(this.flight.from[1], this.flight.to[1], e);
+      if (k >= 1) this.flight = null;
+    }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     // The sun itself is out of the picture: its label goes up the middle beam as far as the frame allows.
