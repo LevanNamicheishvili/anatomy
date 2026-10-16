@@ -131,6 +131,8 @@ export class MapLabels {
   private placed: Uint8Array;
   private side: Int8Array;
   private hidden = new Set<number>();
+  /** Kinds of name shown (null: all). */
+  private kinds: ReadonlySet<LabelKind> | null = null;
   private hideNames = new Set<string>();
   // Per instance (text instances first, then dots).
   private alpha: Float32Array;
@@ -210,6 +212,11 @@ export class MapLabels {
     this.hideNames = new Set(names);
     this.hidden.clear();
     this.labels.forEach((l, i) => this.hideNames.has(l.n) && this.hidden.add(i));
+  }
+
+  /** Only these kinds of name (null: all of them). */
+  setKinds(kinds: ReadonlySet<LabelKind> | null) {
+    this.kinds = kinds;
   }
 
   /** Canvas size changed: bigger names on a big screen (a smart board in full screen), redrawn sharp. */
@@ -409,7 +416,7 @@ export class MapLabels {
     const fade = Math.min(1, dt * 6);
     for (let i = 0; i < this.labels.length; i++) {
       const was = this.placed[i] === 1;
-      const want = this.hidden.has(i) ? 0 : this.place(i, was, view);
+      const want = this.hidden.has(i) || (this.kinds && !this.kinds.has(this.labels[i].t)) ? 0 : this.place(i, was, view);
       this.placed[i] = want > 0 ? 1 : 0;
       const a = this.alpha[i] + (want - this.alpha[i]) * fade;
       this.alpha[i] = a < 0.01 && want === 0 ? 0 : a;

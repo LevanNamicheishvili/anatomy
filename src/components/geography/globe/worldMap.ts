@@ -3,11 +3,13 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { latLonToVec3 } from "./coords";
+import { COUNTRY_LABELS } from "./mapDetail";
 import { MapLabels, type MapLabel } from "./mapLabels";
 
 /*
  * The political map over the globe: coasts and big lakes, country borders (disputed ones dashed), Georgia's
- * outline, and the Georgian names (mapLabels.ts). Data: public/geo/world-map.json, built by
+ * outline, and the Georgian names (mapLabels.ts). By default only the countries show (borders, coasts, country
+ * names); `setDetail(true)` adds the lakes and the names of oceans, seas, continents, capitals and cities. Data: public/geo/world-map.json, built by
  * scripts/build-world-map.py from Natural Earth. Everything sits in the globe's turning group.
  */
 
@@ -53,6 +55,7 @@ export class WorldMap {
   private materials: { mat: LineMaterial; width: number }[] = [];
   private names: MapLabels | null = null;
   private hidden: string[] = [];
+  private detail = false;
   private layers: HTMLElement[] = [];
   private avoidBoxes: number[] = [];
   private clearBoxes: number[] = [];
@@ -104,13 +107,23 @@ export class WorldMap {
       if (style.dashed) segments.computeLineDistances();
       segments.renderOrder = kind === "georgia" ? 3 : 2;
       segments.name = `map-${kind}`;
+      if (kind === "lake") segments.visible = this.detail;
       this.group.add(segments);
       this.materials.push({ mat, width: style.width });
     }
     this.names = new MapLabels(data.labels, this.radius);
     this.names.setHidden(this.hidden);
+    this.names.setKinds(this.detail ? null : COUNTRY_LABELS);
     this.group.add(this.names.mesh);
     this.resize(this.size.w, this.size.h, this.size.dpr);
+  }
+
+  /** Countries only (false) or the details too: lakes, oceans, seas, continents, capitals, cities. */
+  setDetail(on: boolean) {
+    this.detail = on;
+    const lakes = this.group.getObjectByName("map-lake");
+    if (lakes) lakes.visible = on;
+    this.names?.setKinds(on ? null : COUNTRY_LABELS);
   }
 
   /** Place names the lesson shows itself (its own labels): left out of the map. */
