@@ -216,6 +216,12 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "duration": 65.76,
     "voice": "Charon"
   },
+  "bio-12-0922d49d": {
+    "hash": "c1e62229",
+    "rev": "c31fb41d4d",
+    "duration": 98.76,
+    "voice": "Charon"
+  },
   "bio-12-1a6e1552": {
     "hash": "52ef7f58",
     "rev": "f552209425",
@@ -234,6 +240,12 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "duration": 88.16,
     "voice": "Charon"
   },
+  "bio-12-3a9472dc": {
+    "hash": "8995960e",
+    "rev": "9fed5234c6",
+    "duration": 81.44,
+    "voice": "Charon"
+  },
   "bio-12-96678405": {
     "hash": "d809bd1d",
     "rev": "d20beb865f",
@@ -250,6 +262,12 @@ export const NARRATION_MANIFEST: Record<string, { hash: string; rev: string; dur
     "hash": "8833f690",
     "rev": "74dfca83ab",
     "duration": 69.2,
+    "voice": "Charon"
+  },
+  "bio-12-bb431397": {
+    "hash": "ef4e308d",
+    "rev": "cb4b94978f",
+    "duration": 83.48,
     "voice": "Charon"
   },
   "bio-12-dc151094": {
