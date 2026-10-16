@@ -4,6 +4,8 @@
  * Keys: "<grade>|<textbook key>" as in src/lib/lessons.
  */
 
+import { STAGE_ANCHORS } from "./stage-anchors";
+
 export interface VisualStage {
   title: string;
   text: string;
@@ -13,7 +15,12 @@ export interface LessonVisualDef {
   /** Builder id in ./builders. */
   id: string;
   stages: VisualStage[];
+  /** Where stages 1… begin in the lesson read aloud (./stage-anchors). */
+  anchors?: StageAnchor[];
 }
+
+/** A phrase of the lesson text and its block; the stage it starts (default: the anchor's place in the list + 1). */
+export type StageAnchor = [phrase: string, block: number, stage?: number];
 
 export const LESSON_VISUALS: Record<string, LessonVisualDef> = {
   // ---- Hormones ---------------------------------------------------------------------------------
@@ -842,4 +849,7 @@ export const LESSON_VISUALS: Record<string, LessonVisualDef> = {
   },
 };
 
-export const visualForLesson = (grade: number, key: string) => LESSON_VISUALS[`${grade}|${key}`] ?? null;
+export function visualForLesson(grade: number, key: string): LessonVisualDef | null {
+  const def = LESSON_VISUALS[`${grade}|${key}`];
+  return def ? { ...def, anchors: STAGE_ANCHORS[`${grade}|${key}`] } : null;
+}

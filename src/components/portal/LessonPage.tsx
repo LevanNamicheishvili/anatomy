@@ -3,11 +3,12 @@ import { Box } from "lucide-react";
 import type { BioLesson, BioTopic } from "@/lib/biology-topics";
 import type { Lesson } from "@/lib/curriculum";
 import type { LessonContent } from "@/lib/lessons";
-import { narrationWords, type NarrationInfo } from "@/lib/narration";
+import { narrationBlocks, narrationWords, type NarrationInfo } from "@/lib/narration";
 import { LessonVisual } from "@/components/visuals/LessonVisual";
 import type { LessonVisualDef } from "@/components/visuals/lesson-visuals";
 import { LessonNav, LessonHeader, LessonSections, Reading, RememberCallout, TermsList, VisualWide, type LessonLink } from "./lesson";
 import { LessonNarration } from "./LessonNarration";
+import { NarrationTextProvider } from "./NarrationScene";
 import { LessonQuiz } from "./LessonQuiz";
 import { PunnettSquare } from "./PunnettSquare";
 import { TopicHeader } from "./TopicHeader";
@@ -56,6 +57,7 @@ export function LessonPage({
         color={COLOR}
         icon={topic?.icon ?? "body"}
       />
+      <NarrationTextProvider blocks={narration && !locked ? narrationBlocks(content) : null} seconds={narration?.duration ?? 0}>
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-10">
         <Reading>
           <LessonHeader
@@ -79,7 +81,7 @@ export function LessonPage({
           <>
             {visual && (
               <VisualWide>
-                <LessonVisual id={visual.id} stages={visual.stages} />
+                <LessonVisual id={visual.id} stages={visual.stages} anchors={visual.anchors} />
               </VisualWide>
             )}
 
@@ -114,6 +116,7 @@ export function LessonPage({
           <LessonNav prev={link(prev)} next={link(next)} back={{ href: back, label: topic ? `ყველა გაკვეთილი: ${topic.title}` : "ყველა თემა" }} color={COLOR} />
         </Reading>
       </main>
+      </NarrationTextProvider>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export function GeoLessonPage({ lesson, prev, next }: { lesson: GeoLesson; prev:
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink">
       <TopicHeader subject={{ name: "გეოგრაფია", href: "/geography" }} topic={lesson.title} color={COLOR} icon={lesson.icon} />
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-10">
-        <NarrationTextProvider blocks={narration ? narrationBlocks(lesson) : null}>
+        <NarrationTextProvider blocks={narration ? narrationBlocks(lesson) : null} seconds={narration?.duration ?? 0}>
         <Reading>
           <LessonHeader
             path={[{ label: "გეოგრაფია", href: "/geography" }, { label: lesson.title }]}

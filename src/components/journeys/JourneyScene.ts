@@ -472,6 +472,8 @@ export class JourneyScene {
   }
 
   private playbackRate = 1;
+  /** At the end of a stage, wait there instead of going on (the narration says when the next stage starts). */
+  holdAtEnd = false;
 
   zoomBy(factor: number) {
     if (!this.plan || !Number.isFinite(factor) || factor <= 0) return;
@@ -759,7 +761,8 @@ export class JourneyScene {
       }
       this.cb.onProgress(Math.min(1, this.stageTime / stage.duration));
       if (run && this.stageTime >= stage.duration) {
-        if (this.stage < plan.stages.length - 1) this.goTo(this.stage + 1);
+        if (this.holdAtEnd) this.stageTime = stage.duration;
+        else if (this.stage < plan.stages.length - 1) this.goTo(this.stage + 1);
         else this.setPlaying(false);
       }
     }

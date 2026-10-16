@@ -13,12 +13,25 @@ import { onNarration, resolveCues, stateAt, type Cue } from "@/lib/narration-cue
  */
 
 const TextContext = createContext<NarrationBlock[] | null>(null);
+const SecondsContext = createContext(0);
 
-export function NarrationTextProvider({ blocks, children }: { blocks: NarrationBlock[] | null; children: React.ReactNode }) {
-  return <TextContext.Provider value={blocks}>{children}</TextContext.Provider>;
+/** `seconds`: how long the recording is (scenes pace their animations by it). */
+export function NarrationTextProvider({ blocks, seconds = 0, children }: { blocks: NarrationBlock[] | null; seconds?: number; children: React.ReactNode }) {
+  return (
+    <TextContext.Provider value={blocks}>
+      <SecondsContext.Provider value={seconds}>{children}</SecondsContext.Provider>
+    </TextContext.Provider>
+  );
 }
 
 export const useNarrationText = () => useContext(TextContext);
+/** About how long the voice takes per word (0 when unknown). */
+export function useSecondsPerWord() {
+  const blocks = useContext(TextContext);
+  const seconds = useContext(SecondsContext);
+  const words = useMemo(() => (blocks ? blocks.reduce((n, b) => n + (b.heading ? narrationWords(b.heading).length : 0) + b.paragraphs.reduce((m, p) => m + narrationWords(p).length, 0), 0) : 0), [blocks]);
+  return words && seconds ? seconds / words : 0;
+}
 
 /** Scenes following the narration now (the player keeps the scene in view, not the text, when there is one). */
 let directors = 0;

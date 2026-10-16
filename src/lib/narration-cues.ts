@@ -9,7 +9,7 @@ import { narrationLayout, narrationWords, type NarrationBlock } from "./narratio
  */
 
 export interface Cue<S> {
-  /** A phrase of the lesson text (punctuation and case do not matter); the cue starts at its first word. */
+  /** A phrase of the lesson text (punctuation and case do not matter); the cue starts at its first word. Empty: the start of `block`. */
   at: string;
   /** Look for the phrase in this block only (0: the introduction, 1…: the sections). */
   block?: number;
@@ -36,8 +36,8 @@ export function resolveCues<S>(blocks: NarrationBlock[], cues: Cue<S>[]): Resolv
     const phrase = narrationWords(cue.at).map(norm).filter(Boolean);
     const lo = cue.block !== undefined ? (layout[cue.block]?.start ?? 0) : from;
     const hi = cue.block !== undefined ? (layout[cue.block + 1]?.start ?? all.length) : all.length;
-    let found = -1;
-    for (let i = 0; i + phrase.length <= words.length && found < 0; i++) {
+    let found = phrase.length ? -1 : lo;
+    for (let i = 0; phrase.length && i + phrase.length <= words.length && found < 0; i++) {
       if (words[i].n < lo || words[i + phrase.length - 1].n >= hi) continue;
       if (phrase.every((p, k) => words[i + k].w === p)) found = words[i].n;
     }

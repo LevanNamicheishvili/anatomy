@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, RotateCcw } from "lucide-react";
 import { JourneyScene } from "@/components/journeys/JourneyScene";
+import { useNarrationDirector, useNarrationText, useSecondsPerWord } from "@/components/portal/NarrationScene";
 import { sceneFrame } from "@/components/portal/ui";
+import { resolveCues, type Cue } from "@/lib/narration-cues";
 import { cn } from "@/lib/utils";
 import { VISUAL_BUILDERS } from "./builders";
-import type { VisualStage } from "./lesson-visuals";
+import type { StageAnchor, VisualStage } from "./lesson-visuals";
 
-/** The animation at the top of a lesson: 3D scene, caption per stage, play/pause, stages, full screen. */
-export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[] }) {
+/**
+ * The animation at the top of a lesson: 3D scene, caption per stage, play/pause, stages, full screen. While the
+ * lesson is read aloud, each stage starts when the voice reaches the words it shows (`anchors`, stage 1 on), runs
+ * at the pace of the voice and waits at its end for the next.
+ */
+export function LessonVisual({ id, stages, anchors }: { id: string; stages: VisualStage[]; anchors?: StageAnchor[] }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -48,6 +54,34 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
     };
   }, [id]);
 
+  const cues = useMemo<Cue<{ stage: number }>[]>(() => [{ at: "", block: 0, set: { stage: 0 } }, ...(anchors ?? []).map(([at, block, stage], i) => ({ at, block, set: { stage: stage ?? i + 1 } }))], [anchors]);
+  const blocks = useNarrationText();
+  const spw = useSecondsPerWord();
+  /** Word where each stage's passage starts, in reading order (to pace the stage by how long the voice takes). */
+  const spans = useMemo(() => (blocks && anchors ? resolveCues(blocks, cues).map((c) => ({ word: c.word, stage: c.set.stage! })) : []), [blocks, cues, anchors]);
+  const total = useMemo(() => (blocks ? blocks.reduce((n, b) => n + (b.heading ? b.heading.split(/\s+/).length : 0) + b.paragraphs.reduce((m, p) => m + p.split(/\s+/).filter(Boolean).length, 0), 0) : 0), [blocks]);
+  const driving = useNarrationDirector(anchors ? cues : [], (s: { stage?: number }, jump: boolean) => {
+    const scene = sceneRef.current;
+    if (!scene || s.stage === undefined) return;
+    scene.holdAtEnd = true;
+    // Pace: the stage lasts about as long as the voice takes over its passage.
+    const at = spans.findIndex((x) => x.stage === s.stage);
+    const words = at >= 0 ? (spans[at + 1]?.word ?? total) - spans[at].word : 0;
+    const seconds = words * spw;
+    scene.setPlaybackRate(seconds > 1 ? Math.min(2, Math.max(0.5, scene.stageDuration(s.stage) / seconds)) : 1);
+    if (jump || scene.currentStage !== s.stage) {
+      scene.goTo(s.stage);
+      scene.setPlaying(true);
+    }
+  });
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (driving || !scene) return;
+    // The voice stopped: the animation is the pupil's again.
+    scene.holdAtEnd = false;
+    scene.setPlaybackRate(1);
+  }, [driving]);
+
   const go = (i: number) => {
     sceneRef.current?.goTo(i);
     sceneRef.current?.setPlaying(true);
@@ -61,7 +95,7 @@ export function LessonVisual({ id, stages }: { id: string; stages: VisualStage[]
 
   return (
     <section ref={boxRef} className={cn("mt-6 overflow-hidden rounded-2xl border border-line-strong bg-white shadow-card", full && "flex flex-col rounded-none border-0")}>
-      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : sceneFrame)}>
+      <div className={cn("relative bg-[radial-gradient(ellipse_at_center,#26312e_0%,#0e1413_80%)]", full ? "min-h-0 flex-1" : sceneFrame)} data-scene>
         <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" aria-label={`ანიმაცია: ${current.title}`} />
         <div ref={overlayRef} className="lesson-visual pointer-events-none absolute inset-0 overflow-hidden" />
         {loading && (
