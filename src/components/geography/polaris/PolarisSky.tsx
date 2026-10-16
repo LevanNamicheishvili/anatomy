@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useNarrationDirector } from "@/components/portal/NarrationScene";
 import { Compass, MapPin, Pause, Play, Star } from "lucide-react";
 import { LabeledSlider } from "@/components/portal/controls";
 import { sceneFrame } from "@/components/portal/ui";
 import { FullscreenButton, useFullscreen } from "@/components/portal/fullscreen";
 import { cn } from "@/lib/utils";
 import { bearing, compassName, horizonDir, LATITUDES, POLARIS, TARGETS, TBILISI } from "./sky-data";
-import { SkyScene, type SkyAnchor } from "./SkyScene";
+import { POLARIS_CUES, type PolarisShot } from "./polaris-cues";
+import { SkyScene, type SkyAnchor, type SkyLit } from "./SkyScene";
 
 /*
  * Topic 5 — finding north by Polaris, and the azimuth. The sky turns round Polaris; its height above the
@@ -29,6 +31,8 @@ const LABELS: { at: SkyAnchor; text: string; cls: string }[] = [
   { at: "uma", text: "დიდი დათვი", cls: "text-[#7cc4ff]" },
   { at: "umi", text: "პატარა დათვი", cls: "text-[#ffd166]" },
   { at: "cas", text: "კასიოპეა", cls: "text-[#c4b5fd]" },
+  { at: "crux", text: "სამხრეთის ჯვარი", cls: "text-[#9ae6b4]" },
+  { at: "pole", text: "ჩრდილოეთის ციური პოლუსი", cls: "text-[#ff8fa3]" },
   { at: "n", text: "ჩ · 0°", cls: "bg-[#ff5a4f] text-white" },
   { at: "e", text: "აღმ · 90°", cls: "bg-card/85 text-ink" },
   { at: "s", text: "ს · 180°", cls: "bg-card/85 text-ink" },
@@ -36,6 +40,9 @@ const LABELS: { at: SkyAnchor; text: string; cls: string }[] = [
 ];
 
 const fmtDeg = (v: number) => `${(Math.round(v * 10) / 10).toLocaleString("ka-GE")}°`;
+const ease = (k: number) => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
+/** Labels the narration lights up for each thing it names. */
+const LIT_LABELS: Record<SkyLit, SkyAnchor[]> = { uma: ["uma"], umi: ["umi"], cas: ["cas"], crux: ["crux"], pointers: ["dubhe", "merak"], polaris: ["polaris"], n: ["n"], e: ["e"], s: ["s"], w: ["w"] };
 
 export function PolarisSky() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,6 +54,13 @@ export function PolarisSky() {
   const [playing, setPlaying] = useState(false);
   const [step, setStep] = useState(0);
   const [az, setAz] = useState(0);
+  /** Set by the narration. */
+  const [shot, setShot] = useState<Partial<PolarisShot> | null>(null);
+  const glides = useRef({ lat: 0, time: 0, az: 0 });
+  const now = useRef({ lat, time, az });
+  useEffect(() => {
+    now.current = { lat, time, az };
+  }, [lat, time, az]);
   const polAlt = (() => {
     const d = horizonDir(POLARIS.ra, POLARIS.dec, lat, time * 15, { x: 0, y: 0, z: 0 });
     return (Math.asin(Math.max(-1, Math.min(1, d.y))) * 180) / Math.PI;
@@ -63,7 +77,7 @@ export function PolarisSky() {
       for (const el of els) {
         const p = project(anchors[el.dataset.at as SkyAnchor]);
         const hidden = el.dataset.hidden === "1";
-        el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, ${el.dataset.at === "polaris" ? "-160%" : "-50%"})`;
+        el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, ${el.dataset.at === "polaris" ? "-160%" : el.dataset.at === "pole" ? "90%" : el.dataset.at === "crux" ? "160%" : "-50%"})`;
         el.style.opacity = p.visible && !hidden ? "1" : "0";
       }
     };
@@ -76,16 +90,77 @@ export function PolarisSky() {
   useEffect(() => sceneRef.current?.setLatitude(lat), [lat]);
   useEffect(() => sceneRef.current?.setTime(time), [time]);
   useEffect(() => sceneRef.current?.setAzimuth(az), [az]);
-  useEffect(() => sceneRef.current?.setStep(step), [step]);
 
+  /** Glide a value to a target in step with the voice (`wrap`: an angle, the shorter way round). */
+  const glide = (key: "lat" | "time" | "az", from: number, to: number, set: (v: number) => void, wrap = 0, perUnit = 25) => {
+    cancelAnimationFrame(glides.current[key]);
+    let delta = to - from;
+    if (wrap) {
+      delta = (((delta % wrap) + wrap) % wrap) as number;
+      if (delta > wrap / 2) delta -= wrap;
+    }
+    const start = performance.now();
+    const dur = Math.min(2600, 300 + Math.abs(delta) * perUnit);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - start) / dur);
+      const v = from + delta * ease(k);
+      set(wrap ? (((v % wrap) + wrap) % wrap) : v);
+      if (k < 1) glides.current[key] = requestAnimationFrame(step);
+    };
+    step();
+  };
   useEffect(() => {
-    if (!playing) return;
+    const g = glides.current;
+    return () => {
+      cancelAnimationFrame(g.lat);
+      cancelAnimationFrame(g.time);
+      cancelAnimationFrame(g.az);
+    };
+  }, []);
+  const last = useRef<Partial<PolarisShot>>({});
+  const direct = (s: Partial<PolarisShot>, jump: boolean) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const before = last.current;
+    last.current = s;
+    const cur = now.current;
+    const lat = s.lat ?? cur.lat;
+    const time = s.time ?? cur.time;
+    const changed = <K extends keyof PolarisShot>(k: K) => s[k] !== undefined && (jump || JSON.stringify(s[k]) !== JSON.stringify(before[k]));
+    if (changed("lat")) {
+      if (jump) setLat(lat);
+      else glide("lat", cur.lat, lat, (v) => setLat(Math.round(v * 10) / 10), 0, 22);
+    }
+    // The sky turned by itself since the last cue: its time is no longer the cue's.
+    if ((changed("time") || (before.turning && !jump)) && !s.turning) {
+      if (jump) setTime(time);
+      else glide("time", cur.time, time, setTime, 24, 110);
+    }
+    if (changed("az") && s.az !== null && s.az !== undefined) {
+      const [from, to] = typeof s.az === "number" ? [cur.az, s.az] : s.az;
+      if (jump) setAz(to);
+      else glide("az", from, to, setAz, typeof s.az === "number" ? 360 : 0, typeof s.az === "number" ? 7 : 7.5);
+    }
+    if (s.view && (jump || changed("view") || changed("lat") || changed("time") || before.turning)) scene.view(s.view, lat, time, jump);
+    scene.narrate({ lit: s.lit ?? [], pointer: s.pointer ?? "off", arc: !!s.arc, azimuth: s.az !== null && s.az !== undefined, azArc: !!s.azArc, trails: !!s.trails, axis: !!s.axis });
+    setShot(s);
+  };
+  const driving = useNarrationDirector(POLARIS_CUES, direct);
+  const narr = driving ? shot : null;
+  // When the voice stops, the how-to steps are the pupil's again.
+  useEffect(() => {
+    if (!driving) sceneRef.current?.setStep(step);
+  }, [step, driving]);
+  const turning = narr ? !!narr.turning : playing;
+  useEffect(() => {
+    if (!turning) return;
     const id = window.setInterval(() => setTime((t) => (t + 0.05) % 24), 50);
     return () => window.clearInterval(id);
-  }, [playing]);
+  }, [turning]);
 
-  const hideArc = !(step === 0 || step === 3) || polAlt <= 0;
-  const hideAz = !(step === 0 || step === 4);
+  const hideArc = (narr ? !narr.arc : !(step === 0 || step === 3)) || polAlt <= 0;
+  const hideAz = narr ? narr.az === null || narr.az === undefined : !(step === 0 || step === 4);
+  const lit = new Set((narr?.lit ?? []).flatMap((k) => LIT_LABELS[k]));
 
   return (
     <section ref={fsRef} className="mt-6 overflow-hidden rounded-2xl border border-line-strong bg-card shadow-card">
@@ -93,7 +168,7 @@ export function PolarisSky() {
         <canvas ref={canvasRef} className="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing" aria-label="ღამის ცა და პოლარული ვარსკვლავი" />
         <div ref={labelsRef} className="pointer-events-none absolute inset-0 overflow-hidden text-[11px] font-semibold whitespace-nowrap">
           {LABELS.map((l) => (
-            <span key={l.at} data-at={l.at} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]", l.cls)}>
+            <span key={l.at} data-at={l.at} data-hidden={(l.at === "crux" && lat > 0) || (l.at === "pole" && !narr?.axis) ? "1" : "0"} className={cn("absolute top-0 left-0 rounded px-1.5 py-0.5 opacity-0 transition-[box-shadow,font-size] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]", l.cls, lit.has(l.at) && "text-[13px] ring-2 ring-[#ffd76a]")}>
               {l.text}
             </span>
           ))}
@@ -101,7 +176,7 @@ export function PolarisSky() {
             სიმაღლე {fmtDeg(polAlt)} ≈ განედი
           </span>
           <span data-at="azimuth" data-hidden={hideAz ? "1" : "0"} className="absolute top-0 left-0 rounded bg-deep/85 px-1.5 py-0.5 text-[#ffd166] opacity-0">
-            აზიმუტი {Math.round(az)}°
+            აზიმუტი {Math.round(az)}°{narr?.place ? ` · ${narr.place}` : ""}
           </span>
         </div>
 
@@ -113,8 +188,8 @@ export function PolarisSky() {
         </div>
 
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={playing} title={playing ? "გაჩერება" : "ცის ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", playing ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
-            {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+          <button type="button" onClick={() => setPlaying((p) => !p)} aria-pressed={turning} title={playing ? "გაჩერება" : "ცის ბრუნვა"} className={cn("flex size-10 items-center justify-center rounded-lg shadow-sm", turning ? "bg-[#2f6fb0] text-white" : "bg-card/90 text-ink")}>
+            {turning ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
           <FullscreenButton full={fsOn} onClick={fsToggle} />
         </div>

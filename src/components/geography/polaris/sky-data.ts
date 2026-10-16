@@ -1,6 +1,6 @@
 /*
- * A small star catalogue for the Polaris lesson: the stars of the Big Dipper, the Little Dipper and
- * Cassiopeia (J2000 right ascension in degrees, declination in degrees), with the lines that join them.
+ * A small star catalogue for the Polaris lesson: the stars of the Big Dipper, the Little Dipper, Cassiopeia and
+ * the Southern Cross (J2000 right ascension in degrees, declination in degrees), with the lines that join them.
  */
 
 export interface Star {
@@ -82,6 +82,20 @@ export const CONSTELLATIONS: Constellation[] = [
       ["schedar", "gamma-cas"],
       ["gamma-cas", "ruchbah"],
       ["ruchbah", "segin"],
+    ],
+  },
+  {
+    id: "crux",
+    name: "სამხრეთის ჯვარი",
+    stars: [
+      { id: "acrux", ra: 186.65, dec: -63.1, mag: 1.6 },
+      { id: "mimosa", ra: 191.93, dec: -59.69, mag: 1.8 },
+      { id: "gacrux", ra: 187.79, dec: -57.11, mag: 2 },
+      { id: "delta-cru", ra: 183.79, dec: -58.75, mag: 3 },
+    ],
+    lines: [
+      ["acrux", "gacrux"],
+      ["mimosa", "delta-cru"],
     ],
   },
 ];

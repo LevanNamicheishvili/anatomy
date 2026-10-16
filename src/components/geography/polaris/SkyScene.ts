@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { ALL_STARS, CONSTELLATIONS, horizonDir } from "./sky-data";
+import { ALL_STARS, CONSTELLATIONS, horizonDir, POLARIS } from "./sky-data";
 
 /*
  * The night sky over an observer: the ground with a compass rose, the star dome turning round the celestial
@@ -11,6 +11,13 @@ import { ALL_STARS, CONSTELLATIONS, horizonDir } from "./sky-data";
 const D = Math.PI / 180;
 const SKY_R = 40;
 
+/** Where the narration sends the camera. */
+export type SkyView = "sky" | "north" | "dipper" | "cas" | "south" | "side" | "ground";
+/** What the narration lights up: constellations, the pointer stars, Polaris, the directions. */
+export type SkyLit = "uma" | "umi" | "cas" | "crux" | "pointers" | "polaris" | "n" | "e" | "s" | "w";
+const CONSTELLATION_IDS = ["uma", "umi", "cas", "crux"] as const;
+const LINE_COLORS: Record<string, string> = { uma: "#7cc4ff", umi: "#ffd166", cas: "#c4b5fd", crux: "#9ae6b4" };
+
 export interface SkyAnchors {
   polaris: THREE.Vector3;
   dubhe: THREE.Vector3;
@@ -18,6 +25,8 @@ export interface SkyAnchors {
   uma: THREE.Vector3;
   umi: THREE.Vector3;
   cas: THREE.Vector3;
+  crux: THREE.Vector3;
+  pole: THREE.Vector3;
   arc: THREE.Vector3;
   azimuth: THREE.Vector3;
   n: THREE.Vector3;
@@ -108,6 +117,14 @@ export class SkyScene {
   private azGroup: THREE.Group;
   private azArc: THREE.Mesh;
   private azArrow: THREE.ArrowHelper;
+  /** Narration extras: the stars' daily circles, the axis to the celestial pole, the pointer line drawn out. */
+  private trails: THREE.LineSegments;
+  private axis = new THREE.Group();
+  private poleRing: THREE.Mesh;
+  private pointerK = 1;
+  private pointerGrow = 0;
+  private flight: { from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
+  private reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   private tmp = { x: 0, y: 0, z: 0 };
   private anchors: SkyAnchors = {
     polaris: new THREE.Vector3(),
@@ -116,6 +133,8 @@ export class SkyScene {
     uma: new THREE.Vector3(),
     umi: new THREE.Vector3(),
     cas: new THREE.Vector3(),
+    crux: new THREE.Vector3(),
+    pole: new THREE.Vector3(),
     arc: new THREE.Vector3(),
     azimuth: new THREE.Vector3(),
     n: new THREE.Vector3(0, 0.6, -22),
@@ -199,7 +218,7 @@ export class SkyScene {
     for (const c of CONSTELLATIONS) {
       const seg = new THREE.LineSegments(
         new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(new Float32Array(c.lines.length * 6), 3)),
-        new THREE.LineBasicMaterial({ color: c.id === "uma" ? "#7cc4ff" : c.id === "umi" ? "#ffd166" : "#c4b5fd", transparent: true, opacity: 0.8 }),
+        new THREE.LineBasicMaterial({ color: LINE_COLORS[c.id], transparent: true, opacity: 0.8 }),
       );
       this.lines.set(c.id, seg);
       this.scene.add(seg);
@@ -209,6 +228,22 @@ export class SkyScene {
       new THREE.LineDashedMaterial({ color: "#ff8fa3", dashSize: 0.8, gapSize: 0.6 }),
     );
     this.scene.add(this.pointer);
+
+    const trailStars = ALL_STARS.filter((s) => s.id !== "polaris");
+    this.trails = new THREE.LineSegments(
+      new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(new Float32Array(trailStars.length * 96 * 6), 3)),
+      new THREE.LineBasicMaterial({ color: "#9fc3ff", transparent: true, opacity: 0.45, depthWrite: false }),
+    );
+    this.trails.visible = false;
+    this.poleRing = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.45, 48), new THREE.MeshBasicMaterial({ color: "#ff8fa3", transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    const axisLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]), new THREE.LineDashedMaterial({ color: "#ff8fa3", dashSize: 0.02, gapSize: 0.015 }));
+    axisLine.computeLineDistances();
+    axisLine.name = "axis";
+    this.axis.add(axisLine, this.poleRing);
+    this.axis.visible = false;
+    this.scene.add(this.trails, this.axis);
+    // These are moved every time the sky turns: their first bounds would cull them once they leave that place.
+    for (const o of [this.bgPoints, this.brightPoints, this.pointer, this.trails, ...this.lines.values()]) o.frustumCulled = false;
 
     // Altitude of Polaris: an arc from the north horizon up to the star, plus the sight line.
     this.altArc = new THREE.Group();
@@ -233,6 +268,7 @@ export class SkyScene {
     this.controls.maxDistance = 16;
     this.controls.maxPolarAngle = Math.PI * 0.62;
     this.controls.rotateSpeed = 0.5;
+    this.controls.addEventListener("start", () => (this.flight = null));
 
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
@@ -269,10 +305,84 @@ export class SkyScene {
     (this.lines.get("uma")!.material as THREE.LineBasicMaterial).opacity = on(1) || step === 2 ? 1 : 0.35;
     (this.lines.get("umi")!.material as THREE.LineBasicMaterial).opacity = on(3) ? 1 : 0.35;
     (this.lines.get("cas")!.material as THREE.LineBasicMaterial).opacity = step === 0 ? 0.8 : 0.25;
+    (this.lines.get("crux")!.material as THREE.LineBasicMaterial).opacity = step === 0 ? 0.8 : 0.25;
     this.pointer.visible = step === 0 || step >= 2;
+    this.pointerK = 1;
+    this.pointerGrow = 0;
     this.polarisMesh.scale.setScalar(step === 3 ? 1.6 : 1);
     this.altArc.visible = step === 0 || step === 3;
     this.azGroup.visible = step === 0 || step === 4;
+    this.azArc.visible = true;
+    this.trails.visible = false;
+    this.axis.visible = false;
+    this.dirty = true;
+  }
+
+  /** What the narration shows: lit constellations (the rest dim), Polaris enlarged, the extras. */
+  narrate(s: { lit: SkyLit[]; pointer: "off" | "on" | "grow"; arc: boolean; azimuth: boolean; azArc: boolean; trails: boolean; axis: boolean }) {
+    const anyLit = CONSTELLATION_IDS.some((c) => s.lit.includes(c));
+    for (const c of CONSTELLATION_IDS) (this.lines.get(c)!.material as THREE.LineBasicMaterial).opacity = !anyLit ? 0.8 : s.lit.includes(c) ? 1 : 0.22;
+    this.polarisMesh.scale.setScalar(s.lit.includes("polaris") ? 1.7 : 1);
+    if (s.pointer === "grow" && !(this.pointer.visible && this.pointerGrow)) {
+      this.pointerGrow = performance.now();
+      this.pointerK = this.reduceMotion ? 1 : 0;
+    } else if (s.pointer !== "grow") {
+      this.pointerGrow = 0;
+      this.pointerK = 1;
+    }
+    this.pointer.visible = s.pointer !== "off";
+    this.altArc.visible = s.arc;
+    this.azGroup.visible = s.azimuth;
+    this.azArc.visible = s.azArc;
+    this.trails.visible = s.trails;
+    this.axis.visible = s.axis;
+    this.dirty = true;
+  }
+
+  /** Fly the camera to a view, worked out for the sky at latitude `lat` and sidereal time `hours`. */
+  view(name: SkyView, lat: number, hours: number, instant = false) {
+    const dirOf = (ra: number, dec: number) => {
+      horizonDir(ra, dec, lat, hours * 15, this.tmp);
+      return new THREE.Vector3(this.tmp.x, this.tmp.y, this.tmp.z);
+    };
+    const centre = (id: string) => {
+      const c = CONSTELLATIONS.find((x) => x.id === id)!;
+      return c.stars.reduce((v, s) => v.add(dirOf(s.ra, s.dec)), new THREE.Vector3()).normalize();
+    };
+    /**
+     * Just behind the observer's head, looking along a direction in the sky (the sky is far, so the view is true to
+     * it), aimed a little lower: subtitles run along the bottom.
+     */
+    const look = (dir: THREE.Vector3, back = 2.6): [THREE.Vector3, THREE.Vector3] => {
+      const flat = new THREE.Vector3(dir.x, 0, dir.z);
+      if (flat.lengthSq() < 1e-4) flat.set(0, 0, -1);
+      flat.normalize();
+      const eye = flat.clone().multiplyScalar(-back).add(new THREE.Vector3(0, 1.9, 0));
+      return [eye, dir.clone().multiplyScalar(9).add(eye).add(new THREE.Vector3(0, -1.3, 0))];
+    };
+    const pole = new THREE.Vector3(0, Math.sin(lat * D), -Math.cos(lat * D));
+    const views: Record<SkyView, () => [THREE.Vector3, THREE.Vector3]> = {
+      sky: () => [new THREE.Vector3(0, 2.6, 7.5), new THREE.Vector3(0, 6.2, -2)],
+      north: () => look(pole.clone()),
+      dipper: () => look(centre("uma").add(dirOf(POLARIS.ra, POLARIS.dec)).normalize()),
+      cas: () => look(centre("cas").add(pole).normalize()),
+      south: () => look(centre("crux")),
+      // From the east: the altitude of Polaris as an angle over the northern horizon.
+      side: () => [new THREE.Vector3(14.5, 4.2, -2.5), new THREE.Vector3(0, 4.2, -3.6)],
+      // From above and behind: the compass rose on the ground.
+      ground: () => [new THREE.Vector3(0, 11.5, 10.2), new THREE.Vector3(0, -0.6, 1.2)],
+    };
+    const to = views[name]();
+    // Looking up steeply needs the camera to go further under its target than a pupil may drag it.
+    const off = to[0].clone().sub(to[1]);
+    this.controls.maxPolarAngle = Math.max(Math.PI * 0.62, Math.acos(THREE.MathUtils.clamp(off.y / off.length(), -1, 1)) + 0.02);
+    if (instant || this.reduceMotion) {
+      this.flight = null;
+      this.camera.position.copy(to[0]);
+      this.controls.target.copy(to[1]);
+      return;
+    }
+    this.flight = { from: [this.camera.position.clone(), this.controls.target.clone()], to, start: performance.now() };
   }
 
   private place(ra: number, dec: number, r: number, out: THREE.Vector3) {
@@ -306,19 +416,48 @@ export class SkyScene {
         attr.setXYZ(i * 2 + 1, pos[b].x, pos[b].y, pos[b].z);
       });
       attr.needsUpdate = true;
-      const centre = this.anchors[c.id as "uma" | "umi" | "cas"];
+      const centre = this.anchors[c.id as "uma" | "umi" | "cas" | "crux"];
       centre.set(0, 0, 0);
       for (const s of c.stars) centre.add(pos[s.id]);
       centre.divideScalar(c.stars.length);
       if (c.id === "umi") centre.lerp(pos.kochab, 0.5);
     }
-    // Pointer: Merak → Dubhe, continued on to Polaris.
+    // Pointer: Merak → Dubhe, continued on to Polaris (drawn out while the voice tells it).
     const pAttr = this.pointer.geometry.getAttribute("position") as THREE.BufferAttribute;
     const start = pos.merak.clone().lerp(pos.dubhe, -0.15);
+    const end = start.clone().lerp(pos.polaris, Math.max(0.02, this.pointerK));
     pAttr.setXYZ(0, start.x, start.y, start.z);
-    pAttr.setXYZ(1, pos.polaris.x, pos.polaris.y, pos.polaris.z);
+    pAttr.setXYZ(1, end.x, end.y, end.z);
     pAttr.needsUpdate = true;
     this.pointer.computeLineDistances();
+
+    // The stars' daily circles round the celestial pole, and the axis to the pole.
+    if (this.trails.visible) {
+      const tAttr = this.trails.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const a = new THREE.Vector3();
+      const b = new THREE.Vector3();
+      let n = 0;
+      for (const s of ALL_STARS) {
+        if (s.id === "polaris") continue;
+        for (let k = 0; k < 96; k++) {
+          horizonDir(s.ra, s.dec, this.lat, (k / 96) * 360, this.tmp);
+          a.set(this.tmp.x, this.tmp.y, this.tmp.z).multiplyScalar(SKY_R * 0.97);
+          horizonDir(s.ra, s.dec, this.lat, ((k + 1) / 96) * 360, this.tmp);
+          b.set(this.tmp.x, this.tmp.y, this.tmp.z).multiplyScalar(SKY_R * 0.97);
+          tAttr.setXYZ(n++, a.x, a.y, a.z);
+          tAttr.setXYZ(n++, b.x, b.y, b.z);
+        }
+      }
+      tAttr.needsUpdate = true;
+    }
+    const poleDir = new THREE.Vector3(0, Math.sin(this.lat * D), -Math.cos(this.lat * D));
+    this.anchors.pole.copy(poleDir).multiplyScalar(SKY_R * 0.97);
+    this.poleRing.position.copy(this.anchors.pole);
+    this.poleRing.lookAt(0, 0, 0);
+    const axisLine = this.axis.getObjectByName("axis") as THREE.Line;
+    axisLine.scale.setScalar(SKY_R * 0.97);
+    axisLine.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), poleDir);
+    axisLine.position.set(0, 0.05, 0);
 
     this.anchors.polaris.copy(pos.polaris);
     this.anchors.dubhe.copy(pos.dubhe);
@@ -373,7 +512,20 @@ export class SkyScene {
   private loop = () => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.loop);
+    const now = performance.now();
+    if (this.pointerGrow && this.pointerK < 1) {
+      this.pointerK = Math.min(1, (now - this.pointerGrow) / 2600);
+      this.dirty = true;
+    }
     if (this.dirty) this.update();
+    if (this.axis.visible) (this.poleRing.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.4 * Math.sin(now / 260);
+    if (this.flight) {
+      const k = Math.min(1, (now - this.flight.start) / 1800);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+      this.camera.position.lerpVectors(this.flight.from[0], this.flight.to[0], e);
+      this.controls.target.lerpVectors(this.flight.from[1], this.flight.to[1], e);
+      if (k >= 1) this.flight = null;
+    }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.onFrame?.(this.project, this.anchors);
