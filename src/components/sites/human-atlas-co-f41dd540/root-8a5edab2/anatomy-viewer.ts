@@ -303,6 +303,7 @@ export class AnatomyViewer {
   private pickBusy = false;
   private lastPickAt = 0;
   private clearColor = new THREE.Color();
+  private floor: THREE.Object3D[] = [];
   private selected = new Set<string>();
   private hovered: string | null = null;
   private explode = 0;
@@ -465,6 +466,7 @@ export class AnatomyViewer {
     shadow.position.y = -0.004;
     this.disposables.push(shadowTex);
     this.scene.add(disc, ring, shadow);
+    this.floor = [disc, ring];
   }
 
   // ---- Materials -------------------------------------------------------------------------------
@@ -981,6 +983,14 @@ export class AnatomyViewer {
     // Zoom out as pieces separate so the exploded cloud still fits.
     const { halfHeight } = this.homeFrame();
     return this.fitDistance(halfHeight, 0.45 + this.explode * 2.4) * 1.04;
+  }
+
+  /** For the presentation: a dark room and a slow turn, with nobody at the controls. */
+  presentationMode() {
+    this.scene.background = new THREE.Color("#060a12");
+    for (const part of this.floor) part.visible = false;
+    this.controls.autoRotate = true;
+    this.controls.autoRotateSpeed = 1.2;
   }
 
   setView(view: ViewName) {

@@ -8,13 +8,35 @@ import { ease, rng, v, type Builder, type Kit, type V3 } from "./JourneyScene";
  * sizes between levels are not to scale (each level is ~10–1000× smaller than the one before).
  */
 
+/**
+ * The body seen through like an X-ray: the skin glows at its edges and is almost clear where it faces you. It does
+ * not depend on which way the source mesh's normals point (patches of it have them inverted, which shows as dark
+ * shards under ordinary lighting).
+ */
+function xray(material: THREE.MeshPhysicalMaterial) {
+  material.customProgramCacheKey = () => "xray-skin";
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <opaque_fragment>",
+      /* glsl */ `
+      {
+        float rim = 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition)));
+        diffuseColor.a *= 0.05 + 0.95 * pow(rim, 2.2);
+        outgoingLight = diffuseColor.rgb * (0.5 + 0.7 * rim);
+      }
+      #include <opaque_fragment>`,
+    );
+  };
+  return material;
+}
+
 export const zoomJourney: Builder = async (k) => {
   const body = await k.body(false);
   const bodyGroup = new THREE.Group();
   const heartGroup = new THREE.Group();
   k.root.add(bodyGroup, heartGroup);
   const ctx = context(k, body, bodyGroup, 0.32, 0.2);
-  if (ctx.skin) ctx.skin.material = k.ghost("#e8b79e", 0.32, { side: THREE.FrontSide, depthWrite: true });
+  if (ctx.skin) ctx.skin.material = xray(k.ghost("#f0c4ac", 0.85, { side: THREE.DoubleSide }));
   layer(k, body, bodyGroup, (p) => p.group === "lungs", k.ghost("#e79aa2", 0.3), 3);
   const heartMat = k.material({ color: "#b3363d", roughness: 0.42, clearcoat: 0.5, sheen: 0.4, sheenColor: new THREE.Color("#ffb3b3") });
   const vesselMat = { a: k.material({ color: "#c9343a", roughness: 0.4 }), v: k.material({ color: "#4062b0", roughness: 0.4 }) };

@@ -38,7 +38,7 @@ const georgian = Noto_Sans_Georgian({
 export const metadata: Metadata = {
   title: "სასწავლო პორტალი",
   description: "ინტერაქტიული სასწავლო მასალა საქართველოს სკოლებისთვის.",
-  icons: { icon: "/sites/human-atlas-co-f41dd540/shared/seo/favicon.svg" },
+  icons: { icon: "/logo.svg" },
 };
 
 export const viewport: Viewport = {

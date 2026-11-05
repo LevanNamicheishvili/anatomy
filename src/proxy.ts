@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/session-cookie";
 
-/** Pages open without signing in: the landing page, the login page and the school application form. */
+/** Open without signing in: the landing page, the login page, the school application form, and the list of file hashes. */
 const PUBLIC = ["/login", "/request"];
-const PUBLIC_EXACT = ["/"];
+const PUBLIC_EXACT = ["/", "/asset-manifest.json"];
+/** Pages that need the database and the internet (not in the desktop application). */
+const ACCOUNT_PAGES = ["/login", "/request", "/account", "/admin", "/school"];
 /** Public three.js Draco decoder (wasm/js) — not lesson data. */
 const PUBLIC_PREFIX = ["/draco/"];
 
@@ -16,6 +18,11 @@ const LESSON_ASSET = /\.(?:gz|bin|json|hdr|glb|gltf|ktx2|mp3|m4a|ogg|mp4|webm)$/
  */
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  // The desktop application has no accounts: everything is open, and the pages that manage them are not there.
+  if (process.env.ATLAS_OFFLINE === "1") {
+    if (path === "/" || ACCOUNT_PAGES.some((p) => path === p || path.startsWith(`${p}/`))) return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.next();
+  }
   const isPublic =
     PUBLIC_EXACT.includes(path) ||
     PUBLIC_PREFIX.some((p) => path.startsWith(p)) || PUBLIC.some((p) => path === p || path.startsWith(`${p}/`));

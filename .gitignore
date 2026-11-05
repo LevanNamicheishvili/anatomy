@@ -52,3 +52,11 @@ temp/
 
 # Lesson narration: Gemini audio kept between runs (scripts/narration/build-narration.ts)
 .narration-cache/
+
+# Desktop application (built files)
+desktop/node_modules/
+desktop/build/
+desktop/dist/
+
+# Made before every build (scripts/asset-manifest.mjs)
+public/asset-manifest.json

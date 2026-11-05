@@ -582,3 +582,52 @@ textarea {
   max-height: none;
   aspect-ratio: auto;
 }
+
+/*
+ * The presentation (components/presentation): words rise into place, and a whole lesson scene put on a screen of the
+ * presentation keeps only its picture, full size, without the lesson's controls.
+ */
+@keyframes present-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.2rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.present-rise {
+  animation: present-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+[data-present-scene] section {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+[data-present-scene] section > :not([data-scene]) {
+  display: none !important;
+}
+[data-present-scene] [data-scene] {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100% !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+}
+[data-present-scene] [data-scene] > .absolute.top-3.right-3,
+[data-present-scene] [data-scene] > .absolute.top-3.left-3,
+[data-present-scene] [data-scene] > .absolute.inset-x-0.bottom-3 {
+  display: none !important;
+}
+/* The scene's labels and the voice's words, large enough for a hall. */
+[data-present-scene] [data-scene] span {
+  font-size: clamp(12px, 0.95vw, 19px);
+}
+[data-present-scene] [data-scene] > button {
+  bottom: 6vh;
+  max-width: 80vw;
+  font-size: clamp(1.1rem, 2vw, 2.25rem);
+  line-height: 1.4;
+}

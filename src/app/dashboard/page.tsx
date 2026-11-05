@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, Globe2, HeartPulse, Landmark, Presentation, Users, type LucideIcon } from "lucide-react";
 import { PortalShell } from "@/components/portal/Shell";
 import { Chip, SectionTitle, cardLink } from "@/components/portal/ui";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { collections } from "@/lib/db";
+import { OFFLINE } from "@/lib/offline";
 import { cn } from "@/lib/utils";
 import { BIO_TOPICS } from "@/lib/biology-topics";
 import { SUBJECTS, type Subject, type SubjectIcon } from "@/lib/subjects";
@@ -75,8 +76,10 @@ function SubjectCard({ subject }: { subject: Subject }) {
 
 /** One management shortcut tile: icon, title and the numbers that matter to the person. */
 function ManagementTile({ href, icon: Icon, title, meta }: { href: string; icon: LucideIcon; title: string; meta: string }) {
+  // The presentation opens by a full page load (see components/portal/Shell.tsx).
+  const Item = href === "/presentation" ? "a" : Link;
   return (
-    <Link href={href} className={cn(cardLink, "flex-row items-center gap-4 p-5 hover:border-brand")}>
+    <Item href={href} className={cn(cardLink, "flex-row items-center gap-4 p-5 hover:border-brand")}>
       <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-deep text-white">
         <Icon className="size-6" aria-hidden />
       </span>
@@ -85,12 +88,14 @@ function ManagementTile({ href, icon: Icon, title, meta }: { href: string; icon:
         <span className="block text-sm text-mute">{meta}</span>
       </span>
       <ArrowRight className="size-5 shrink-0 text-faint transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
-    </Link>
+    </Item>
   );
 }
 
 /** Management shortcut for administrators, with the numbers that matter to them. */
 async function ManagementCard({ user }: { user: CurrentUser }) {
+  // Nothing to manage without internet; the person who gives the presentation has it here.
+  if (OFFLINE) return user.role === "super_admin" ? <ManagementTile href="/presentation" icon={Presentation} title="პრეზენტაცია" meta="პროდუქტი ცოცხალ 3D სცენებში, სრულ ეკრანზე" /> : null;
   const db = await collections();
   if (user.role === "super_admin") {
     const [pending, schools] = await Promise.all([db.requests.countDocuments({ status: "pending" }), db.schools.countDocuments()]);

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { collections, dbConfigured } from "./db";
+import { OFFLINE } from "./offline";
 import type { Role } from "./roles";
 import { sessionUserId } from "./session";
 
@@ -20,12 +21,26 @@ export interface CurrentUser {
 }
 
 /**
+ * Who uses the desktop application without internet: the account they last signed in with, as the application
+ * remembers it (desktop/main.mjs). Nothing known: the least a person may see.
+ */
+function offlineUser(): CurrentUser {
+  const fallback: CurrentUser = { id: "offline", role: "student", fullName: "მოსწავლე", username: "offline", classLabel: null, mustChangePassword: false, school: null };
+  try {
+    return { ...fallback, ...JSON.parse(process.env.ATLAS_OFFLINE_USER ?? ""), mustChangePassword: false };
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * The signed-in user with their school, or null. Checked against the database on every request
  * (memoised per render), so it is safe to base access decisions on.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   // Who is signed in is only known per request: never prerender a page that depends on it.
   await connection();
+  if (OFFLINE) return offlineUser();
   if (!dbConfigured) return null;
   const userId = await sessionUserId();
   if (!userId) return null;

@@ -931,6 +931,12 @@ export class GeorgiaScene {
     this.borderMat.uniforms.uOpacity.value = light ? 0.7 : 0.55;
   }
 
+  /** The colour round the country (the presentation has it dark). */
+  setBackdrop(color: string) {
+    this.scene.background = new THREE.Color(color);
+    (this.scene.fog as THREE.Fog).color.set(color);
+  }
+
   setOverlays(o: Overlays) {
     this.overlays = o;
     this.applyOverlays();
@@ -1191,6 +1197,7 @@ export class GeorgiaScene {
     if (key === this.patchKey) return;
     this.patchKey = key;
     const jobs: Promise<void>[] = [];
+    let drawn = 0;
     const canvas = document.createElement("canvas");
     canvas.width = (c1 - c0 + 1) * 256;
     canvas.height = (r1 - r0 + 1) * 256;
@@ -1199,11 +1206,14 @@ export class GeorgiaScene {
       for (let c = c0; c <= c1; c++)
         jobs.push(
           this.tile(z, r, c).then((img) => {
-            if (img) ctx.drawImage(img, (c - c0) * 256, (r - r0) * 256);
+            if (!img) return;
+            ctx.drawImage(img, (c - c0) * 256, (r - r0) * 256);
+            drawn++;
           }),
         );
     void Promise.all(jobs).then(() => {
-      if (this.disposed || this.patchKey !== key) return;
+      // No internet: the country's own picture stays, rather than a black patch.
+      if (this.disposed || this.patchKey !== key || !drawn) return;
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.flipY = false;

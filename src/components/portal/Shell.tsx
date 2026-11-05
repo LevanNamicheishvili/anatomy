@@ -2,11 +2,14 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 import { ROLE_NAMES, type CurrentUser } from "@/lib/auth";
+import { OFFLINE } from "@/lib/offline";
 import { Logo, PORTAL_NAME } from "./ui";
 
 function navFor(user: CurrentUser) {
   const items = [{ href: "/dashboard", label: "მთავარი" }];
-  if (user.role === "super_admin") items.push({ href: "/admin", label: "სკოლები და განაცხადები" });
+  // Without internet (the desktop application) there are no accounts or schools to manage.
+  if (OFFLINE) return user.role === "super_admin" ? [...items, { href: "/presentation", label: "პრეზენტაცია" }] : items;
+  if (user.role === "super_admin") items.push({ href: "/admin", label: "სკოლები და განაცხადები" }, { href: "/presentation", label: "პრეზენტაცია" });
   if (user.role === "school_admin" || user.role === "teacher") items.push({ href: "/school", label: user.role === "school_admin" ? "სკოლის მართვა" : "ჩემი სკოლა" });
   items.push({ href: "/account/password", label: "პაროლის შეცვლა" });
   return items;
@@ -33,7 +36,7 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
             <Logo />
             <span className="min-w-0 leading-6">
               <span className="block break-words text-[15px] font-heading">{PORTAL_NAME}</span>
-              <span className="block break-words text-xs text-mute">{user.school ? `${user.school.name} · ${user.school.city}` : "სისტემის მართვა"}</span>
+              <span className="block break-words text-xs text-mute">{OFFLINE ? "ინტერნეტის გარეშე" : user.school ? `${user.school.name} · ${user.school.city}` : "სისტემის მართვა"}</span>
             </span>
           </Link>
 
@@ -48,26 +51,32 @@ export function PortalShell({ user, active, children }: { user: CurrentUser; act
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong" aria-hidden>
               {initials(user.fullName)}
             </span>
-            <form action={signOut}>
-              <button type="submit" title="გასვლა" aria-label="გასვლა" className="flex size-10 items-center justify-center rounded-lg text-copy transition-colors hover:bg-chip">
-                <LogOut className="size-[18px]" />
-              </button>
-            </form>
+            {!OFFLINE && (
+              <form action={signOut}>
+                <button type="submit" title="გასვლა" aria-label="გასვლა" className="flex size-10 items-center justify-center rounded-lg text-copy transition-colors hover:bg-chip">
+                  <LogOut className="size-[18px]" />
+                </button>
+              </form>
+            )}
           </div>
         </div>
         <nav className="mx-auto flex max-w-6xl flex-wrap gap-2 px-4 pb-3 sm:px-6" aria-label="ნავიგაცია">
-          {navFor(user).map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active === item.href ? "page" : undefined}
-              className={`relative flex min-h-11 items-center rounded-xl px-4 py-2 text-sm whitespace-normal transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
-                active === item.href ? "bg-deep font-semibold text-white shadow-card" : "text-copy hover:bg-chip hover:text-ink"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navFor(user).map((item) => {
+            // The presentation opens by a full page load: it starts clean, and in the desktop application it runs from the computer.
+            const Item = item.href === "/presentation" ? "a" : Link;
+            return (
+              <Item
+                key={item.href}
+                href={item.href}
+                aria-current={active === item.href ? "page" : undefined}
+                className={`relative flex min-h-11 items-center rounded-xl px-4 py-2 text-sm whitespace-normal transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                  active === item.href ? "bg-deep font-semibold text-white shadow-card" : "text-copy hover:bg-chip hover:text-ink"
+                }`}
+              >
+                {item.label}
+              </Item>
+            );
+          })}
         </nav>
       </header>
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-section sm:px-6">

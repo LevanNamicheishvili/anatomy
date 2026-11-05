@@ -1,0 +1,62 @@
+{
+  "name": "saswavlo-portali-desktop",
+  "productName": "სასწავლო პორტალი",
+  "version": "1.0.0",
+  "private": true,
+  "description": "სასწავლო პორტალი: აპლიკაცია, რომელიც ინტერნეტის გარეშე მუშაობს",
+  "author": "სასწავლო პორტალი",
+  "main": "main.mjs",
+  "type": "module",
+  "scripts": {
+    "prepare-site": "node prepare-site.mjs",
+    "start": "electron .",
+    "dist:win": "npm run prepare-site && electron-builder --win --x64",
+    "dist:mac": "npm run prepare-site && electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "ge.saswavlo.portali",
+    "executableName": "SaswavloPortali",
+    "artifactName": "SaswavloPortali-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "main.mjs",
+      "splash.html",
+      "no-internet.html",
+      "package.json"
+    ],
+    "compression": "normal",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "language": "1033"
+    },
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "category": "public.app-category.education",
+      "identity": null
+    },
+    "afterPack": "./after-pack.cjs"
+  }
+}

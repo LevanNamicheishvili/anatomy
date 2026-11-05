@@ -156,15 +156,10 @@ export function PageHeader({ title, description, action }: { title: string; desc
 }
 
 /** The portal's mark: an open book on ink. */
+/** The mark: a shield with a mountain over an open book (public/logo.svg; also the application's icon). */
 export function Logo({ className }: { className?: string }) {
-  return (
-    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl bg-deep text-white shadow-card", className)}>
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M12 7v14" />
-        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-      </svg>
-    </span>
-  );
+  // eslint-disable-next-line @next/next/no-img-element -- a small vector, one file for every place it is shown.
+  return <img src="/logo.svg" alt="" width={36} height={36} className={cn("size-9 shrink-0", className)} />;
 }
 
 export const PORTAL_NAME = "სასწავლო პორტალი";

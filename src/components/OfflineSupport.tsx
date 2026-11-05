@@ -18,6 +18,8 @@ export function OfflineSupport() {
       });
       return;
     }
+    // The desktop application has its own copy of the files: nothing to keep.
+    if (["localhost", "127.0.0.1"].includes(window.location.hostname) || navigator.userAgent.includes("SaswavloDesktop")) return;
     navigator.serviceWorker.register("/sw.js").catch(() => {
       // Offline mode is a bonus; the site works the same without it.
     });
